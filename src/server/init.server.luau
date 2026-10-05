@@ -1,9 +1,13 @@
 local Weapons = require(script.Weapons)
 local Dummies = require(script.Dummies)
 local TestArena = require(script.TestArena)
+local PlayerState = require(script.PlayerState)
+local Revive = require(script.Revive)
 local Director = require(script.Director)
 
 Weapons.start()
 Dummies.start()
 TestArena.start()
+PlayerState.start()
+Revive.start()
 Director.start()

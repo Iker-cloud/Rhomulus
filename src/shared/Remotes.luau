@@ -7,6 +7,7 @@ local NAMES = {
 	"Reload", -- cliente -> servidor
 	"Sync", -- cliente -> servidor: pide el estado de munición
 	"AmmoUpdate", -- servidor -> cliente: (ammo, magSize, reloading)
+	"Drop", -- cliente -> servidor: soltar al compañero que se carga
 	"Shot", -- servidor -> todos: (shooter, from, to) para dibujar el trazador
 }
 

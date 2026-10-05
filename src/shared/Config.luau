@@ -20,6 +20,34 @@ return {
 		ShoulderOffset = Vector3.new(2, 0.5, 0),
 	},
 
+	Player = {
+		WalkSpeed = 16,
+		DownedWalkSpeed = 4,
+		CarrySpeed = 9,
+		BleedTime = 30, -- segundos caído antes de morir
+		ReviveHealth = 30,
+		RespawnTime = 5,
+	},
+
+	Revive = {
+		HoldTime = 4, -- segundos manteniendo E
+		CarryHoldTime = 1,
+		PromptDistance = 7,
+		MaxDistance = 12, -- validación en el servidor (un poco más holgada que el prompt)
+		ReplyDelay = 1.5, -- el caído responde esto después de la frase de quien revive
+		BubbleTime = 2.5,
+		-- Frases provisionales: la lista final sigue abierta en el GDD
+		ReviverPhrases = {
+			"¡Arriba, que todavía no es tu hora!",
+			"¿Otra vez en el piso?",
+			"Me debes una",
+		},
+		DownedPhrases = {
+			"Ya me andaba",
+			"Tardaste muchísimo",
+		},
+	},
+
 	Zombie = {
 		ThinkInterval = 0.2, -- cada cuánto decide (ataque, objetivo)
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta

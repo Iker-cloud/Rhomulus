@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PlayerState = require(script.Parent.PlayerState)
 
 local Zombies = {}
 
@@ -66,10 +67,11 @@ local function nearestTarget(fromPosition)
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if humanoid and root and humanoid.Health > 0 then
+		-- Los caídos no son objetivo: los zombies van por los que siguen de pie
+		if humanoid and root and humanoid.Health > 0 and PlayerState.get(player) == "Normal" then
 			local distance = (root.Position - fromPosition).Magnitude
 			if not bestDistance or distance < bestDistance then
-				best, bestDistance = { humanoid = humanoid, root = root, character = character }, distance
+				best, bestDistance = { player = player, root = root, character = character }, distance
 			end
 		end
 	end
@@ -98,7 +100,7 @@ local function think(humanoid, root, stats)
 				humanoid:MoveTo(root.Position) -- se detiene para golpear
 				if now - lastAttack >= stats.AttackCooldown then
 					lastAttack = now
-					target.humanoid:TakeDamage(stats.Damage)
+					PlayerState.damage(target.player, stats.Damage)
 				end
 			elseif now - lastPath >= Config.Zombie.RepathInterval then
 				lastPath = now

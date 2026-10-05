@@ -38,6 +38,10 @@ local function faceCamera()
 	if not (humanoid and root) or humanoid.Health <= 0 then
 		return
 	end
+	-- Si lo están cargando, el cuerpo va soldado al que carga: no se gira
+	if character:GetAttribute("Carried") then
+		return
+	end
 
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	UserInputService.MouseIconEnabled = false
