@@ -12,8 +12,6 @@ local folder = Instance.new("Folder")
 folder.Name = "Zombies"
 folder.Parent = workspace
 
-local alive = 0
-
 local function addPart(model, name, size, offset, root, color)
 	local part = Instance.new("Part")
 	part.Name = name
@@ -131,7 +129,19 @@ end
 
 -- Zombies vivos ahora mismo (lo usa el director para respetar el límite)
 function Zombies.getAlive()
-	return alive
+	local count = 0
+	for _, model in folder:GetChildren() do
+		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.Health > 0 then
+			count += 1
+		end
+	end
+	return count
+end
+
+-- Borra todos los zombies (cambio de zona, fin de partida)
+function Zombies.clear()
+	folder:ClearAllChildren()
 end
 
 -- Crea un zombie del tipo dado ("Common" o "Fast") en la posición (a nivel del suelo). Devuelve el modelo.
@@ -141,9 +151,7 @@ function Zombies.spawn(kind, position)
 	model.Parent = folder
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
-	alive += 1
 	humanoid.Died:Once(function()
-		alive -= 1
 		task.wait(Config.Zombie.CorpseTime)
 		model:Destroy()
 	end)

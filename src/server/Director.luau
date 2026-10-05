@@ -1,6 +1,6 @@
 -- Director de hordas: decide cuándo y dónde aparecen zombies, fuera de la vista de los jugadores.
--- Los puntos de aparición son Parts dentro de la carpeta Workspace/SpawnPoints (se colocan en Studio);
--- si no existe, usa Config.Director.TestSpawnPoints.
+-- Los puntos de aparición son Parts dentro de Workspace/SpawnPoints/<zona> (los crea MapBuilder o se colocan en Studio).
+-- GameState le dice en qué zona está el equipo con setZone; sin zona no aparece nadie.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,17 +9,28 @@ local Zombies = require(script.Parent.Zombies)
 
 local Director = {}
 
+local zone = nil
+local boost = false
+
+function Director.setZone(name)
+	zone = name
+end
+
+-- Presión alta (extracción): los zombies aparecen más seguido
+function Director.setBoost(on)
+	boost = on
+end
+
 local function getSpawnPoints()
-	local folder = workspace:FindFirstChild("SpawnPoints")
 	local points = {}
+	local root = workspace:FindFirstChild("SpawnPoints")
+	local folder = root and zone and root:FindFirstChild(zone)
 	if folder then
 		for _, part in folder:GetChildren() do
 			if part:IsA("BasePart") then
 				table.insert(points, part.Position - Vector3.new(0, part.Size.Y / 2, 0))
 			end
 		end
-	else
-		points = Config.Director.TestSpawnPoints
 	end
 	return points
 end
@@ -31,14 +42,13 @@ local function getScaling()
 end
 
 local function getMaxAlive()
-	return Config.Director.TestMaxAlive or getScaling().MaxAlive
+	return getScaling().MaxAlive
 end
 
 -- Un punto es válido si está lejos de todos los jugadores y ninguno lo ve
 local function isHidden(point)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { workspace:FindFirstChild("Zombies") }
 
 	for _, player in Players:GetPlayers() do
 		local head = player.Character and player.Character:FindFirstChild("Head")
@@ -97,10 +107,10 @@ end
 function Director.start()
 	task.spawn(function()
 		while true do
-			if #Players:GetPlayers() > 0 and Zombies.getAlive() < getMaxAlive() then
+			if zone and #Players:GetPlayers() > 0 and Zombies.getAlive() < getMaxAlive() then
 				spawnOne()
 			end
-			task.wait(Config.Director.SpawnInterval)
+			task.wait(boost and Config.Director.BoostInterval or Config.Director.SpawnInterval)
 		end
 	end)
 end

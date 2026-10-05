@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Stats = require(script.Parent.Stats)
 
 local WEAPON = Config.Weapons.Pistol
 
@@ -96,6 +97,9 @@ local function onFire(player, origin, direction)
 		-- Fuego amigo desactivado: no se daña a otros jugadores
 		if target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
 			target:TakeDamage(WEAPON.Damage)
+			if target.Health <= 0 and model.Parent == workspace.Zombies then
+				Stats.add(player, "Kills")
+			end
 		end
 	end
 

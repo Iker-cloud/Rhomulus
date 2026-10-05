@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Stats = require(script.Parent.Stats)
 
 local PlayerState = {}
 
@@ -75,6 +76,7 @@ function PlayerState.damage(player, amount)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
+	Stats.add(player, "DamageTaken", math.min(amount, humanoid.Health))
 	if humanoid.Health - amount <= 0 then
 		down(player, humanoid)
 	else
@@ -82,7 +84,7 @@ function PlayerState.damage(player, amount)
 	end
 end
 
-function PlayerState.revive(player)
+function PlayerState.revive(player, helper)
 	if PlayerState.get(player) ~= "Downed" then
 		return
 	end
@@ -95,6 +97,9 @@ function PlayerState.revive(player)
 	humanoid.Health = Config.Player.ReviveHealth
 	setState(player, "Normal")
 	PlayerState.refreshSpeed(player)
+	if helper then
+		Stats.add(helper, "Revives")
+	end
 end
 
 local function onCharacter(player, character)
@@ -107,7 +112,8 @@ local function onCharacter(player, character)
 
 	if safePoint then
 		character:WaitForChild("HumanoidRootPart")
-		character:PivotTo(safePoint)
+		-- Dispersos para que no reaparezcan encimados
+		character:PivotTo(safePoint * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6)))
 	end
 
 	humanoid.Died:Once(function()
@@ -118,9 +124,11 @@ local function onCharacter(player, character)
 end
 
 function PlayerState.start()
-	Players.RespawnTime = Config.Player.RespawnTime
-
 	local function setup(player)
+		-- Sin personaje hasta que la partida los haga aparecer
+		if not player.Character then
+			player:SetAttribute("State", "Dead")
+		end
 		player.CharacterAdded:Connect(function(character)
 			onCharacter(player, character)
 		end)

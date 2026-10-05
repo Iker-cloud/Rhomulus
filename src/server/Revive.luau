@@ -188,7 +188,7 @@ local function onCharacter(player, character)
 
 	revivePrompt.Triggered:Connect(function(helper)
 		if canHelp(helper, player) then
-			PlayerState.revive(player)
+			PlayerState.revive(player, helper)
 		end
 	end)
 

@@ -26,7 +26,6 @@ return {
 		CarrySpeed = 9,
 		BleedTime = 30, -- segundos caído antes de morir
 		ReviveHealth = 30,
-		RespawnTime = 5,
 	},
 
 	Revive = {
@@ -80,8 +79,7 @@ return {
 		FastChance = 0.2,
 		MinSpawnDistance = 50, -- nunca aparecen más cerca de un jugador
 		FarSpawnDistance = 120, -- más lejos que esto cuenta como fuera de vista
-		-- Temporal: fuerza el límite para probar rendimiento (nil = usar ByPlayers)
-		TestMaxAlive = 25,
+		BoostInterval = 0.4, -- segundos entre apariciones en la extracción
 		-- Ajuste por número de jugadores
 		ByPlayers = {
 			[1] = { MaxAlive = 12, HordeScale = 0.4 },
@@ -89,31 +87,26 @@ return {
 			[3] = { MaxAlive = 22, HordeScale = 0.8 },
 			[4] = { MaxAlive = 25, HordeScale = 1.0 },
 		},
-		-- Solo se usan si no existe Workspace/SpawnPoints (los puntos reales se colocan en Studio)
-		TestSpawnPoints = {
-			Vector3.new(0, 0, 60),
-			Vector3.new(130, 0, 0),
-			Vector3.new(-130, 0, 40),
-			Vector3.new(0, 0, -130),
-			Vector3.new(90, 0, 100),
-		},
 	},
 
-	-- Temporal: obstáculos generados por código
-	TestArena = {
-		Walls = {
-			{ Position = Vector3.new(0, 5, 35), Size = Vector3.new(30, 10, 2) },
-			{ Position = Vector3.new(-20, 5, 15), Size = Vector3.new(2, 10, 30) },
-		},
+	Game = {
+		Seed = 7, -- semilla del mapa generado
+		SafeRoomTime = 10, -- segundos de descanso en el punto seguro
+		GeneratorHoldTime = 4,
+		GeneratorHorde = 40, -- tamaño de la horda al 100% (4 jugadores)
+		RadioHoldTime = 3,
+		ExtractionTime = 150, -- segundos hasta que llega la van
+		VanGrace = 5, -- margen para que suban los demás tras el primero
+		ResultTime = 15,
 	},
 
 	Dummy = {
 		Health = 100,
 		RespawnTime = 3,
 		Positions = {
-			Vector3.new(0, 0, -25),
-			Vector3.new(12, 0, -45),
-			Vector3.new(-12, 0, -65),
+			Vector3.new(-8, 0, -243),
+			Vector3.new(0, 0, -243),
+			Vector3.new(8, 0, -243),
 		},
 	},
 }
