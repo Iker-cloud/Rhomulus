@@ -8,7 +8,7 @@
 - Mapas, modelos e iluminación se hacen en Studio (no están en los archivos).
 - Al terminar algo que funcione, propón un commit con un mensaje corto en español.
 - Sigue la arquitectura del GDD: el servidor es la autoridad, un `ModuleScript` por sistema, valores de balance en un módulo de configuración.
-- **Fase actual:** 3 — Un zombie.
+- **Fase actual:** 4 — Muchos zombies.
 
 ---
 

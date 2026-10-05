@@ -32,13 +32,47 @@ return {
 			AttackRange = 4,
 			AttackCooldown = 1,
 			HipHeight = 2,
+			Color = Color3.fromRGB(90, 130, 80),
+		},
+
+		Fast = {
+			Health = 30,
+			Speed = 20,
+			Damage = 10,
+			AttackRange = 4,
+			AttackCooldown = 1,
+			HipHeight = 2,
+			Color = Color3.fromRGB(150, 70, 60),
 		},
 	},
 
-	-- Temporal (fase 3): zona de prueba generada por código
+	Director = {
+		SpawnInterval = 1, -- segundos entre apariciones mientras haya cupo
+		HordeSpawnDelay = 0.15, -- pausa entre zombies de una horda
+		FastChance = 0.2,
+		MinSpawnDistance = 50, -- nunca aparecen más cerca de un jugador
+		FarSpawnDistance = 120, -- más lejos que esto cuenta como fuera de vista
+		-- Temporal: fuerza el límite para probar rendimiento (nil = usar ByPlayers)
+		TestMaxAlive = 25,
+		-- Ajuste por número de jugadores
+		ByPlayers = {
+			[1] = { MaxAlive = 12, HordeScale = 0.4 },
+			[2] = { MaxAlive = 18, HordeScale = 0.6 },
+			[3] = { MaxAlive = 22, HordeScale = 0.8 },
+			[4] = { MaxAlive = 25, HordeScale = 1.0 },
+		},
+		-- Solo se usan si no existe Workspace/SpawnPoints (los puntos reales se colocan en Studio)
+		TestSpawnPoints = {
+			Vector3.new(0, 0, 60),
+			Vector3.new(130, 0, 0),
+			Vector3.new(-130, 0, 40),
+			Vector3.new(0, 0, -130),
+			Vector3.new(90, 0, 100),
+		},
+	},
+
+	-- Temporal: obstáculos generados por código
 	TestArena = {
-		ZombieSpawn = Vector3.new(0, 0, 60),
-		RespawnTime = 5,
 		Walls = {
 			{ Position = Vector3.new(0, 5, 35), Size = Vector3.new(30, 10, 2) },
 			{ Position = Vector3.new(-20, 5, 15), Size = Vector3.new(2, 10, 30) },
