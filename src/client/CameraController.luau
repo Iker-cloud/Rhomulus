@@ -8,6 +8,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
 local firstPerson = false
+local aiming = false
 
 local CameraController = {}
 
@@ -54,6 +55,19 @@ local function faceCamera()
 	end
 end
 
+local function setAiming(on)
+	aiming = on
+	UserInputService.MouseDeltaSensitivity = on and Config.Camera.AimSensitivity or 1
+end
+
+-- Zoom suave entre FOV normal y FOV de mira
+local function updateZoom(dt)
+	local camera = workspace.CurrentCamera
+	local target = aiming and Config.Camera.AimFov or Config.Camera.NormalFov
+	local alpha = 1 - math.exp(-Config.Camera.AimSpeed * dt)
+	camera.FieldOfView += (target - camera.FieldOfView) * alpha
+end
+
 function CameraController.start()
 	player.CharacterAdded:Connect(function()
 		task.wait()
@@ -70,7 +84,24 @@ function CameraController.start()
 		end
 	end)
 
-	RunService.RenderStepped:Connect(faceCamera)
+	UserInputService.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			setAiming(true)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			setAiming(false)
+		end
+	end)
+	UserInputService.WindowFocusReleased:Connect(function()
+		setAiming(false)
+	end)
+
+	RunService.RenderStepped:Connect(function(dt)
+		faceCamera()
+		updateZoom(dt)
+	end)
 end
 
 return CameraController

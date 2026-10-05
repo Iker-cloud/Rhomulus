@@ -148,6 +148,7 @@ end
 function Zombies.spawn(kind, position)
 	local stats = Config.Zombie[kind]
 	local model, humanoid, root = build(stats, position)
+	model:SetAttribute("Kind", kind)
 	model.Parent = folder
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 

@@ -131,7 +131,7 @@ La dificultad se ajusta al número de jugadores al iniciar la partida (valores i
 
 | Jugadores | Zombies vivos máx. | Tamaño de horda | Ajuste extra |
 | --- | --- | --- | --- |
-| 1 | 12 | 40% | Puede levantarse solo una vez por zona |
+| 1 | 10 | 25% | Puede levantarse solo una vez por zona |
 | 2 | 18 | 60% | Ninguno |
 | 3 | 22 | 80% | Ninguno |
 | 4 | 25 | 100% | Ninguno |

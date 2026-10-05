@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
+local Points = require(script.Parent.Points)
 
 local Revive = {}
 
@@ -123,6 +124,7 @@ local function carry(carrier, target)
 
 	carrying[carrier] = target
 	carriedBy[target] = carrier
+	Points.add(Config.Points.Carry)
 	carrier:SetAttribute("Carrying", target.Name)
 	PlayerState.refreshSpeed(carrier)
 

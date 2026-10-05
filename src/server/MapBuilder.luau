@@ -73,12 +73,12 @@ local function prompt(part, action, holdTime)
 end
 
 -- Letrero visible a través de paredes sobre un objetivo
-local function label(part, text, color)
+local function label(part, text, color, maxDistance)
 	local gui = Instance.new("BillboardGui")
 	gui.Size = UDim2.fromOffset(160, 36)
 	gui.StudsOffset = Vector3.new(0, part.Size.Y / 2 + 3, 0)
 	gui.AlwaysOnTop = true
-	gui.MaxDistance = 400
+	gui.MaxDistance = maxDistance or 35 -- solo se lee de cerca
 	gui.Parent = part
 
 	local text_ = Instance.new("TextLabel")
@@ -214,6 +214,37 @@ function MapBuilder.build(config)
 	refs.vanStart = CFrame.new(0, 3.5, 236)
 	refs.vanStop = CFrame.new(0, 3.5, 175)
 	refs.vanVolume = volume(map, "VanVolume", -12, 12, 165, 185, 12)
+
+	-- Estaciones de munición (una por zona, en la acera)
+	refs.ammoStations = {}
+	for _, spot in { Vector3.new(17, 0, -150), Vector3.new(17, 0, 30), Vector3.new(17, 0, 130) } do
+		local station = block(map, "AmmoStation", Vector3.new(3, 4, 2), spot + Vector3.new(0, 2, 0), Color3.fromRGB(70, 130, 220))
+		station.Material = Enum.Material.Neon
+		label(station, "▼ MUNICIÓN", Color3.fromRGB(120, 180, 255), 25)
+		table.insert(refs.ammoStations, { part = station, prompt = prompt(station, "Comprar munición", 0.5) })
+	end
+
+	-- Lugares posibles de la caja de armas: libres de obstáculos, dentro de la calle de cada zona
+	refs.boxSpots = {}
+	local boxRanges = {
+		Zone1 = { -195, -105 },
+		Zone2 = { -50, 70 },
+		Extraction = { 95, 160 },
+	}
+	for zoneName, range in boxRanges do
+		local spots = {}
+		for _ = 1, 60 do
+			local spot = Vector3.new(rng:NextInteger(-14, 14), 0, rng:NextInteger(range[1], range[2]))
+			local blocked = workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7))
+			if #blocked == 0 then
+				table.insert(spots, spot)
+			end
+			if #spots >= 8 then
+				break
+			end
+		end
+		refs.boxSpots[zoneName] = spots
+	end
 
 	-- Puntos extra al final de la calle para la horda de extracción
 	marker(spawnFolders.Extraction, Vector3.new(-8, 0, 240))

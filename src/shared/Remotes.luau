@@ -7,6 +7,8 @@ local NAMES = {
 	"Reload", -- cliente -> servidor
 	"Sync", -- cliente -> servidor: pide el estado de munición
 	"AmmoUpdate", -- servidor -> cliente: (ammo, magSize, reloading)
+	"Switch", -- cliente -> servidor: "primary" o "pistol"
+	"Feed", -- servidor -> cliente(s): (texto) aviso en pantalla
 	"Ready", -- cliente -> servidor: listo en el lobby
 	"Results", -- servidor -> todos: (won, stats) al terminar la partida
 	"Drop", -- cliente -> servidor: soltar al compañero que se carga

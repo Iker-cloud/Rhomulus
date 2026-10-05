@@ -42,8 +42,13 @@ function Hud.start()
 	local ammoLabel = label(gui, UDim2.new(1, -220, 1, -70), UDim2.fromOffset(200, 50))
 	ammoLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-	Remotes.AmmoUpdate.OnClientEvent:Connect(function(ammo, magSize, reloading)
-		ammoLabel.Text = reloading and "Recargando..." or `{ammo} / {magSize}`
+	local nameLabel = label(gui, UDim2.new(1, -220, 1, -100), UDim2.fromOffset(200, 28))
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+	-- reserve = -1 es munición infinita
+	Remotes.AmmoUpdate.OnClientEvent:Connect(function(ammo, reserve, _magSize, reloading, weaponName)
+		nameLabel.Text = weaponName
+		ammoLabel.Text = reloading and "Recargando..." or `{ammo} / {reserve < 0 and "∞" or reserve}`
 	end)
 
 	-- Vida

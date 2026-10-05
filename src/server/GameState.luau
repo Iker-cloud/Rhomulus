@@ -9,7 +9,10 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Director = require(script.Parent.Director)
 local MapBuilder = require(script.Parent.MapBuilder)
 local PlayerState = require(script.Parent.PlayerState)
+local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
+local WeaponBox = require(script.Parent.WeaponBox)
+local Weapons = require(script.Parent.Weapons)
 local Zombies = require(script.Parent.Zombies)
 
 local GameState = {}
@@ -125,6 +128,9 @@ local function lobby()
 	Director.setBoost(false)
 	Zombies.clear()
 	Stats.reset()
+	Points.reset()
+	WeaponBox.clear()
+	Weapons.resetAll()
 	resetMap()
 	for _, player in Players:GetPlayers() do
 		player:SetAttribute("Ready", false)
@@ -155,18 +161,25 @@ end
 local function zone1()
 	setStage("Zone1", "Crucen la calle hasta el punto seguro")
 	Director.setZone("Zone1")
-	return waitUntil(function()
+	WeaponBox.place("Zone1")
+	local ok = waitUntil(function()
 		return allInside(map.safeVolume)
 	end, true)
+	if ok then
+		Points.add(Config.Points.ZoneComplete)
+	end
+	return ok
 end
 
 local function safeRoom()
 	setDoor(map.safeEntryDoor, false) -- cierra la puerta detrás del equipo
 	Director.setZone(nil)
 	Zombies.clear()
+	WeaponBox.clear()
 
 	PlayerState.setSafePoint(map.safeSpawn)
 	respawn(true) -- los caídos de antes reaparecen aquí
+	Weapons.refillAll() -- recarga gratis del punto seguro
 	setStage("SafeRoom", "Punto seguro. Descansen")
 	task.wait(Config.Game.SafeRoomTime)
 
@@ -177,6 +190,7 @@ end
 local function zone2()
 	setStage("Zone2", "Enciendan el generador para abrir el portón")
 	Director.setZone("Zone2")
+	WeaponBox.place("Zone2")
 	if not waitForPrompt(map.generatorPrompt) then
 		return false
 	end
@@ -185,17 +199,24 @@ local function zone2()
 	setDoor(map.gate, true)
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
-	return waitUntil(function()
+	local ok = waitUntil(function()
 		return allInside(map.extractionVolume)
 	end, true)
+	if ok then
+		Points.add(Config.Points.ZoneComplete)
+	end
+	return ok
 end
 
 local function extraction()
-	Director.setZone("Extraction")
+	-- Sin zombies nuevos mientras llaman a la radio (solo quedan los de la horda)
+	Director.setZone(nil)
+	WeaponBox.place("Extraction")
 	setStage("Extraction", "Llamen al rescate con la radio")
 	if not waitForPrompt(map.radioPrompt) then
 		return false
 	end
+	Director.setZone("Extraction")
 
 	local arrival = workspace:GetServerTimeNow() + Config.Game.ExtractionTime
 	workspace:SetAttribute("ExtractionEnd", arrival)
@@ -251,6 +272,7 @@ local function result(won)
 	Director.setZone(nil)
 	Director.setBoost(false)
 	Zombies.clear()
+	WeaponBox.clear()
 	setStage("Result", won and "¡Victoria!" or "Derrota")
 	Remotes.Results:FireAllClients(won, Stats.all())
 	task.wait(Config.Game.ResultTime)
@@ -260,6 +282,7 @@ function GameState.start()
 	-- La partida decide cuándo reaparece cada jugador (el siguiente punto seguro)
 	Players.CharacterAutoLoads = false
 	map = MapBuilder.build(Config.Game)
+	WeaponBox.init(map)
 
 	Players.PlayerAdded:Connect(function(player)
 		if stage == "Lobby" then

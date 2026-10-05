@@ -2,13 +2,78 @@
 return {
 	Weapons = {
 		Pistol = {
+			Name = "Pistola",
 			Damage = 20,
+			Pellets = 1,
+			Spread = 0, -- grados de dispersión
 			MagSize = 12,
 			FireCooldown = 0.25, -- segundos entre disparos
 			ReloadTime = 1.5,
 			Range = 300,
+			Auto = false,
 			InfiniteReserve = true,
 		},
+		Rifle = {
+			Name = "Rifle",
+			Damage = 25,
+			Pellets = 1,
+			Spread = 1,
+			MagSize = 30,
+			FireCooldown = 0.1,
+			ReloadTime = 2,
+			Range = 400,
+			Auto = true,
+			ReserveStart = 90,
+			MaxReserve = 150,
+			Rarity = "Común",
+			Weight = 40, -- probabilidad relativa en la caja
+		},
+		Shotgun = {
+			Name = "Escopeta",
+			Damage = 8, -- por perdigón
+			Pellets = 8,
+			Spread = 6,
+			MagSize = 8,
+			FireCooldown = 0.9,
+			ReloadTime = 2.5,
+			Range = 80,
+			Auto = false,
+			ReserveStart = 32,
+			MaxReserve = 56,
+			Rarity = "Común",
+			Weight = 35,
+		},
+		SMG = {
+			Name = "Subfusil",
+			Damage = 14,
+			Pellets = 1,
+			Spread = 2.5,
+			MagSize = 40,
+			FireCooldown = 0.07,
+			ReloadTime = 1.8,
+			Range = 250,
+			Auto = true,
+			ReserveStart = 120,
+			MaxReserve = 200,
+			Rarity = "Rara",
+			Weight = 25,
+		},
+	},
+
+	WeaponBox = {
+		Cost = 500,
+		AmmoCost = 150,
+		SpinTime = 3, -- segundos girando
+		TakeTime = 8, -- segundos para tomar el arma antes de que se pierda
+		Pool = { "Rifle", "Shotgun", "SMG" },
+	},
+
+	-- Puntos del equipo
+	Points = {
+		Kill = { Common = 25, Fast = 40 },
+		Revive = 50,
+		Carry = 20,
+		ZoneComplete = 100,
 	},
 
 	-- Tolerancia anti-trampa: distancia máxima entre la cabeza y el origen del rayo
@@ -16,8 +81,12 @@ return {
 	MaxShotOriginDistance = 20,
 
 	Camera = {
-		ThirdPersonDistance = 12,
-		ShoulderOffset = Vector3.new(2, 0.5, 0),
+		ThirdPersonDistance = 8,
+		ShoulderOffset = Vector3.new(3.5, 1.5, 0), -- cámara sobre el hombro derecho: el personaje queda a la izquierda
+		NormalFov = 70,
+		AimFov = 35, -- zoom al mantener clic derecho
+		AimSpeed = 14, -- qué tan rápido entra/sale el zoom
+		AimSensitivity = 0.5, -- multiplicador de sensibilidad del mouse al apuntar
 	},
 
 	Player = {
@@ -82,7 +151,7 @@ return {
 		BoostInterval = 0.4, -- segundos entre apariciones en la extracción
 		-- Ajuste por número de jugadores
 		ByPlayers = {
-			[1] = { MaxAlive = 12, HordeScale = 0.4 },
+			[1] = { MaxAlive = 10, HordeScale = 0.25 },
 			[2] = { MaxAlive = 18, HordeScale = 0.6 },
 			[3] = { MaxAlive = 22, HordeScale = 0.8 },
 			[4] = { MaxAlive = 25, HordeScale = 1.0 },
