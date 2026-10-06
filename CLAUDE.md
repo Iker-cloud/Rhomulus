@@ -198,6 +198,15 @@ El MVP es una partida completa y jugable de principio a fin con 1 a 4 amigos. To
 
 Regla de oro: no se agrega nada de la columna derecha hasta que un grupo de amigos haya terminado el MVP y quiera jugarlo otra vez.
 
+## Identidad del juego (después del MVP)
+
+Lo que nos diferencia de otros juegos de zombies: **"nadie se queda atrás"**. Cargar al compañero en hombros mientras sigue disparando ya es parte del juego; estas dos ideas lo refuerzan. Entran después del MVP, cuando un grupo de amigos lo haya terminado y quiera jugarlo otra vez (ver regla de oro).
+
+1. **Deudas entre jugadores.** Cada vez que alguien te revive, le debes una (como dicen las frases: "Me debes una"). Si luego lo revives tú, quedan a mano. La pantalla de resultados muestra quién debe a quién ("Iker le debe 2 a Isaac") y quién es el mayor deudor.
+2. **Separarse sale caro.** El director de hordas manda más zombies hacia quien está lejos del equipo, o quien está solo recibe más daño. Es una regla del juego, no solo un consejo.
+
+Ideas guardadas para más adelante (no decididas): ruido que atrae hordas (armas silenciadas o cuerpo a cuerpo como respiro), ambientación y voces latinas en español, y un rol para quien va en hombros (marca zombies para quien lo carga).
+
 ## Arquitectura técnica en Roblox
 
 Toda la lógica que importa (daño, vida, zombies) vive en el servidor; el cliente solo detecta lo que hace el jugador y muestra el resultado.
