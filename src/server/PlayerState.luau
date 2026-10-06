@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
 
@@ -57,6 +58,7 @@ local function down(player, humanoid)
 	bleedTokens[player] = token
 	-- Hora del servidor en que muere; el cliente la usa para mostrar la cuenta regresiva
 	player:SetAttribute("BleedEnd", workspace:GetServerTimeNow() + Config.Player.BleedTime)
+	player:SetAttribute("DownedAt", workspace:GetServerTimeNow())
 
 	task.delay(Config.Player.BleedTime, function()
 		if bleedTokens[player] == token and PlayerState.get(player) == "Downed" then
@@ -105,6 +107,31 @@ function PlayerState.revive(player, helper)
 	end
 end
 
+-- Con 1 solo jugador puede levantarse solo, una vez por zona
+function PlayerState.selfRevive(player)
+	if PlayerState.get(player) ~= "Downed" or #Players:GetPlayers() ~= 1 then
+		return
+	end
+	local charges = player:GetAttribute("SelfRevives") or 0
+	if charges <= 0 then
+		return
+	end
+	local elapsed = workspace:GetServerTimeNow() - (player:GetAttribute("DownedAt") or 0)
+	if elapsed < Config.Player.SelfReviveTime * 0.9 then
+		return
+	end
+	player:SetAttribute("SelfRevives", charges - 1)
+	PlayerState.revive(player)
+	Points.feed(`{player.DisplayName} se levantó solo`)
+end
+
+-- Se llama al empezar cada zona
+function PlayerState.resetSelfRevives()
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("SelfRevives", Config.Player.SelfRevivesPerZone)
+	end
+end
+
 local function onCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid")
 	bleedTokens[player] = (bleedTokens[player] or 0) + 1
@@ -128,6 +155,7 @@ end
 
 function PlayerState.start()
 	local function setup(player)
+		player:SetAttribute("SelfRevives", Config.Player.SelfRevivesPerZone)
 		-- Sin personaje hasta que la partida los haga aparecer
 		if not player.Character then
 			player:SetAttribute("State", "Dead")
@@ -139,6 +167,8 @@ function PlayerState.start()
 			task.spawn(onCharacter, player, player.Character)
 		end
 	end
+
+	Remotes.SelfRevive.OnServerEvent:Connect(PlayerState.selfRevive)
 
 	Players.PlayerAdded:Connect(setup)
 	for _, player in Players:GetPlayers() do

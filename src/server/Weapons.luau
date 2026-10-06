@@ -163,7 +163,7 @@ local function onFire(player, origin, direction)
 		end
 	end
 
-	Remotes.Shot:FireAllClients(player, head.Position, endPoints)
+	Remotes.Shot:FireAllClients(player, head.Position, endPoints, slot.name)
 
 	if slot.ammo <= 0 then
 		startReload(player)

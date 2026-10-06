@@ -60,6 +60,38 @@ return {
 		},
 	},
 
+	-- Sonidos (Creator Store, gratis). Cambia cualquier id aquí para sustituirlo.
+	Sounds = {
+		Volume = { Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6 },
+		Shot = {
+			Pistol = "rbxassetid://132539859090895",
+			Rifle = "rbxassetid://113879008765178",
+			Shotgun = "rbxassetid://132711300701696",
+			SMG = "rbxassetid://92967624763578",
+		},
+		ShotPitch = { SMG = 1.35 }, -- el subfusil reutiliza el tiro de pistola, más agudo
+		Reload = "rbxassetid://117963160131194",
+		ReloadShotgun = "rbxassetid://139827026287805",
+		DryFire = "rbxassetid://117629133235583",
+		ZombieGrowls = {
+			"rbxassetid://129294628821291",
+			"rbxassetid://100949226522885",
+			"rbxassetid://130156156621885",
+		},
+		HordeSiren = "rbxassetid://9119163479",
+		BoxSpin = "rbxassetid://9046019442",
+		Music = {
+			Calm = "rbxassetid://9046799798", -- lobby, punto seguro y resultados
+			Tension = "rbxassetid://131562091269894", -- explorando
+			Horde = "rbxassetid://9045941477", -- muchos zombies cerca
+			Extraction = "rbxassetid://9044584201", -- aguantando hasta la van
+		},
+		MusicVolume = 0.35,
+		HordeNearCount = 6, -- zombies cerca para que suene la música de horda
+		HordeNearDistance = 45,
+		HordeMusicHold = 10, -- segundos que se mantiene tras la última horda
+	},
+
 	WeaponBox = {
 		Cost = 500,
 		AmmoCost = 150,
@@ -95,6 +127,8 @@ return {
 		CarrySpeed = 9,
 		BleedTime = 30, -- segundos caído antes de morir
 		ReviveHealth = 30,
+		SelfReviveTime = 3, -- segundos manteniendo H para levantarse solo (1 jugador)
+		SelfRevivesPerZone = 1,
 	},
 
 	Revive = {
@@ -162,6 +196,7 @@ return {
 		Seed = 7, -- semilla del mapa generado
 		SafeRoomTime = 10, -- segundos de descanso en el punto seguro
 		GeneratorHoldTime = 4,
+		HordeWarning = 4, -- segundos de sirena antes de que llegue la horda
 		GeneratorHorde = 40, -- tamaño de la horda al 100% (4 jugadores)
 		RadioHoldTime = 3,
 		ExtractionTime = 150, -- segundos hasta que llega la van

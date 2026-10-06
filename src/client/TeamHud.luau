@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -113,9 +114,33 @@ function TeamHud.start()
 		end
 	end)
 
+	-- Levantarse solo (1 jugador): mantener H unos segundos
+	local selfReviveStart = nil
+	local function canSelfRevive()
+		return (player:GetAttribute("State") or "Normal") == "Downed"
+			and #Players:GetPlayers() == 1
+			and (player:GetAttribute("SelfRevives") or 0) > 0
+	end
+
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if not processed and input.KeyCode == Enum.KeyCode.G then
+		if processed then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.G then
 			Remotes.Drop:FireServer()
+		elseif input.KeyCode == Enum.KeyCode.H and canSelfRevive() then
+			selfReviveStart = os.clock()
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.H then
+			selfReviveStart = nil
+		end
+	end)
+	RunService.Heartbeat:Connect(function()
+		if selfReviveStart and canSelfRevive() and os.clock() - selfReviveStart >= Config.Player.SelfReviveTime then
+			selfReviveStart = nil
+			Remotes.SelfRevive:FireServer()
 		end
 	end)
 
@@ -176,6 +201,13 @@ function TeamHud.start()
 			local text = `ESTÁS CAÍDO — {math.ceil(bleedRemaining(player))}s`
 			if player.Character and player.Character:GetAttribute("Carried") then
 				text ..= " (te cargan)"
+			end
+			if canSelfRevive() then
+				if selfReviveStart then
+					text ..= ` — levantándote {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
+				else
+					text ..= " — mantén H para levantarte"
+				end
 			end
 			notice.Text = text
 		elseif carrying then

@@ -2,7 +2,9 @@
 -- Publica Workspace attributes "Stage", "Message" y "ExtractionEnd" para que los clientes muestren el avance.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -79,6 +81,16 @@ local function waitUntil(condition, checkWipe)
 		task.wait(0.25)
 	end
 	return true
+end
+
+-- Sonido global (2D) para todos los jugadores
+local function playGlobal(soundId, volume, lifetime)
+	local sound = Instance.new("Sound")
+	sound.SoundId = soundId
+	sound.Volume = volume
+	sound.Parent = SoundService
+	sound:Play()
+	Debris:AddItem(sound, lifetime)
 end
 
 local function setDoor(part, open)
@@ -160,6 +172,7 @@ end
 
 local function zone1()
 	setStage("Zone1", "Crucen la calle hasta el punto seguro")
+	PlayerState.resetSelfRevives()
 	Director.setZone("Zone1")
 	WeaponBox.place("Zone1")
 	local ok = waitUntil(function()
@@ -189,14 +202,19 @@ end
 
 local function zone2()
 	setStage("Zone2", "Enciendan el generador para abrir el portón")
+	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
 	if not waitForPrompt(map.generatorPrompt) then
 		return false
 	end
 
-	setStage("Zone2", "¡HORDA! Corran al portón")
+	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
+	setStage("Zone2", "¡Se acerca una horda! Prepárense")
 	setDoor(map.gate, true)
+	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
+	task.wait(Config.Game.HordeWarning)
+	setStage("Zone2", "¡HORDA! Corran al portón")
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
 	local ok = waitUntil(function()
@@ -213,6 +231,7 @@ local function extraction()
 	Director.setZone(nil)
 	WeaponBox.place("Extraction")
 	setStage("Extraction", "Llamen al rescate con la radio")
+	PlayerState.resetSelfRevives()
 	if not waitForPrompt(map.radioPrompt) then
 		return false
 	end

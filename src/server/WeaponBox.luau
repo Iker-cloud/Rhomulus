@@ -128,6 +128,12 @@ local function onTriggered(box, player)
 		-- Las armas giran unos segundos y se detiene en una al azar
 		local pick = rollWeapon()
 		box.display.Transparency = 0
+		local music = Instance.new("Sound")
+		music.SoundId = Config.Sounds.BoxSpin
+		music.Volume = Config.Sounds.Volume.Box
+		music.RollOffMaxDistance = 80
+		music.Parent = box.base
+		music:Play()
 		local pool = Config.WeaponBox.Pool
 		local steps = math.floor(Config.WeaponBox.SpinTime / 0.1)
 		for i = 1, steps do
@@ -139,6 +145,7 @@ local function onTriggered(box, player)
 			box.display.Color = RARITY_COLOR[Config.Weapons[name].Rarity]
 			task.wait(0.1)
 		end
+		music:Destroy()
 		if box ~= current then
 			return
 		end

@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local SoundController = require(script.Parent.SoundController)
 
 local Shooting = {}
 
@@ -14,6 +15,7 @@ local weaponName = "Pistola" -- nombre del arma activa (lo manda el servidor)
 local firing = false
 local lastShot = 0
 local slot = "pistol"
+local ammo, reloading = 1, false -- último estado que mandó el servidor
 
 local function activeConfig()
 	for _, cfg in Config.Weapons do
@@ -43,6 +45,9 @@ end
 
 local function fire()
 	lastShot = os.clock()
+	if ammo <= 0 and not reloading then
+		SoundController.play2D(Config.Sounds.DryFire, Config.Sounds.Volume.DryFire)
+	end
 	-- El disparo sale del centro de la pantalla
 	local camera = workspace.CurrentCamera
 	local size = camera.ViewportSize
@@ -90,7 +95,8 @@ function Shooting.start()
 		end
 	end)
 
-	Remotes.AmmoUpdate.OnClientEvent:Connect(function(_ammo, _reserve, _magSize, _reloading, name)
+	Remotes.AmmoUpdate.OnClientEvent:Connect(function(newAmmo, _reserve, _magSize, isReloading, name)
+		ammo, reloading = newAmmo, isReloading
 		weaponName = name
 	end)
 	Remotes.Shot.OnClientEvent:Connect(drawTracers)
