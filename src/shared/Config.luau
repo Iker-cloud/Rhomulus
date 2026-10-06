@@ -3,6 +3,7 @@ return {
 	Weapons = {
 		Pistol = {
 			Name = "Pistola",
+			AmmoStyle = "Ring", -- anillo de balas
 			Damage = 20,
 			Pellets = 1,
 			Spread = 0, -- grados de dispersión
@@ -15,6 +16,7 @@ return {
 		},
 		Rifle = {
 			Name = "Rifle",
+			AmmoStyle = "Drum", -- tambor giratorio
 			Damage = 25,
 			Pellets = 1,
 			Spread = 1,
@@ -30,6 +32,7 @@ return {
 		},
 		Shotgun = {
 			Name = "Escopeta",
+			AmmoStyle = "Shells", -- casquillos y cinta
 			Damage = 8, -- por perdigón
 			Pellets = 8,
 			Spread = 6,
@@ -45,6 +48,7 @@ return {
 		},
 		SMG = {
 			Name = "Subfusil",
+			AmmoStyle = "Magazine", -- cargador transparente
 			Damage = 14,
 			Pellets = 1,
 			Spread = 2.5,
@@ -92,6 +96,25 @@ return {
 		HordeMusicHold = 10, -- segundos que se mantiene tras la última horda
 	},
 
+	-- Animaciones oficiales de Roblox (paquetes R15). Cambia cualquier id aquí para sustituirlo.
+	Animations = {
+		-- Sobrevivientes: paquete Antiguo (Oldschool). Alternativa: Ninja (Idle 10921156883, Walk 10921162768, Run 10921157929, Jump 10921160088, Fall 10921159222)
+		Survivor = {
+			Idle = "rbxassetid://10921233298",
+			Walk = "rbxassetid://10921244891",
+			Run = "rbxassetid://10921240218",
+			Jump = "rbxassetid://10921242013",
+			Fall = "rbxassetid://10921241244",
+		},
+		-- Zombies: paquete Zombie
+		Zombie = {
+			Idle = "rbxassetid://10921347258",
+			Walk = "rbxassetid://10921355261",
+			Run = "rbxassetid://616163682",
+		},
+		RunSpeed = 8, -- por encima de esta velocidad se usa la animación de correr
+	},
+
 	WeaponBox = {
 		Cost = 500,
 		AmmoCost = 150,
@@ -100,7 +123,7 @@ return {
 		Pool = { "Rifle", "Shotgun", "SMG" },
 	},
 
-	-- Puntos del equipo
+	-- Latas del equipo (la moneda compartida; el módulo se llama Points)
 	Points = {
 		Kill = { Common = 25, Fast = 40 },
 		Revive = 50,

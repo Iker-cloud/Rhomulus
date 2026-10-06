@@ -1,4 +1,4 @@
--- Puntos del equipo: una sola bolsa compartida. El total se publica en Workspace.Points para la UI.
+-- Latas del equipo (antes "puntos"): una sola bolsa compartida. El total se publica en Workspace.Points para la UI.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)

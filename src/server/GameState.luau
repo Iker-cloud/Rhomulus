@@ -64,10 +64,15 @@ end
 
 -- Derrota: nadie queda de pie para revivir a los demás
 local function teamWiped()
-	for _, player in Players:GetPlayers() do
+	local players = Players:GetPlayers()
+	for _, player in players do
 		if PlayerState.get(player) == "Normal" then
 			return false
 		end
+	end
+	-- Un jugador solo, caído, todavía puede levantarse solo (tecla H) si le queda la oportunidad de la zona
+	if #players == 1 and PlayerState.get(players[1]) == "Downed" and (players[1]:GetAttribute("SelfRevives") or 0) > 0 then
+		return false
 	end
 	return true
 end

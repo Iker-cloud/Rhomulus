@@ -37,13 +37,6 @@ function GameHud.start()
 	timer.Position = UDim2.new(0.5, 0, 0, 120)
 	timer.Size = UDim2.fromOffset(400, 36)
 
-	-- Puntos del equipo
-	local points = text(gui, 24, Color3.fromRGB(255, 220, 90))
-	points.AnchorPoint = Vector2.new(1, 0)
-	points.Position = UDim2.new(1, -20, 0, 90) -- debajo de la barra de vida de Roblox
-	points.Size = UDim2.fromOffset(300, 30)
-	points.TextXAlignment = Enum.TextXAlignment.Right
-
 	-- Avisos del equipo (quién compró qué)
 	local feed = Instance.new("Frame")
 	feed.AnchorPoint = Vector2.new(0, 1)
@@ -94,7 +87,6 @@ function GameHud.start()
 			message ..= " [Y]"
 		end
 		banner.Text = message
-		points.Text = `Puntos: {workspace:GetAttribute("Points") or 0}`
 
 		local arrival = workspace:GetAttribute("ExtractionEnd")
 		local remaining = arrival and arrival - workspace:GetServerTimeNow() or 0

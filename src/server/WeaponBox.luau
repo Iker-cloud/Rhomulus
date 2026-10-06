@@ -1,5 +1,5 @@
 -- Caja de armas (una por zona, en un lugar al azar de la zona) y estaciones de munición.
--- La caja cuesta puntos del equipo; las armas giran unos segundos y se detiene en una al azar.
+-- La caja cuesta latas del equipo; las armas giran unos segundos y se detiene en una al azar.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -44,7 +44,7 @@ local function resetToIdle(box)
 	box.state = "idle"
 	box.pick = nil
 	box.display.Transparency = 1
-	box.prompt.ActionText = `Abrir caja ({Config.WeaponBox.Cost} pts)`
+	box.prompt.ActionText = `Abrir caja ({Config.WeaponBox.Cost} latas)`
 	box.prompt.HoldDuration = 0.5
 	box.prompt.Enabled = true
 	setLabel(box, "▼ CAJA DE ARMAS")
@@ -115,7 +115,7 @@ local function onTriggered(box, player)
 
 	if box.state == "idle" then
 		if not Points.spend(Config.WeaponBox.Cost) then
-			Remotes.Feed:FireClient(player, `Faltan puntos: la caja cuesta {Config.WeaponBox.Cost}`)
+			Remotes.Feed:FireClient(player, `Faltan latas: la caja cuesta {Config.WeaponBox.Cost}`)
 			return
 		end
 
@@ -211,7 +211,7 @@ function WeaponBox.init(refs)
 	boxSpots = refs.boxSpots
 
 	for _, station in refs.ammoStations do
-		station.prompt.ActionText = `Comprar munición ({Config.WeaponBox.AmmoCost} pts)`
+		station.prompt.ActionText = `Comprar munición ({Config.WeaponBox.AmmoCost} latas)`
 		station.prompt.Enabled = true
 		station.prompt.Triggered:Connect(function(player)
 			local denied = Weapons.ammoDenied(player)
@@ -221,7 +221,7 @@ function WeaponBox.init(refs)
 				Weapons.refillReserve(player)
 				Points.feed(`{player.DisplayName} compró munición`)
 			else
-				Remotes.Feed:FireClient(player, `Faltan puntos: la munición cuesta {Config.WeaponBox.AmmoCost}`)
+				Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Config.WeaponBox.AmmoCost}`)
 			end
 		end)
 	end
