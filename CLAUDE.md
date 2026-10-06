@@ -8,7 +8,52 @@
 - Mapas, modelos e iluminación se hacen en Studio (no están en los archivos).
 - Al terminar algo que funcione, propón un commit con un mensaje corto en español.
 - Sigue la arquitectura del GDD: el servidor es la autoridad, un `ModuleScript` por sistema, valores de balance en un módulo de configuración.
-- **Fase actual:** 7 — Pulido y prueba con amigos (sonido, balance, bugs).
+- **Fase actual:** 7 — Pulido y prueba con amigos (ver "Estado actual del proyecto" abajo).
+
+## Estado actual del proyecto (actualizado el 6 de octubre de 2026)
+
+**Dónde vamos:** fase 7 (pulido y prueba con amigos). El MVP ya se juega de inicio a fin con 1 jugador (probado en Studio de lobby a victoria y derrota). **Meta: tener el MVP listo para el viernes 9 de octubre.** Regla hasta entonces: congelar el alcance, solo arreglar y balancear.
+
+**Hecho (fases 2 a 6 y casi toda la 7):**
+- Disparo con raycast validado en el servidor, 4 armas (pistola, rifle, escopeta, subfusil), zoom con clic derecho, cámara sobre el hombro y primera persona (`V`).
+- Zombie común y rápido con modelos propios (desde `.glb`), IA con `PathfindingService`, director de hordas con límite por número de jugadores.
+- Caída, revivir con frases, cargar al compañero, levantarse solo con 1 jugador (`H`, una vez por zona), reaparición en el siguiente punto seguro.
+- Partida completa: lobby, zona 1, punto seguro, zona 2 (generador, horda, portón), extracción (radio, cuenta atrás, van), resultados.
+- Latas del equipo (antes "puntos"), caja de armas (500 latas), estaciones de munición (150 latas).
+- Sonido: disparos, recargas, gruñidos 3D, sirena de horda, música por estado, melodía de la caja.
+- Interfaz propia: munición junto a la mira (4 estilos), jeringa de sangre, latas, panel de radio por órdenes, placas de señalética, prompts con precio, barras de vida de enemigos, pantallas de victoria y derrota, tarjeta de caído.
+- Modelos 3D propios de: zombies, cajas de munición y misteriosa, maniquíes del lobby, generador y radio.
+
+**Pendiente (en orden):**
+1. **Probar con 2 o más jugadores** (Studio: Test > Clients and Servers): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
+2. Balance (precios, zombies, horda, tiempos) y bugs que salgan de esa prueba.
+3. Revisar rendimiento: el zombie común tiene 86 piezas. Si baja el FPS, `Config.Zombie.Common.ModelDetail = "light"`. Meta: 30 FPS en celular.
+4. Probar las animaciones de sobrevivientes (paquete Antiguo): requiere que Rojo cargue `src/character`.
+5. Botiquín (está en el GDD, no se ha hecho; se pensó recortarlo del MVP).
+6. Dificultad elegible por el jugador (Iker lo mencionó): ahora los números salen de `Config.Director.ByPlayers`.
+7. Publicar el juego para los amigos (el lugar existe, falta dejarlo accesible).
+
+**Mapa de código** (`src/`):
+- `shared/Config.luau`: **todos** los valores de balance, sonidos, animaciones y textos de precios. `shared/Remotes.luau`: único canal cliente-servidor.
+- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
+- `client/`: HUDs (`AmmoHud`, `HealthHud`, `LatasHud`, `TeamHud`, `RadioHud`, `GameHud`, `ResultHud`, `DownedHud`, `EnemyBars`, `Plates`, `PromptUi`), `ZombieAnimator`, `DummyAnimator`, `PropAnimator`, `SoundController`, `CameraController`, `Shooting`, `Icons`, `Slant`.
+- `character/Animate.client.luau`: animación de los sobrevivientes (reemplaza el script de Roblox).
+- `assets/*.glb` + `tools/glb_to_lua.py`: modelos 3D de origen y su conversor. Uso: `python tools/glb_to_lua.py <archivo-sin-.glb> <Modulo> [escala] [articulaciones]` (para cajas: articulación `tapa`). Los modelos se construyen con bloques nativos de Roblox, no se suben mallas.
+
+**Controles:** clic = disparar (mantener = automática), clic derecho = apuntar, `R` recargar, `1`/`2`/`Q` cambiar de arma, `V` primera/tercera persona, `E` interactuar (revivir, abrir caja, comprar, generador, radio), `F` cargar a un caído, `G` soltar, `H` levantarse solo (1 jugador), `Y` listo en el lobby.
+
+**Cosas que aprendimos (para no repetir errores):**
+- Si cambia `default.project.json` (carpetas nuevas), hay que **reiniciar `rojo serve`** y reconectar el plugin. Mantener una sola sesión de Rojo corriendo.
+- En los modelos de articulaciones, el frente es `+Z` en el marco local: una rotación positiva en X manda hacia adelante lo que está arriba (torso, cabeza) y hacia atrás lo que cuelga (piernas, brazos). Las tapas se abren con rotación negativa.
+- Ocultar interfaz en `BillboardGui` con transparencia no basta: apagarla con `Enabled = false`.
+- `ColorSequence` admite máximo 20 puntos; las franjas usan 9.
+- Las piezas llegan al cliente poco a poco: los animadores esperan a tener todas las articulaciones (atributo `JointCount`) antes de registrar un modelo.
+- Para probar con las herramientas de Studio: `require` desde la herramienta crea una copia separada de los módulos (no sirve para cambiar valores del juego en marcha); para probar compras se bajan precios con un comentario `TEMP-PRUEBA` y se restauran (revisar con `grep TEMP-PRUEBA`). Los prompts a veces necesitan reintentarse tras un teletransporte.
+- El tiempo de las pruebas puede pasar de los 8 s de `TakeTime` de la caja: tomar el arma en la misma llamada.
+
+**Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (no se ven capturas de pantalla desde las herramientas); proponer commit con mensaje corto en español y pedir confirmación antes del `push`. Iker comparte capturas de diseños de referencia para la interfaz.
+
+**Ideas guardadas (después del MVP):** deudas entre jugadores y "separarse sale caro" (ver identidad del juego), infección con jeringa que se vuelve verde, ruido que atrae hordas, ambientación latina y voces, rol para quien carga, selector de dificultad, nombre del juego, lista final de frases de revivir.
 
 ---
 
@@ -102,7 +147,7 @@ Todos empiezan con pistola; las armas principales salen de una caja misteriosa, 
 
 ### Puntos del equipo
 
-Los puntos son una sola bolsa compartida por todo el equipo y se ven en la UI de todos.
+Los puntos (en el juego se llaman **latas**) son una sola bolsa compartida por todo el equipo y se ven en la UI de todos.
 
 - Se ganan matando zombies, reviviendo o cargando compañeros y completando cada zona.
 - Se gastan en la caja de armas y en estaciones de munición que hay en cada zona.
@@ -246,4 +291,4 @@ Cada fase termina con algo que se puede probar en Studio; no se pasa a la siguie
 - [ ] Nombre y ambientación general del juego (pospuesto)
 - [x] Flujo de trabajo: Rojo + Git + GitHub desde el inicio
 - [ ] Lista final de frases para revivir
-- [ ] Precios en puntos de la caja de armas y de la munición
+- [x] Precios de la caja de armas y de la munición (500 y 150 latas; se pueden afinar en pruebas)

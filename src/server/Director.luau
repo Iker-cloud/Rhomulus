@@ -16,7 +16,7 @@ function Director.setZone(name)
 	zone = name
 end
 
--- Presión alta (extracción): los zombies aparecen más seguido
+-- Presión de la extracción: llegan despacio y con un tope más bajo (ver Config.Director)
 function Director.setBoost(on)
 	boost = on
 end
@@ -42,11 +42,15 @@ local function getScaling()
 end
 
 local function getMaxAlive()
-	return getScaling().MaxAlive
+	local max = getScaling().MaxAlive
+	if boost then
+		max = math.max(1, math.floor(max * Config.Director.ExtractionCapFactor + 0.5))
+	end
+	return max
 end
 
 -- Un punto es válido si está lejos de todos los jugadores y ninguno lo ve
-local function isHidden(point)
+local function isHidden(point, relaxed)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -59,7 +63,7 @@ local function isHidden(point)
 				return false
 			end
 			-- Muy lejos se considera fuera de vista aunque no haya paredes en medio
-			if delta.Magnitude < Config.Director.FarSpawnDistance then
+			if not relaxed and delta.Magnitude < Config.Director.FarSpawnDistance then
 				params.FilterDescendantsInstances = { workspace:FindFirstChild("Zombies"), player.Character }
 				if not workspace:Raycast(head.Position, delta, params) then
 					return false -- línea de vista libre
@@ -70,10 +74,10 @@ local function isHidden(point)
 	return true
 end
 
-local function pickPoint()
+local function pickPoint(relaxed)
 	local candidates = {}
 	for _, point in getSpawnPoints() do
-		if isHidden(point) then
+		if isHidden(point, relaxed) then
 			table.insert(candidates, point)
 		end
 	end
@@ -82,11 +86,16 @@ local function pickPoint()
 	end
 end
 
+local failedSpawns = 0
+
 local function spawnOne()
-	local point = pickPoint()
+	-- Si varias veces seguidas no hay un punto fuera de la vista, se usa cualquiera que no esté demasiado cerca
+	local point = pickPoint(failedSpawns >= Config.Director.MaxFailedSpawns)
 	if not point then
+		failedSpawns += 1
 		return false
 	end
+	failedSpawns = 0
 	local kind = math.random() < Config.Director.FastChance and "Fast" or "Common"
 	Zombies.spawn(kind, point)
 	return true
@@ -110,7 +119,7 @@ function Director.start()
 			if zone and #Players:GetPlayers() > 0 and Zombies.getAlive() < getMaxAlive() then
 				spawnOne()
 			end
-			task.wait(boost and Config.Director.BoostInterval or Config.Director.SpawnInterval)
+			task.wait(boost and Config.Director.ExtractionInterval or Config.Director.SpawnInterval)
 		end
 	end)
 end

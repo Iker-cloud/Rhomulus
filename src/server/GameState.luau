@@ -100,6 +100,17 @@ local function playGlobal(soundId, volume, lifetime)
 	Debris:AddItem(sound, lifetime)
 end
 
+local LIGHT_OFF = Color3.fromRGB(255, 70, 50)
+local LIGHT_ON = Color3.fromRGB(120, 255, 60)
+
+-- Cambia el color de una luz del modelo (generador: luz_estado; radio: led_llamada y led_senal)
+local function setLight(model, partName, color)
+	local part = model:FindFirstChild(partName)
+	if part then
+		part.Color = color
+	end
+end
+
 local function setDoor(part, open)
 	part.CanCollide = not open
 	part.Transparency = open and 1 or 0
@@ -135,6 +146,9 @@ local function resetMap()
 	setDoor(map.safeEntryDoor, true)
 	setDoor(map.safeExitDoor, false)
 	setDoor(map.gate, false)
+	setLight(map.generatorModel, "luz_estado", LIGHT_OFF)
+	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
+	setLight(map.radioModel, "led_senal", LIGHT_OFF)
 	local van = workspace.Map:FindFirstChild("Van")
 	if van then
 		van:Destroy()
@@ -216,6 +230,7 @@ local function zone2()
 		return false
 	end
 
+	setLight(map.generatorModel, "luz_estado", LIGHT_ON) -- el generador arranca
 	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
 	setStage("Zone2", "¡Se acerca una horda! Prepárense", "Warning")
 	setDoor(map.gate, true)
@@ -244,6 +259,8 @@ local function extraction()
 	end
 	Director.setZone("Extraction")
 
+	setLight(map.radioModel, "led_llamada", LIGHT_ON) -- la llamada de rescate sale
+	setLight(map.radioModel, "led_senal", LIGHT_ON)
 	local arrival = workspace:GetServerTimeNow() + Config.Game.ExtractionTime
 	workspace:SetAttribute("ExtractionEnd", arrival)
 	setStage("Extraction", "¡Aguanten hasta que llegue la van!", "Hold")

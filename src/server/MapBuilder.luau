@@ -7,6 +7,8 @@ local CollectionService = game:GetService("CollectionService")
 
 local PropModel = require(script.Parent.PropModel)
 local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
+local Generador = require(script.Parent.ZombieData.Generador)
+local Radio = require(script.Parent.ZombieData.Radio)
 
 local MapBuilder = {}
 
@@ -190,19 +192,27 @@ function MapBuilder.build(config)
 	block(map, "Barrier", Vector3.new(26, 6, 2), Vector3.new(-7, 3, 10))
 
 	-- Generador (evento que activa la horda y abre el portón)
-	refs.generator = block(map, "Generator", Vector3.new(4, 5, 4), Vector3.new(0, 2.5, 45), Color3.fromRGB(190, 160, 40))
-	refs.generator.Material = Enum.Material.Neon
-	refs.generatorPrompt = prompt(refs.generator, "Encender generador", config.GeneratorHoldTime)
-	label(refs.generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
+	-- (modelo de generador.glb; el Hitbox invisible lleva el prompt y la placa)
+	local generatorModel, generator = PropModel.build(Generador, Vector3.new(0, 0, 45), 0)
+	generator.Name = "Generator"
+	generatorModel.Parent = map
+	refs.generator = generator
+	refs.generatorModel = generatorModel
+	refs.generatorPrompt = prompt(generator, "Encender generador", config.GeneratorHoldTime)
+	label(generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
 
 	-- Entrada de la extracción
 	refs.extractionVolume = volume(map, "ExtractionVolume", -20, 20, 86, 120, 12)
 
 	-- Radio para llamar el rescate
-	refs.radio = block(map, "Radio", Vector3.new(3, 4, 3), Vector3.new(0, 2, 100), Color3.fromRGB(90, 220, 110))
-	refs.radio.Material = Enum.Material.Neon
-	refs.radioPrompt = prompt(refs.radio, "Llamar a la radio", config.RadioHoldTime)
-	label(refs.radio, "RADIO", Color3.fromRGB(110, 225, 150))
+	-- (modelo de radio-rescate.glb)
+	local radioModel, radio = PropModel.build(Radio, Vector3.new(0, 0, 100), 0)
+	radio.Name = "Radio"
+	radioModel.Parent = map
+	refs.radio = radio
+	refs.radioModel = radioModel
+	refs.radioPrompt = prompt(radio, "Llamar a la radio", config.RadioHoldTime)
+	label(radio, "RADIO", Color3.fromRGB(110, 225, 150))
 
 	-- Van de extracción
 	refs.vanStart = CFrame.new(0, 3.5, 236)

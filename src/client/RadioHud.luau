@@ -28,12 +28,17 @@ local TONES = {
 
 local RadioHud = {}
 
--- Una letra mayúscula suelta se convierte en tecla resaltada
+-- Una letra mayúscula completamente sola ("Y") se convierte en tecla resaltada. Se revisa palabra por palabra para
+-- no confundirla con la inicial de una palabra con tilde ("Súbanse").
 local function withKeys(message, color)
 	local hex = color:ToHex()
 	return (
-		message:gsub("%f[%a]%u%f[%A]", function(key)
-			return `<mark color="#{hex}" transparency="0"><font color="#10140f"> {key} </font></mark>`
+		message:gsub("%S+", function(word)
+			local lead, key, trail = word:match("^([¡¿%p]*)(%u)([%p]*)$")
+			if not key then
+				return word
+			end
+			return lead .. `<mark color="#{hex}" transparency="0"><font color="#10140f"> {key} </font></mark>` .. trail
 		end)
 	)
 end

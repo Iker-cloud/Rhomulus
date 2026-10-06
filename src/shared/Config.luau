@@ -201,7 +201,10 @@ return {
 		FastChance = 0.2,
 		MinSpawnDistance = 50, -- nunca aparecen más cerca de un jugador
 		FarSpawnDistance = 120, -- más lejos que esto cuenta como fuera de vista
-		BoostInterval = 0.4, -- segundos entre apariciones en la extracción
+		-- Extracción (después de llamar a la radio): zombies que llegan poco a poco y con menos a la vez
+		ExtractionInterval = 2.5, -- segundos entre apariciones
+		ExtractionCapFactor = 0.6, -- fracción del máximo de vivos normal (con 1 jugador: 6 de 10)
+		MaxFailedSpawns = 4, -- si no hay punto oculto tantas veces seguidas, se relaja la regla de vista
 		-- Ajuste por número de jugadores
 		ByPlayers = {
 			[1] = { MaxAlive = 10, HordeScale = 0.25 },
