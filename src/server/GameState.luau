@@ -22,9 +22,11 @@ local GameState = {}
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
 
-local function setStage(name, message)
+-- `tone` es la clave de la orden en RadioHud.luau (define su color y quién la dice por radio)
+local function setStage(name, message, tone)
 	stage = name
 	workspace:SetAttribute("Stage", name)
+	workspace:SetAttribute("Tone", tone)
 	workspace:SetAttribute("Message", message)
 end
 
@@ -154,7 +156,7 @@ local function lobby()
 	end
 
 	PlayerState.setSafePoint(map.lobbySpawn)
-	setStage("Lobby", "Practiquen en los maniquíes. Presionen Y cuando estén listos")
+	setStage("Lobby", "Practiquen en los maniquíes. Presionen Y cuando estén listos", "Lobby")
 	respawn(false)
 
 	waitUntil(function()
@@ -170,13 +172,13 @@ local function lobby()
 		return true
 	end, false)
 
-	setStage("Lobby", "¡Empezamos!")
+	setStage("Lobby", "¡Empezamos!", "Start")
 	task.wait(2)
 	setDoor(map.lobbyDoor, true)
 end
 
 local function zone1()
-	setStage("Zone1", "Crucen la calle hasta el punto seguro")
+	setStage("Zone1", "Crucen la calle hasta el punto seguro", "Advance")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone1")
 	WeaponBox.place("Zone1")
@@ -198,7 +200,7 @@ local function safeRoom()
 	PlayerState.setSafePoint(map.safeSpawn)
 	respawn(true) -- los caídos de antes reaparecen aquí
 	Weapons.refillAll() -- recarga gratis del punto seguro
-	setStage("SafeRoom", "Punto seguro. Descansen")
+	setStage("SafeRoom", "Punto seguro. Descansen", "Safe")
 	task.wait(Config.Game.SafeRoomTime)
 
 	setDoor(map.safeExitDoor, true)
@@ -206,7 +208,7 @@ local function safeRoom()
 end
 
 local function zone2()
-	setStage("Zone2", "Enciendan el generador para abrir el portón")
+	setStage("Zone2", "Enciendan el generador para abrir el portón", "Generator")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
@@ -215,11 +217,11 @@ local function zone2()
 	end
 
 	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
-	setStage("Zone2", "¡Se acerca una horda! Prepárense")
+	setStage("Zone2", "¡Se acerca una horda! Prepárense", "Warning")
 	setDoor(map.gate, true)
 	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
 	task.wait(Config.Game.HordeWarning)
-	setStage("Zone2", "¡HORDA! Corran al portón")
+	setStage("Zone2", "¡HORDA! Corran al portón", "Horde")
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
 	local ok = waitUntil(function()
@@ -235,7 +237,7 @@ local function extraction()
 	-- Sin zombies nuevos mientras llaman a la radio (solo quedan los de la horda)
 	Director.setZone(nil)
 	WeaponBox.place("Extraction")
-	setStage("Extraction", "Llamen al rescate con la radio")
+	setStage("Extraction", "Llamen al rescate con la radio", "Radio")
 	PlayerState.resetSelfRevives()
 	if not waitForPrompt(map.radioPrompt) then
 		return false
@@ -244,7 +246,7 @@ local function extraction()
 
 	local arrival = workspace:GetServerTimeNow() + Config.Game.ExtractionTime
 	workspace:SetAttribute("ExtractionEnd", arrival)
-	setStage("Extraction", "¡Aguanten hasta que llegue la van!")
+	setStage("Extraction", "¡Aguanten hasta que llegue la van!", "Hold")
 	Director.setBoost(true)
 
 	local survived = waitUntil(function()
@@ -265,12 +267,12 @@ local function extraction()
 		van:PivotTo(value)
 	end)
 	local tween = TweenService:Create(position, TweenInfo.new(6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = map.vanStop })
-	setStage("Extraction", "¡La van está llegando!")
+	setStage("Extraction", "¡La van está llegando!", "Van")
 	tween:Play()
 	tween.Completed:Wait()
 	position:Destroy()
 
-	setStage("Extraction", "¡Súbanse a la van!")
+	setStage("Extraction", "¡Súbanse a la van!", "Board")
 	local reached = waitUntil(function()
 		for _, player in livingPlayers() do
 			if inside(map.vanVolume, getRoot(player).Position) then
@@ -284,7 +286,7 @@ local function extraction()
 	end
 
 	-- Margen para que lleguen los demás
-	setStage("Extraction", "¡Corran a la van!")
+	setStage("Extraction", "¡Corran a la van!", "Run")
 	local started = os.clock()
 	while os.clock() - started < Config.Game.VanGrace and not allInside(map.vanVolume) do
 		task.wait(0.25)
@@ -297,7 +299,7 @@ local function result(won)
 	Director.setBoost(false)
 	Zombies.clear()
 	WeaponBox.clear()
-	setStage("Result", won and "¡Victoria!" or "Derrota")
+	setStage("Result", won and "¡Victoria!" or "Derrota", won and "Victory" or "Defeat")
 	Remotes.Results:FireAllClients(won, Stats.all())
 	task.wait(Config.Game.ResultTime)
 end

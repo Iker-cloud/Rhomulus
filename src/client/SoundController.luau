@@ -62,7 +62,7 @@ local function watchZombie(model)
 			local sound = Instance.new("Sound")
 			sound.SoundId = S.ZombieGrowls[math.random(#S.ZombieGrowls)]
 			sound.Volume = S.Volume.Zombie
-			sound.PlaybackSpeed = fast and 1.25 or 0.9 + math.random() * 0.2
+			sound.PlaybackSpeed = fast and 1.25 or (0.9 + math.random() * 0.2)
 			sound.RollOffMinDistance = 8
 			sound.RollOffMaxDistance = 80
 			sound.Parent = root

@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local DownedHud = require(script.Parent.DownedHud)
 
 local player = Players.LocalPlayer
 
@@ -106,6 +107,7 @@ function TeamHud.start()
 	notice.Parent = gui
 
 	local rows, markers = {}, {}
+	local downedCard = DownedHud.create(gui)
 
 	-- Los prompts de revivir/cargar de tu propio cuerpo no se muestran
 	ProximityPromptService.PromptShown:Connect(function(prompt)
@@ -198,21 +200,25 @@ function TeamHud.start()
 		local state = player:GetAttribute("State") or "Normal"
 		local carrying = player:GetAttribute("Carrying")
 		if state == "Downed" then
-			local text = `ESTÁS CAÍDO — {math.ceil(bleedRemaining(player))}s`
+			-- Tarjeta compacta: segundos de sangre que quedan y qué hacer
+			local hintText = "Un compañero puede revivirte"
 			if player.Character and player.Character:GetAttribute("Carried") then
-				text ..= " (te cargan)"
-			end
-			if canSelfRevive() then
+				hintText = "Te están cargando"
+			elseif canSelfRevive() then
 				if selfReviveStart then
-					text ..= ` — levantándote {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
+					hintText = `Levantándote… {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
 				else
-					text ..= " — mantén H para levantarte"
+					hintText = "Mantén H para levantarte"
 				end
 			end
-			notice.Text = text
+			local remaining = bleedRemaining(player)
+			downedCard.set(remaining, remaining / Config.Player.BleedTime, hintText)
+			notice.Text = ""
 		elseif carrying then
+			downedCard.hide()
 			notice.Text = `Cargando a {carrying} — G para soltar`
 		else
+			downedCard.hide()
 			notice.Text = ""
 		end
 	end

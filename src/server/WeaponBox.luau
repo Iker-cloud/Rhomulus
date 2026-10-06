@@ -1,5 +1,6 @@
 -- Caja de armas (una por zona, en un lugar al azar de la zona) y estaciones de munición.
 -- La caja cuesta latas del equipo; las armas giran unos segundos y se detiene en una al azar.
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -7,7 +8,9 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
+local PropModel = require(script.Parent.PropModel)
 local Weapons = require(script.Parent.Weapons)
+local CajaMisteriosa = require(script.Parent.ZombieData.CajaMisteriosa)
 
 local WeaponBox = {}
 
@@ -35,43 +38,29 @@ local function rollWeapon()
 	return Config.WeaponBox.Pool[1]
 end
 
+-- La placa sobre la caja la dibuja el cliente (Plates.luau) a partir de estos atributos
 local function setLabel(box, text, color)
-	box.label.Text = text
-	box.label.TextColor3 = color or Color3.fromRGB(255, 220, 90)
+	box.base:SetAttribute("PlateText", text)
+	box.base:SetAttribute("PlateColor", color or Color3.fromRGB(245, 200, 70))
 end
 
 local function resetToIdle(box)
 	box.state = "idle"
 	box.pick = nil
+	box.model:SetAttribute("Open", false)
 	box.display.Transparency = 1
-	box.prompt.ActionText = `Abrir caja ({Config.WeaponBox.Cost} latas)`
+	box.prompt.ActionText = "Comprar caja de armas"
+	box.prompt.ObjectText = `{Config.WeaponBox.Cost} latas`
 	box.prompt.HoldDuration = 0.5
 	box.prompt.Enabled = true
-	setLabel(box, "▼ CAJA DE ARMAS")
+	setLabel(box, "Caja de armas")
 end
 
 local function build(position)
-	local model = Instance.new("Model")
+	-- La caja misteriosa (modelo de caja-misteriosa.glb). El Hitbox invisible hace de base: colisión, prompt y placa.
+	local model, base = PropModel.build(CajaMisteriosa, position, 0)
 	model.Name = "WeaponBox"
-
-	local base = Instance.new("Part")
 	base.Name = "Base"
-	base.Size = Vector3.new(5, 3, 3)
-	base.Anchored = true
-	base.Color = Color3.fromRGB(110, 70, 40)
-	base.Material = Enum.Material.Wood
-	base.CFrame = CFrame.new(position + Vector3.new(0, 1.5, 0))
-	base.Parent = model
-
-	local trim = Instance.new("Part")
-	trim.Name = "Trim"
-	trim.Size = Vector3.new(5.2, 0.6, 3.2)
-	trim.Anchored = true
-	trim.CanCollide = false
-	trim.Color = Color3.fromRGB(255, 200, 60)
-	trim.Material = Enum.Material.Neon
-	trim.CFrame = base.CFrame * CFrame.new(0, 0.9, 0)
-	trim.Parent = model
 
 	local display = Instance.new("Part")
 	display.Name = "Display"
@@ -83,29 +72,19 @@ local function build(position)
 	display.CFrame = base.CFrame * CFrame.new(0, 3.5, 0)
 	display.Parent = model
 
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(240, 40)
-	gui.StudsOffset = Vector3.new(0, 6.5, 0)
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = 25 -- solo se lee de cerca
-	gui.Parent = base
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBold
-	label.TextScaled = true
-	label.TextStrokeTransparency = 0.3
-	label.Parent = gui
-
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ObjectText = "Caja de armas"
+	prompt.Style = Enum.ProximityPromptStyle.Custom -- la interfaz la dibuja PromptUi.luau
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = base
 
+	base:SetAttribute("PlateRange", 18)
+	base:SetAttribute("PlateHeight", 4.2)
+	CollectionService:AddTag(base, "Plate")
+
 	model.Parent = workspace.Map
-	return { model = model, base = base, display = display, label = label, prompt = prompt, state = "idle", rollId = 0 }
+	return { model = model, base = base, display = display, prompt = prompt, state = "idle", rollId = 0 }
 end
 
 local function onTriggered(box, player)
@@ -120,6 +99,7 @@ local function onTriggered(box, player)
 		end
 
 		box.state = "spinning"
+		box.model:SetAttribute("Open", true)
 		box.rollId += 1
 		local id = box.rollId
 		box.prompt.Enabled = false
@@ -156,6 +136,7 @@ local function onTriggered(box, player)
 		box.display.Color = RARITY_COLOR[cfg.Rarity]
 		setLabel(box, `{cfg.Name} ({cfg.Rarity})`, RARITY_COLOR[cfg.Rarity])
 		box.prompt.ActionText = `Tomar {cfg.Name}`
+		box.prompt.ObjectText = cfg.Rarity
 		box.prompt.HoldDuration = 0
 		box.prompt.Enabled = true
 		Points.feed(`La caja sacó: {cfg.Name} ({cfg.Rarity})`)
@@ -211,7 +192,8 @@ function WeaponBox.init(refs)
 	boxSpots = refs.boxSpots
 
 	for _, station in refs.ammoStations do
-		station.prompt.ActionText = `Comprar munición ({Config.WeaponBox.AmmoCost} latas)`
+		station.prompt.ActionText = "Comprar munición"
+		station.prompt.ObjectText = `{Config.WeaponBox.AmmoCost} latas`
 		station.prompt.Enabled = true
 		station.prompt.Triggered:Connect(function(player)
 			local denied = Weapons.ammoDenied(player)
@@ -219,6 +201,10 @@ function WeaponBox.init(refs)
 				Remotes.Feed:FireClient(player, denied)
 			elseif Points.spend(Config.WeaponBox.AmmoCost) then
 				Weapons.refillReserve(player)
+				station.model:SetAttribute("Open", true)
+				task.delay(1.6, function()
+					station.model:SetAttribute("Open", false)
+				end)
 				Points.feed(`{player.DisplayName} compró munición`)
 			else
 				Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Config.WeaponBox.AmmoCost}`)

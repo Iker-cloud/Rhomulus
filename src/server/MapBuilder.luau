@@ -3,6 +3,11 @@
 --
 -- Eje de la partida (z creciente): Lobby -> Zona 1 -> Punto seguro -> Zona 2 (generador, portón) -> Extracción.
 -- El suelo es la Baseplate (cara superior en y = 0).
+local CollectionService = game:GetService("CollectionService")
+
+local PropModel = require(script.Parent.PropModel)
+local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
+
 local MapBuilder = {}
 
 local GRAY = Color3.fromRGB(110, 110, 115)
@@ -67,29 +72,18 @@ local function prompt(part, action, holdTime)
 	p.HoldDuration = holdTime
 	p.MaxActivationDistance = 10
 	p.RequiresLineOfSight = false
+	p.Style = Enum.ProximityPromptStyle.Custom -- la interfaz la dibuja PromptUi.luau
 	p.Enabled = false
 	p.Parent = part
 	return p
 end
 
--- Letrero visible a través de paredes sobre un objetivo
-local function label(part, text, color, maxDistance)
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(160, 36)
-	gui.StudsOffset = Vector3.new(0, part.Size.Y / 2 + 3, 0)
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = maxDistance or 35 -- solo se lee de cerca
-	gui.Parent = part
-
-	local text_ = Instance.new("TextLabel")
-	text_.Size = UDim2.fromScale(1, 1)
-	text_.BackgroundTransparency = 1
-	text_.Font = Enum.Font.GothamBold
-	text_.TextScaled = true
-	text_.TextColor3 = color
-	text_.TextStrokeTransparency = 0.3
-	text_.Text = text
-	text_.Parent = gui
+-- Placa de señalética sobre un objetivo: el cliente la dibuja (ver Plates.luau) y solo se ve de cerca
+local function label(part, text, color, range)
+	CollectionService:AddTag(part, "Plate")
+	part:SetAttribute("PlateText", text)
+	part:SetAttribute("PlateColor", color)
+	part:SetAttribute("PlateRange", range or 20)
 end
 
 function MapBuilder.build(config)
@@ -199,7 +193,7 @@ function MapBuilder.build(config)
 	refs.generator = block(map, "Generator", Vector3.new(4, 5, 4), Vector3.new(0, 2.5, 45), Color3.fromRGB(190, 160, 40))
 	refs.generator.Material = Enum.Material.Neon
 	refs.generatorPrompt = prompt(refs.generator, "Encender generador", config.GeneratorHoldTime)
-	label(refs.generator, "▼ GENERADOR", Color3.fromRGB(255, 220, 90))
+	label(refs.generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
 
 	-- Entrada de la extracción
 	refs.extractionVolume = volume(map, "ExtractionVolume", -20, 20, 86, 120, 12)
@@ -207,21 +201,23 @@ function MapBuilder.build(config)
 	-- Radio para llamar el rescate
 	refs.radio = block(map, "Radio", Vector3.new(3, 4, 3), Vector3.new(0, 2, 100), Color3.fromRGB(90, 220, 110))
 	refs.radio.Material = Enum.Material.Neon
-	refs.radioPrompt = prompt(refs.radio, "Llamar al rescate", config.RadioHoldTime)
-	label(refs.radio, "▼ RADIO", Color3.fromRGB(120, 255, 140))
+	refs.radioPrompt = prompt(refs.radio, "Llamar a la radio", config.RadioHoldTime)
+	label(refs.radio, "RADIO", Color3.fromRGB(110, 225, 150))
 
 	-- Van de extracción
 	refs.vanStart = CFrame.new(0, 3.5, 236)
 	refs.vanStop = CFrame.new(0, 3.5, 175)
 	refs.vanVolume = volume(map, "VanVolume", -12, 12, 165, 185, 12)
 
-	-- Estaciones de munición (una por zona, en la acera)
+	-- Estaciones de munición (una por zona, en la acera): la caja de munición, mirando hacia la calle.
+	-- El Hitbox invisible lleva el prompt y la placa; la tapa se abre al comprar (PropAnimator).
 	refs.ammoStations = {}
 	for _, spot in { Vector3.new(17, 0, -150), Vector3.new(17, 0, 30), Vector3.new(17, 0, 130) } do
-		local station = block(map, "AmmoStation", Vector3.new(3, 4, 2), spot + Vector3.new(0, 2, 0), Color3.fromRGB(70, 130, 220))
-		station.Material = Enum.Material.Neon
-		label(station, "▼ MUNICIÓN", Color3.fromRGB(120, 180, 255), 25)
-		table.insert(refs.ammoStations, { part = station, prompt = prompt(station, "Comprar munición", 0.5) })
+		local model, hitbox = PropModel.build(CajaMunicion, spot, math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
 	end
 
 	-- Lugares posibles de la caja de armas: libres de obstáculos, dentro de la calle de cada zona

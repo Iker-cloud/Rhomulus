@@ -1,115 +1,23 @@
--- Zombies: modelo ligero + IA que persigue al jugador más cercano con PathfindingService y lo golpea.
-local ContentProvider = game:GetService("ContentProvider")
+-- Zombies: modelo con articulaciones (ZombieModel) + IA que persigue al jugador más cercano con PathfindingService y lo golpea.
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local PlayerState = require(script.Parent.PlayerState)
+local ZombieModel = require(script.Parent.ZombieModel)
 
 local Zombies = {}
+
+-- Modelo de cada tipo (se generan con tools/glb_to_lua.py desde assets/*.glb)
+local MODELS = {
+	Common = require(script.Parent.ZombieData.Brotado),
+	Fast = require(script.Parent.ZombieData.Desbocado),
+}
 
 local folder = Instance.new("Folder")
 folder.Name = "Zombies"
 folder.Parent = workspace
-
--- Cuerpo R15 base (se crea una vez y se clona para cada zombie)
-local template = nil
-
-local function getTemplate()
-	if template then
-		return template
-	end
-	local ok, model = pcall(function()
-		return Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
-	end)
-	if not ok then
-		warn("No se pudo crear el cuerpo base de los zombies:", model)
-		return nil
-	end
-	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BaseScript") then
-			descendant:Destroy() -- sin el Animate de Roblox: animamos nosotros
-		end
-	end
-	-- Precarga las animaciones para que las pistas no nazcan vacías
-	local animations = {}
-	for _, id in Config.Animations.Zombie do
-		local animation = Instance.new("Animation")
-		animation.AnimationId = id
-		table.insert(animations, animation)
-	end
-	ContentProvider:PreloadAsync(animations)
-
-	template = model
-	return template
-end
-
-local function loadTrack(animator, id, priority)
-	local animation = Instance.new("Animation")
-	animation.AnimationId = id
-	local track = animator:LoadAnimation(animation)
-	track.Looped = true
-	track.Priority = priority
-	return track
-end
-
--- Se llama con el zombie ya dentro del workspace (si no, Roblox no carga las pistas)
-local function animate(kind, stats, humanoid)
-	-- Idle parado, caminar o correr (el rápido) al moverse
-	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
-	local anims = Config.Animations.Zombie
-	local idle = loadTrack(animator, anims.Idle, Enum.AnimationPriority.Idle)
-	local move = loadTrack(animator, kind == "Fast" and anims.Run or anims.Walk, Enum.AnimationPriority.Movement)
-	idle:Play()
-	humanoid.Running:Connect(function(speed)
-		if speed > 1 then
-			if not move.IsPlaying then
-				idle:Stop()
-				move:Play()
-			end
-			move:AdjustSpeed(math.clamp(speed / stats.Speed, 0.5, 1.5))
-		elseif not idle.IsPlaying then
-			move:Stop()
-			idle:Play()
-		end
-	end)
-end
-
-local function build(kind, stats, position)
-	local base = getTemplate()
-	if not base then
-		return nil
-	end
-	local model = base:Clone()
-	model.Name = "Zombie"
-
-	-- Piel verde (o rojiza si es rápido) y piernas oscuras
-	for _, part in model:GetChildren() do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-			if part.Name:find("Leg") or part.Name:find("Foot") then
-				part.Color = Color3.fromRGB(60, 70, 90)
-			else
-				part.Color = stats.Color
-			end
-		end
-		if part:IsA("Accessory") or part:IsA("Shirt") or part:IsA("Pants") then
-			part:Destroy()
-		end
-	end
-
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	humanoid.MaxHealth = stats.Health
-	humanoid.Health = stats.Health
-	humanoid.WalkSpeed = stats.Speed
-	humanoid.DisplayName = "Zombie"
-	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.DisplayWhenDamaged
-
-	local root = model.HumanoidRootPart
-	model:PivotTo(CFrame.new(position + Vector3.new(0, 3, 0)))
-
-	return model, humanoid, root
-end
 
 local function nearestTarget(fromPosition)
 	local best, bestDistance
@@ -150,6 +58,7 @@ local function think(humanoid, root, stats)
 				humanoid:MoveTo(root.Position) -- se detiene para golpear
 				if now - lastAttack >= stats.AttackCooldown then
 					lastAttack = now
+					root.Parent:SetAttribute("Attack", workspace:GetServerTimeNow()) -- el cliente anima la embestida
 					PlayerState.damage(target.player, stats.Damage)
 				end
 			elseif now - lastPath >= Config.Zombie.RepathInterval then
@@ -179,9 +88,6 @@ local function think(humanoid, root, stats)
 	end
 end
 
--- Prepara el cuerpo y las animaciones al arrancar, antes del primer zombie
-task.spawn(getTemplate)
-
 -- Zombies vivos ahora mismo (lo usa el director para respetar el límite)
 function Zombies.getAlive()
 	local count = 0
@@ -200,15 +106,12 @@ function Zombies.clear()
 end
 
 -- Crea un zombie del tipo dado ("Common" o "Fast") en la posición (a nivel del suelo). Devuelve el modelo.
+-- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
 function Zombies.spawn(kind, position)
 	local stats = Config.Zombie[kind]
-	local model, humanoid, root = build(kind, stats, position)
-	if not model then
-		return nil
-	end
+	local model, humanoid, root = ZombieModel.build(MODELS[kind], stats, position)
 	model:SetAttribute("Kind", kind)
 	model.Parent = folder
-	animate(kind, stats, humanoid)
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()

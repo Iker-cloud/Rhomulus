@@ -106,12 +106,6 @@ return {
 			Jump = "rbxassetid://10921242013",
 			Fall = "rbxassetid://10921241244",
 		},
-		-- Zombies: paquete Zombie
-		Zombie = {
-			Idle = "rbxassetid://10921347258",
-			Walk = "rbxassetid://10921355261",
-			Run = "rbxassetid://616163682",
-		},
 		RunSpeed = 8, -- por encima de esta velocidad se usa la animación de correr
 	},
 
@@ -178,24 +172,26 @@ return {
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
 		CorpseTime = 2, -- segundos que el cadáver queda antes de borrarse
 
+		-- Modelos: el común = zombie-el-brotado.glb, el rápido = zombie-el-desbocado.glb (ver tools/glb_to_lua.py).
+		-- ModelDetail: "full" = todas las piezas; "light" quita dientes, dedos, vértebras y otros detalles pequeños.
 		Common = {
+			DisplayName = "Zombie",
 			Health = 50,
 			Speed = 10,
 			Damage = 10,
 			AttackRange = 4,
 			AttackCooldown = 1,
-			HipHeight = 2,
-			Color = Color3.fromRGB(90, 130, 80),
+			ModelDetail = "full",
 		},
 
 		Fast = {
+			DisplayName = "Zombie rápido",
 			Health = 30,
 			Speed = 20,
 			Damage = 10,
 			AttackRange = 4,
 			AttackCooldown = 1,
-			HipHeight = 2,
-			Color = Color3.fromRGB(150, 70, 60),
+			ModelDetail = "light", -- hay muchos y corren: menos piezas por zombie
 		},
 	},
 

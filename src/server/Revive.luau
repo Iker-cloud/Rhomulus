@@ -165,6 +165,7 @@ local function makePrompt(root, name, action, key, holdTime, offset)
 	prompt.MaxActivationDistance = Config.Revive.PromptDistance
 	prompt.RequiresLineOfSight = false
 	prompt.UIOffset = offset
+	prompt.Style = Enum.ProximityPromptStyle.Custom -- la interfaz la dibuja PromptUi.luau
 	prompt.Enabled = false
 	prompt.Parent = root
 	return prompt
@@ -175,6 +176,8 @@ local function onCharacter(player, character)
 
 	local revivePrompt = makePrompt(root, "RevivePrompt", "Revivir", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
 	local carryPrompt = makePrompt(root, "CarryPrompt", "Cargar", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
+
+	revivePrompt.ObjectText = player.DisplayName
 
 	revivePrompt.PromptButtonHoldBegan:Connect(function(helper)
 		if not canHelp(helper, player) then
