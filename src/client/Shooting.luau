@@ -3,11 +3,17 @@
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SoundController = require(script.Parent.SoundController)
+local WeaponAnimator = require(script.Parent.WeaponAnimator)
+
+local TRACER_LENGTH = 3 -- studs que mide el destello
+local TRACER_WIDTH = 0.05
+local TRACER_SPEED = 600 -- studs por segundo
 
 local Shooting = {}
 
@@ -26,20 +32,33 @@ local function activeConfig()
 	return Config.Weapons.Pistol
 end
 
-local function drawTracers(_shooter, from, endPoints)
+-- Trazador: un destello corto que viaja desde la boca del cañón hasta donde pegó la bala
+local function drawTracers(shooter, from, endPoints)
+	local origin = WeaponAnimator.muzzlePosition(shooter and shooter.Character) or from
 	for _, to in endPoints do
-		local length = (to - from).Magnitude
-		local tracer = Instance.new("Part")
-		tracer.Anchored = true
-		tracer.CanCollide = false
-		tracer.CanQuery = false
-		tracer.CanTouch = false
-		tracer.Material = Enum.Material.Neon
-		tracer.Color = Color3.fromRGB(255, 220, 120)
-		tracer.Size = Vector3.new(0.1, 0.1, length)
-		tracer.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -length / 2)
-		tracer.Parent = workspace
-		Debris:AddItem(tracer, 0.06)
+		local length = (to - origin).Magnitude
+		if length > 1 then
+			local dash = math.min(TRACER_LENGTH, length)
+			local direction = (to - origin).Unit
+			local tracer = Instance.new("Part")
+			tracer.Anchored = true
+			tracer.CanCollide = false
+			tracer.CanQuery = false
+			tracer.CanTouch = false
+			tracer.CastShadow = false
+			tracer.Material = Enum.Material.Neon
+			tracer.Color = Color3.fromRGB(255, 225, 140)
+			tracer.Size = Vector3.new(TRACER_WIDTH, TRACER_WIDTH, dash)
+			-- el centro del destello recorre el trayecto, sin salirse por delante del impacto
+			local startCF = CFrame.lookAt(origin + direction * (dash / 2), to)
+			local endCF = CFrame.lookAt(to - direction * (dash / 2), to)
+			tracer.CFrame = startCF
+			tracer.Parent = workspace
+			local travel = math.clamp(length / TRACER_SPEED, 0.03, 0.2)
+			local tween = TweenService:Create(tracer, TweenInfo.new(travel, Enum.EasingStyle.Linear), { CFrame = endCF })
+			tween:Play()
+			Debris:AddItem(tracer, travel + 0.02)
+		end
 	end
 end
 
@@ -52,7 +71,8 @@ local function fire()
 	local camera = workspace.CurrentCamera
 	local size = camera.ViewportSize
 	local ray = camera:ViewportPointToRay(size.X / 2, size.Y / 2)
-	Remotes.Fire:FireServer(ray.Origin, ray.Direction)
+	-- La sacudida de cámara del retroceso es solo visual: se apunta con la cámara sin ella
+	Remotes.Fire:FireServer(ray.Origin, WeaponAnimator.cameraCFrame().LookVector)
 end
 
 local function switchTo(newSlot)

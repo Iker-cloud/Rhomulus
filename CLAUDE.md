@@ -26,7 +26,8 @@
 - Zombie Tanque (600 de vida, lento): aparece en la horda del generador y en la extracción (`Config.Director.Tank`).
 - Hitbox de zombies: caja invisible por zombie + tolerancia de puntería (`Config.HitTolerance`); los compañeros ya no bloquean las balas.
 - Poses de sobrevivientes (`client/PoseAnimator`): caído (se arrastra), arrodillado al revivir (atributo `Reviving`) y colgado al ser cargado.
-- Furgoneta: entra animada en el cliente (`client/VanAnimator`: frenada, ruedas, baliza, pitido). Armas: salen de la caja subiendo y girando (`WeaponBox`/`WeaponModel`); la pistola va enfundada en la cadera (`Holster`), sin animación; todavía no hay armas en la mano.
+- Furgoneta: entra animada en el cliente (`client/VanAnimator`: frenada, ruedas, baliza, pitido). Armas: salen de la caja subiendo y girando (`WeaponBox`/`WeaponModel`).
+- Armas en la mano (`server/WeaponRig` + `client/WeaponAnimator` + `client/ArmIK`): el arma activa va en la mano derecha; brazos con cinemática inversa; reposo con el arma baja y al apuntar (clic derecho) o disparar sube; retroceso visual + sacudida de cámara; recarga por tipo (cargador / cartucho a cartucho); fogonazo. Primaria a la espalda y pistola en la cadera cuando no están en la mano. Todo se ajusta en `Config.WeaponHold`.
 
 **Pendiente (en orden):**
 1. **Probar con 2 o más jugadores** (ya se probó una vez con Isaac en el juego publicado; falta ver las poses nuevas, la furgoneta y el Tanque): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
@@ -39,8 +40,8 @@
 
 **Mapa de código** (`src/`):
 - `shared/Config.luau`: **todos** los valores de balance, sonidos, animaciones y textos de precios. `shared/Remotes.luau`: único canal cliente-servidor.
-- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
-- `client/`: HUDs (`AmmoHud`, `HealthHud`, `LatasHud`, `TeamHud`, `RadioHud`, `GameHud`, `ResultHud`, `DownedHud`, `EnemyBars`, `Plates`, `PromptUi`), `ZombieAnimator`, `DummyAnimator`, `PropAnimator`, `SoundController`, `CameraController`, `Shooting`, `Icons`, `Slant`.
+- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponRig`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
+- `client/`: HUDs (`AmmoHud`, `HealthHud`, `LatasHud`, `TeamHud`, `RadioHud`, `GameHud`, `ResultHud`, `DownedHud`, `EnemyBars`, `Plates`, `PromptUi`), `ZombieAnimator`, `DummyAnimator`, `PropAnimator`, `SoundController`, `CameraController`, `Shooting`, `WeaponAnimator`, `ArmIK`, `Icons`, `Slant`.
 - `character/Animate.client.luau`: animación de los sobrevivientes (reemplaza el script de Roblox).
 - `assets/*.glb` + `tools/glb_to_lua.py`: modelos 3D de origen y su conversor. Uso: `python tools/glb_to_lua.py <archivo-sin-.glb> <Modulo> [escala] [articulaciones]` (para cajas: articulación `tapa`). Los modelos se construyen con bloques nativos de Roblox, no se suben mallas.
 
@@ -52,6 +53,7 @@
 - Ocultar interfaz en `BillboardGui` con transparencia no basta: apagarla con `Enabled = false`.
 - `ColorSequence` admite máximo 20 puntos; las franjas usan 9.
 - Las piezas llegan al cliente poco a poco: los animadores esperan a tener todas las articulaciones (atributo `JointCount`) antes de registrar un modelo.
+- Al cargar el avatar, Roblox reemplaza las piezas del cuerpo justo después de `CharacterAdded`: espera `player:HasAppearanceLoaded()` antes de soldar algo al personaje (si no, queda pegado a una mano destruida y se cae).
 - Para probar con las herramientas de Studio: `require` desde la herramienta crea una copia separada de los módulos (no sirve para cambiar valores del juego en marcha); para probar compras se bajan precios con un comentario `TEMP-PRUEBA` y se restauran (revisar con `grep TEMP-PRUEBA`). Los prompts a veces necesitan reintentarse tras un teletransporte.
 - El tiempo de las pruebas puede pasar de los 8 s de `TakeTime` de la caja: tomar el arma en la misma llamada.
 

@@ -64,6 +64,82 @@ return {
 		},
 	},
 
+	-- Armas en la mano (ver server/WeaponRig y client/WeaponAnimator).
+	-- Los puntos Grip/Fore/Mag/Muzzle están en coordenadas del modelo (ZombieData): cañón hacia -X, arriba +Y.
+	--   Grip = donde la mano derecha agarra · Fore = donde se apoya la izquierda · Mag = cargador (o puerto de la escopeta)
+	-- HighGrip/LowGrip: posición de la mano derecha respecto al pecho (X derecha, Y arriba, -Z adelante), con el arma
+	-- arriba (apuntando) o abajo (en reposo). Kick = studs que patea hacia atrás, Rise = cuánto sube el cañón (rad),
+	-- Camera = sacudida de cámara por disparo (grados).
+	WeaponHold = {
+		-- Marco de la palma en la mano (R15): el arma queda con el cañón hacia donde apunta el antebrazo
+		HandGrip = CFrame.new(0, -0.16, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 1, 0), Vector3.new(0, 0, -1), Vector3.new(-1, 0, 0)),
+		LowPitch = -0.9, -- inclinación del arma en reposo (rad, negativo = hacia el suelo; cada arma puede poner el suyo)
+		RaiseTime = 1.5, -- segundos que el arma sigue arriba después de disparar
+		Convergence = 0.1, -- al apuntar el arma gira un poco hacia la derecha (rad): la cámara está sobre el hombro derecho y la mira queda al centro
+		RaiseSpeed = 9, -- qué tan rápido sube y baja
+		Belt = Vector3.new(-0.7, -1.4, -0.1), -- donde la mano izquierda busca cargadores y cartuchos (cadera izquierda)
+
+		Pistol = {
+			Scale = 0.9,
+			Grip = Vector3.new(0.446, 0.37, 0),
+			Fore = Vector3.new(0.42, 0.18, 0),
+			Mag = Vector3.new(0.5, 0.1, 0),
+			Muzzle = Vector3.new(-0.72, 0.84, 0),
+			HighGrip = Vector3.new(0.8, -0.3, -1.4), -- brazo estirado a la derecha y al frente: se ve junto al personaje con la cámara sobre el hombro
+			LowGrip = Vector3.new(0.85, -0.9, -0.6), -- en reposo va a un lado de la cadera, a la vista desde la cámara sobre el hombro
+			LowPitch = -0.3,
+			TwoHanded = false,
+			Support = false, -- al apuntar, la izquierda no la agarra (el brazo estirado no alcanza)
+			Reload = "Mag",
+			Kick = 0.25,
+			Rise = 0.12,
+			Camera = 1.2,
+		},
+		Rifle = {
+			Scale = 0.9,
+			Grip = Vector3.new(0.3, 0.31, 0),
+			Fore = Vector3.new(-0.55, 0.52, 0),
+			Mag = Vector3.new(-0.19, 0.25, 0),
+			Muzzle = Vector3.new(-1.95, 0.646, 0),
+			HighGrip = Vector3.new(0.4, -0.5, -0.35),
+			LowGrip = Vector3.new(0.7, -0.85, -0.3),
+			TwoHanded = true,
+			Reload = "Mag",
+			Kick = 0.22,
+			Rise = 0.05,
+			Camera = 0.6,
+		},
+		Shotgun = {
+			Scale = 0.9,
+			Grip = Vector3.new(0.289, 0.177, 0),
+			Fore = Vector3.new(-0.5, 0.3, 0),
+			Mag = Vector3.new(0, 0.32, 0), -- puerto de carga
+			Muzzle = Vector3.new(-1.254, 0.485, 0),
+			HighGrip = Vector3.new(0.4, -0.5, -0.35),
+			LowGrip = Vector3.new(0.7, -0.85, -0.3),
+			TwoHanded = true,
+			Reload = "Shell", -- cartuchos de uno en uno
+			ShellLoops = 4,
+			Kick = 0.5,
+			Rise = 0.3,
+			Camera = 3,
+		},
+		SMG = {
+			Scale = 0.9,
+			Grip = Vector3.new(0.2, 0.45, 0),
+			Fore = Vector3.new(-0.288, 0.3, 0),
+			Mag = Vector3.new(-0.288, 0.3, 0),
+			Muzzle = Vector3.new(-1.29, 0.774, 0),
+			HighGrip = Vector3.new(0.4, -0.5, -0.4),
+			LowGrip = Vector3.new(0.7, -0.85, -0.3),
+			TwoHanded = true,
+			Reload = "Mag",
+			Kick = 0.15,
+			Rise = 0.04,
+			Camera = 0.5,
+		},
+	},
+
 	-- Sonidos (Creator Store, gratis). Cambia cualquier id aquí para sustituirlo.
 	Sounds = {
 		Volume = { Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },

@@ -8,6 +8,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
+local WeaponRig = require(script.Parent.WeaponRig)
 
 local states = {} -- [Player] = { pistol, primary, current, reloading, lastShot, token }
 
@@ -22,8 +23,8 @@ local function newSlot(name)
 	}
 end
 
-local function newState()
-	return { pistol = newSlot("Pistol"), primary = nil, current = "pistol", reloading = false, lastShot = 0, token = 0 }
+local function newState(player)
+	return { player = player, pistol = newSlot("Pistol"), primary = nil, current = "pistol", reloading = false, lastShot = 0, token = 0 }
 end
 
 -- Caído o cargando a alguien: solo se puede usar la pistola
@@ -48,11 +49,20 @@ local function sendAmmo(player)
 	local cfg = Config.Weapons[slot.name]
 	local reserve = slot.reserve == math.huge and -1 or slot.reserve -- -1 = infinita
 	Remotes.AmmoUpdate:FireClient(player, slot.ammo, reserve, cfg.MagSize, state.reloading, cfg.Name)
+	WeaponRig.set(player, slot.name, state.primary and state.primary.name or nil)
+end
+
+-- Los demás clientes animan la recarga con estos tiempos (hora del servidor)
+local function setReloadAttributes(player, duration)
+	local now = duration and workspace:GetServerTimeNow() or nil
+	player:SetAttribute("ReloadStart", now)
+	player:SetAttribute("ReloadEnd", now and now + duration or nil)
 end
 
 local function cancelReload(state)
 	state.reloading = false
 	state.token += 1 -- invalida cualquier recarga en curso
+	setReloadAttributes(state.player, nil)
 end
 
 local function startReload(player)
@@ -69,6 +79,7 @@ local function startReload(player)
 	state.reloading = true
 	state.token += 1
 	local token = state.token
+	setReloadAttributes(player, cfg.ReloadTime)
 	sendAmmo(player)
 
 	task.delay(cfg.ReloadTime, function()
@@ -81,6 +92,7 @@ local function startReload(player)
 			slot.reserve -= taken
 		end
 		state.reloading = false
+		setReloadAttributes(player, nil)
 		sendAmmo(player)
 	end)
 end
@@ -262,7 +274,7 @@ end
 
 function Weapons.start()
 	local function setup(player)
-		local state = newState()
+		local state = newState(player)
 		states[player] = state
 
 		player.CharacterAdded:Connect(function()
