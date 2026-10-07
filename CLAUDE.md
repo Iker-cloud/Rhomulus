@@ -60,6 +60,8 @@
 
 **Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (no se ven capturas de pantalla desde las herramientas); proponer commit con mensaje corto en español y pedir confirmación antes del `push`. Iker comparte capturas de diseños de referencia para la interfaz.
 
+**Mapa 1 (después del MVP):** diseño en `docs/mapa-1-barrio.md` — barrio Morro Esperanza (referencia Brasil, todo en español) de la ciudad Rhomulus; 3 rutas por tramo que se juntan en cada punto seguro, 3 tramos y 2 puntos seguros, mapa de unos 800×240 studs, evento nuevo "Las garrafas" en el mercado, extracción en el estadio (Refugio Remo), botiquines, guía grande de objetivos (columna de luz, flecha en pantalla, flechas pintadas, un color por ruta). Primero mapa gris a nivel de calle; escaleras y azoteas después.
+
 **Ideas guardadas (después del MVP):** deudas entre jugadores y "separarse sale caro" (ver identidad del juego), infección con jeringa que se vuelve verde, ruido que atrae hordas, voces en español (la ambientación latina ya está decidida, ver Decisiones abiertas), rol para quien carga, selector de dificultad, nombre del juego, lista final de frases de revivir.
 
 ---
