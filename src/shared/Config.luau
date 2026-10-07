@@ -214,6 +214,18 @@ return {
 	-- Ojo: el servidor no ve las animaciones de los zombies (se animan en el cliente): la cabeza se toma en su pose base.
 	Headshot = { Multiplier = 2, RadiusScale = 0.4, Depth = 1.5, PartNames = { "Head", "saco_cabeza" } }, -- saco_cabeza = cabeza del maniquí
 
+	-- Guía de objetivo (client/ObjectiveGuide): columna de luz en el mundo, flecha en el borde de la pantalla y distancia.
+	-- El servidor publica la posición del objetivo de cada orden (GameState.OBJECTIVES).
+	Guide = {
+		Enabled = true,
+		Color = Color3.fromRGB(255, 205, 60),
+		BeaconHeight = 140, -- altura de la columna de luz (studs)
+		BeaconWidth = 4,
+		EdgeMargin = 70, -- px que separan la flecha del borde de la pantalla
+		ArrowSize = 64,
+		StudsPerMeter = 3.571, -- para mostrar la distancia en metros (un avatar de 5 studs ~ 1.75 m)
+	},
+
 	-- Tolerancia de puntería: radio (en studs) de la esfera con la que se busca un zombie cuando el rayo no le da.
 	-- Compensa el retraso de red: en pantalla los zombies van un poco por detrás de donde están en el servidor.
 	HitTolerance = 0.8,

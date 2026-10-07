@@ -21,9 +21,47 @@ local GameState = {}
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
 
+-- Hacia dónde debe ir el equipo en cada orden (clave = `tone`): devuelve la posición y el nombre que muestra la guía
+-- (client/ObjectiveGuide). Las órdenes que no están aquí no tienen objetivo.
+local OBJECTIVES = {
+	Advance = function()
+		return map.safeVolume.Position, "PUNTO SEGURO"
+	end,
+	Generator = function()
+		return map.generator.Position, "GENERADOR"
+	end,
+	Warning = function()
+		return map.gate.Position, "PORTÓN"
+	end,
+	Horde = function()
+		return map.gate.Position, "PORTÓN"
+	end,
+	Radio = function()
+		return map.radioModel:GetPivot().Position, "RADIO"
+	end,
+	Van = function()
+		return map.vanStop.Position, "VAN"
+	end,
+	Board = function()
+		return map.vanStop.Position, "VAN"
+	end,
+	Run = function()
+		return map.vanStop.Position, "VAN"
+	end,
+}
+
 -- `tone` es la clave de la orden en RadioHud.luau (define su color y quién la dice por radio)
 local function setStage(name, message, tone)
 	stage = name
+	local objective = map and OBJECTIVES[tone]
+	if objective then
+		local position, label = objective()
+		workspace:SetAttribute("ObjectivePos", position)
+		workspace:SetAttribute("ObjectiveName", label)
+	else
+		workspace:SetAttribute("ObjectivePos", nil)
+		workspace:SetAttribute("ObjectiveName", nil)
+	end
 	workspace:SetAttribute("Stage", name)
 	workspace:SetAttribute("Tone", tone)
 	workspace:SetAttribute("Message", message)
