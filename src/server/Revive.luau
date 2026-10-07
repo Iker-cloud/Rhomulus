@@ -124,7 +124,7 @@ local function carry(carrier, target)
 
 	carrying[carrier] = target
 	carriedBy[target] = carrier
-	Points.add(Config.Points.Carry)
+	Points.add(Config.Points.Carry, carrier)
 	carrier:SetAttribute("Carrying", target.Name)
 	PlayerState.refreshSpeed(carrier)
 

@@ -213,7 +213,7 @@ local function onFire(player, origin, direction)
 		end
 		if target.Health <= 0 and hit.model.Parent == workspace.Zombies then
 			Stats.add(player, "Kills")
-			Points.add(Config.Points.Kill[hit.model:GetAttribute("Kind")] or 0)
+			Points.add(Config.Points.Kill[hit.model:GetAttribute("Kind")] or 0, player)
 		end
 	end
 

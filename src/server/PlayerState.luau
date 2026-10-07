@@ -110,7 +110,7 @@ function PlayerState.revive(player, helper)
 	PlayerState.refreshSpeed(player)
 	if helper then
 		Stats.add(helper, "Revives")
-		Points.add(Config.Points.Revive)
+		Points.add(Config.Points.Revive, helper)
 		Points.feed(`{helper.DisplayName} revivió a {player.DisplayName}`)
 	end
 end
