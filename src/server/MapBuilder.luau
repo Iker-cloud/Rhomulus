@@ -4,7 +4,9 @@
 -- Eje de la partida (z creciente): Lobby -> Zona 1 -> Punto seguro -> Zona 2 (generador, portón) -> Extracción.
 -- El suelo es la Baseplate (cara superior en y = 0).
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local PropModel = require(script.Parent.PropModel)
 local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
 local Generador = require(script.Parent.ZombieData.Generador)
@@ -218,7 +220,7 @@ function MapBuilder.build(config)
 	-- Van de extracción
 	refs.vanStart = CFrame.new(0, 0, 236) -- a nivel del suelo; el frente de la furgoneta mira hacia -Z (hacia el equipo)
 	refs.vanStop = CFrame.new(0, 0, 175)
-	refs.vanVolume = volume(map, "VanVolume", -12, 12, 165, 185, 12)
+	refs.vanVolume = volume(map, "VanVolume", -14, 14, 162, 188, 14) -- cubre la furgoneta ya agrandada (Config.Game.VanScale)
 
 	-- Estaciones de munición (una por zona, en la acera): la caja de munición, mirando hacia la calle.
 	-- El Hitbox invisible lleva el prompt y la placa; la tapa se abre al comprar (PropAnimator).
@@ -263,7 +265,7 @@ end
 -- La van llega desde el fondo de la calle (se crea solo al llamar el rescate). Es el modelo de furgoneta-de-rescate.glb
 -- con las ruedas en articulaciones propias; el cliente la anima al llegar (VanAnimator).
 function MapBuilder.makeVan(position)
-	local model, hitbox = PropModel.build(Furgoneta, position, 0, { wheels = true })
+	local model, hitbox = PropModel.build(Furgoneta, position, 0, { wheels = true, scale = Config.Game.VanScale })
 	model.Name = "Van"
 	hitbox.CanCollide = false -- los sobrevivientes entran caminando
 	hitbox.Anchored = true

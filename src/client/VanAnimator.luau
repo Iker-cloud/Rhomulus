@@ -138,7 +138,7 @@ local function update(state, dt)
 	-- Ruedas: giran según lo que avanza (rotación negativa en X = rodar hacia el frente, que mira a -Z)
 	local moved = (state.lastPosition - cf.Position).Magnitude
 	state.lastPosition = cf.Position
-	state.wheelAngle += moved / WHEEL_RADIUS
+	state.wheelAngle += moved / (WHEEL_RADIUS * (model:GetAttribute("Scale") or 1))
 	local spin = CFrame.Angles(-state.wheelAngle, 0, 0)
 	for _, wheel in state.wheels do
 		wheel.Transform = spin

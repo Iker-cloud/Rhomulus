@@ -18,6 +18,32 @@ local function newPart(name, size, cframe)
 	return part
 end
 
+-- Copia del módulo de datos con todo multiplicado por `k` (posiciones y tamaños)
+local function scaleCFrame(cf, k)
+	return CFrame.new(cf.Position * k) * (cf - cf.Position)
+end
+
+local function scaleData(data, k)
+	local copy = table.clone(data)
+	copy.bounds = { min = data.bounds.min * k, max = data.bounds.max * k }
+	copy.root = table.clone(data.root)
+	copy.root.cf = scaleCFrame(data.root.cf, k)
+	copy.joints = {}
+	for i, joint in data.joints do
+		local j = table.clone(joint)
+		j.cf = scaleCFrame(joint.cf, k)
+		copy.joints[i] = j
+	end
+	copy.parts = {}
+	for i, piece in data.parts do
+		local p = table.clone(piece)
+		p.size = piece.size * k
+		p.cf = scaleCFrame(piece.cf, k)
+		copy.parts[i] = p
+	end
+	return copy
+end
+
 -- Piezas que giran con la rueda: "rueda_<id>", "llanta_<id>" y "buje_<id>" comparten articulación "rueda_<id>"
 local WHEEL_PREFIXES = { "rueda_", "llanta_", "buje_" }
 
@@ -30,9 +56,13 @@ local function wheelId(pieceName)
 end
 
 -- `position` es el punto del suelo y `yaw` el giro en radianes (el frente del modelo mira hacia -Z).
--- Con `options.wheels = true`, cada rueda del modelo (piezas "rueda_*", "llanta_*", "buje_*") queda en su propia
+-- `options.scale`: tamaño relativo (1 = el del modelo). Con `options.wheels = true`, cada rueda del modelo (piezas "rueda_*", "llanta_*", "buje_*") queda en su propia
 -- articulación para que el cliente la haga girar. Devuelve (modelo, hitbox).
 function PropModel.build(data, position, yaw, options)
+	local scale = options and options.scale or 1 -- options.scale agranda todo el modelo
+	if scale ~= 1 then
+		data = scaleData(data, scale)
+	end
 	local origin = CFrame.new(position) * CFrame.Angles(0, yaw or 0, 0)
 	local model = Instance.new("Model")
 	model.Name = data.rig
@@ -116,6 +146,7 @@ function PropModel.build(data, position, yaw, options)
 
 	model:SetAttribute("JointCount", #data.joints + extraJoints)
 	model:SetAttribute("Rig", data.rig)
+	model:SetAttribute("Scale", scale)
 	for _, joint in data.joints do
 		if joint.name == "tapa" then
 			model:SetAttribute("Open", false)

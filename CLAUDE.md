@@ -60,7 +60,7 @@
 
 **Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (no se ven capturas de pantalla desde las herramientas); proponer commit con mensaje corto en español y pedir confirmación antes del `push`. Iker comparte capturas de diseños de referencia para la interfaz.
 
-**Ideas guardadas (después del MVP):** deudas entre jugadores y "separarse sale caro" (ver identidad del juego), infección con jeringa que se vuelve verde, ruido que atrae hordas, ambientación latina y voces, rol para quien carga, selector de dificultad, nombre del juego, lista final de frases de revivir.
+**Ideas guardadas (después del MVP):** deudas entre jugadores y "separarse sale caro" (ver identidad del juego), infección con jeringa que se vuelve verde, ruido que atrae hordas, voces en español (la ambientación latina ya está decidida, ver Decisiones abiertas), rol para quien carga, selector de dificultad, nombre del juego, lista final de frases de revivir.
 
 ---
 
@@ -72,7 +72,7 @@ Un shooter cooperativo de zombies para 1 a 4 jugadores: el equipo cruza un mapa 
 
 | Campo | Decisión |
 | --- | --- |
-| Nombre | Por definir (nombre de trabajo: "Proyecto Zombies") |
+| Nombre | **Rhomulus** (decidido el 7 de oct. de 2026; falta confirmarlo con Isaac). Antes: "Proyecto Zombies" |
 | Género | Acción / supervivencia cooperativa, con cámara en primera y tercera persona |
 | Inspiración | Left 4 Dead: hordas, trabajo en equipo, revivir compañeros, extracción final; caja de armas al azar de los modos zombies de Call of Duty |
 | Plataforma | Roblox (PC primero; móvil y consola después del MVP) |
@@ -295,7 +295,7 @@ Cada fase termina con algo que se puede probar en Studio; no se pasa a la siguie
 - [x] Cámara: primera y tercera persona, a elección del jugador
 - [x] Estilo visual: realista pero optimizado para correr bien en todos lados
 - [x] Extracción distinta por mapa: van, auto deportivo y avión
-- [ ] Nombre y ambientación general del juego (pospuesto)
+- [x] Nombre: Rhomulus. Ambientación: **apocalipsis latinoamericano** (ciudad latina en ruinas: carteles pintados a mano, tiendas de barrio, buses, murales, radio de emergencia en español, jerga local). Se aplica después del MVP: primero textos, radio y frases; luego carteles y sonido ambiente
 - [x] Flujo de trabajo: Rojo + Git + GitHub desde el inicio
 - [ ] Lista final de frases para revivir
 - [x] Precios de la caja de armas y de la munición (500 y 150 latas; se pueden afinar en pruebas)

@@ -334,6 +334,7 @@ return {
 		GeneratorHorde = 40, -- tamaño de la horda al 100% (4 jugadores)
 		RadioHoldTime = 3,
 		ExtractionTime = 150, -- segundos hasta que llega la van
+		VanScale = 1.3, -- tamaño de la furgoneta respecto al modelo original (para que cuadre con los avatares)
 		VanArriveTime = 7, -- segundos que tarda la furgoneta en entrar por la calle y frenar
 		VanGrace = 5, -- margen para que suban los demás tras el primero
 		ResultTime = 15,
