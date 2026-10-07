@@ -22,10 +22,14 @@
 - Latas del equipo (antes "puntos"), caja de armas (500 latas), estaciones de munición (150 latas).
 - Sonido: disparos, recargas, gruñidos 3D, sirena de horda, música por estado, melodía de la caja.
 - Interfaz propia: munición junto a la mira (4 estilos), jeringa de sangre, latas, panel de radio por órdenes, placas de señalética, prompts con precio, barras de vida de enemigos, pantallas de victoria y derrota, tarjeta de caído.
-- Modelos 3D propios de: zombies, cajas de munición y misteriosa, maniquíes del lobby, generador y radio.
+- Modelos 3D propios de: zombies (común, rápido y Tanque), cajas de munición y misteriosa, maniquíes del lobby, generador, radio, furgoneta de rescate y armas (pistola, rifle de asalto, escopeta, subfusil).
+- Zombie Tanque (600 de vida, lento): aparece en la horda del generador y en la extracción (`Config.Director.Tank`).
+- Hitbox de zombies: caja invisible por zombie + tolerancia de puntería (`Config.HitTolerance`); los compañeros ya no bloquean las balas.
+- Poses de sobrevivientes (`client/PoseAnimator`): caído (se arrastra), arrodillado al revivir (atributo `Reviving`) y colgado al ser cargado.
+- Furgoneta: entra animada en el cliente (`client/VanAnimator`: frenada, ruedas, baliza, pitido). Armas: salen de la caja subiendo y girando (`WeaponBox`/`WeaponModel`); la pistola va enfundada en la cadera (`Holster`), sin animación; todavía no hay armas en la mano.
 
 **Pendiente (en orden):**
-1. **Probar con 2 o más jugadores** (Studio: Test > Clients and Servers): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
+1. **Probar con 2 o más jugadores** (ya se probó una vez con Isaac en el juego publicado; falta ver las poses nuevas, la furgoneta y el Tanque): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
 2. Balance (precios, zombies, horda, tiempos) y bugs que salgan de esa prueba.
 3. Revisar rendimiento: el zombie común tiene 86 piezas. Si baja el FPS, `Config.Zombie.Common.ModelDetail = "light"`. Meta: 30 FPS en celular.
 4. Probar las animaciones de sobrevivientes (paquete Antiguo): requiere que Rojo cargue `src/character`.

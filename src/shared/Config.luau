@@ -66,7 +66,7 @@ return {
 
 	-- Sonidos (Creator Store, gratis). Cambia cualquier id aquí para sustituirlo.
 	Sounds = {
-		Volume = { Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6 },
+		Volume = { Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },
 		Shot = {
 			Pistol = "rbxassetid://132539859090895",
 			Rifle = "rbxassetid://113879008765178",
@@ -83,6 +83,7 @@ return {
 			"rbxassetid://130156156621885",
 		},
 		HordeSiren = "rbxassetid://9119163479",
+		VanHorn = "rbxassetid://93042705532380", -- pitido de la furgoneta al entrar (dura 1.5 s)
 		BoxSpin = "rbxassetid://9046019442",
 		Music = {
 			Calm = "rbxassetid://9046799798", -- lobby, punto seguro y resultados
@@ -119,11 +120,15 @@ return {
 
 	-- Latas del equipo (la moneda compartida; el módulo se llama Points)
 	Points = {
-		Kill = { Common = 25, Fast = 40 },
+		Kill = { Common = 25, Fast = 40, Tank = 150 },
 		Revive = 50,
 		Carry = 20,
 		ZoneComplete = 100,
 	},
+
+	-- Tolerancia de puntería: radio (en studs) de la esfera con la que se busca un zombie cuando el rayo no le da.
+	-- Compensa el retraso de red: en pantalla los zombies van un poco por detrás de donde están en el servidor.
+	HitTolerance = 0.8,
 
 	-- Tolerancia anti-trampa: distancia máxima entre la cabeza y el origen del rayo
 	-- (la cámara en tercera persona queda detrás del jugador)
@@ -193,6 +198,18 @@ return {
 			AttackCooldown = 1,
 			ModelDetail = "light", -- hay muchos y corren: menos piezas por zombie
 		},
+
+		-- El Tanque (zombie-el-tanque.glb): grande, lento y muy resistente. Aparece en la horda del generador y en la extracción.
+		Tank = {
+			DisplayName = "Tanque",
+			Health = 600,
+			Speed = 7,
+			Damage = 35,
+			AttackRange = 6,
+			AttackCooldown = 1.6,
+			AgentRadius = 2.2, -- grosor para calcular rutas (los demás usan 1.5)
+			ModelDetail = "full",
+		},
 	},
 
 	Director = {
@@ -205,12 +222,18 @@ return {
 		ExtractionInterval = 2.5, -- segundos entre apariciones
 		ExtractionCapFactor = 0.6, -- fracción del máximo de vivos normal (con 1 jugador: 6 de 10)
 		MaxFailedSpawns = 4, -- si no hay punto oculto tantas veces seguidas, se relaja la regla de vista
-		-- Ajuste por número de jugadores
+		-- Tanque: uno al empezar la horda del generador y uno cada cierto tiempo durante la extracción
+		Tank = {
+			InHorde = true,
+			ExtractionFirst = 20, -- segundos después de llamar a la radio
+			ExtractionInterval = 45, -- segundos entre tanques (solo aparece otro si el anterior ya murió)
+		},
+		-- Ajuste por número de jugadores (MaxTanks = tanques vivos a la vez)
 		ByPlayers = {
-			[1] = { MaxAlive = 10, HordeScale = 0.25 },
-			[2] = { MaxAlive = 18, HordeScale = 0.6 },
-			[3] = { MaxAlive = 22, HordeScale = 0.8 },
-			[4] = { MaxAlive = 25, HordeScale = 1.0 },
+			[1] = { MaxAlive = 10, HordeScale = 0.25, MaxTanks = 1 },
+			[2] = { MaxAlive = 18, HordeScale = 0.6, MaxTanks = 1 },
+			[3] = { MaxAlive = 22, HordeScale = 0.8, MaxTanks = 2 },
+			[4] = { MaxAlive = 25, HordeScale = 1.0, MaxTanks = 2 },
 		},
 	},
 
@@ -222,6 +245,7 @@ return {
 		GeneratorHorde = 40, -- tamaño de la horda al 100% (4 jugadores)
 		RadioHoldTime = 3,
 		ExtractionTime = 150, -- segundos hasta que llega la van
+		VanArriveTime = 7, -- segundos que tarda la furgoneta en entrar por la calle y frenar
 		VanGrace = 5, -- margen para que suban los demás tras el primero
 		ResultTime = 15,
 	},

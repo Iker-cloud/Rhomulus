@@ -18,9 +18,21 @@ local function newPart(name, size, cframe)
 	return part
 end
 
+-- Piezas que giran con la rueda: "rueda_<id>", "llanta_<id>" y "buje_<id>" comparten articulación "rueda_<id>"
+local WHEEL_PREFIXES = { "rueda_", "llanta_", "buje_" }
+
+local function wheelId(pieceName)
+	for _, prefix in WHEEL_PREFIXES do
+		if pieceName:sub(1, #prefix) == prefix then
+			return pieceName:sub(#prefix + 1)
+		end
+	end
+end
+
 -- `position` es el punto del suelo y `yaw` el giro en radianes (el frente del modelo mira hacia -Z).
--- Devuelve (modelo, hitbox).
-function PropModel.build(data, position, yaw)
+-- Con `options.wheels = true`, cada rueda del modelo (piezas "rueda_*", "llanta_*", "buje_*") queda en su propia
+-- articulación para que el cliente la haga girar. Devuelve (modelo, hitbox).
+function PropModel.build(data, position, yaw, options)
 	local origin = CFrame.new(position) * CFrame.Angles(0, yaw or 0, 0)
 	local model = Instance.new("Model")
 	model.Name = data.rig
@@ -45,6 +57,20 @@ function PropModel.build(data, position, yaw)
 		anchors[joint.name] = anchor
 	end
 
+	local extraJoints = 0
+	if options and options.wheels then
+		for _, piece in data.parts do
+			if piece.name:sub(1, 6) == "rueda_" then
+				local anchor = newPart("J_" .. piece.name, Vector3.new(0.3, 0.3, 0.3), origin * CFrame.new(piece.cf.Position))
+				anchor.Transparency = 1
+				anchor.CanQuery = false
+				anchor.Parent = model
+				anchors[piece.name] = anchor
+				extraJoints += 1
+			end
+		end
+	end
+
 	for _, piece in data.parts do
 		local part = newPart(piece.name, piece.size, origin * piece.cf)
 		part.Color = piece.color
@@ -56,7 +82,8 @@ function PropModel.build(data, position, yaw)
 		end
 
 		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = anchors[piece.group]
+		local id = options and options.wheels and wheelId(piece.name)
+		weld.Part0 = id and anchors["rueda_" .. id] or anchors[piece.group]
 		weld.Part1 = part
 		weld.Parent = part
 		part.Parent = model
@@ -74,7 +101,20 @@ function PropModel.build(data, position, yaw)
 		motor.Parent = childAnchor
 	end
 
-	model:SetAttribute("JointCount", #data.joints)
+	-- Ruedas: articulación "rueda_<id>" del cuerpo a su ancla, con el eje de giro en X (lateral)
+	for name, anchor in anchors do
+		if name:sub(1, 6) == "rueda_" then
+			local motor = Instance.new("Motor6D")
+			motor.Name = name
+			motor.Part0 = hitbox
+			motor.Part1 = anchor
+			motor.C0 = hitbox.CFrame:Inverse() * anchor.CFrame
+			motor.C1 = CFrame.identity
+			motor.Parent = anchor
+		end
+	end
+
+	model:SetAttribute("JointCount", #data.joints + extraJoints)
 	model:SetAttribute("Rig", data.rig)
 	for _, joint in data.joints do
 		if joint.name == "tapa" then

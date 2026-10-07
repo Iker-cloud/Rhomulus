@@ -17,8 +17,12 @@ function Director.setZone(name)
 end
 
 -- Presión de la extracción: llegan despacio y con un tope más bajo (ver Config.Director)
+local nextTankTime = math.huge
+
 function Director.setBoost(on)
 	boost = on
+	-- En la extracción llega un tanque poco después de llamar a la radio y luego cada cierto tiempo
+	nextTankTime = on and os.clock() + Config.Director.Tank.ExtractionFirst or math.huge
 end
 
 local function getSpawnPoints()
@@ -88,7 +92,7 @@ end
 
 local failedSpawns = 0
 
-local function spawnOne()
+local function spawnOne(forcedKind)
 	-- Si varias veces seguidas no hay un punto fuera de la vista, se usa cualquiera que no esté demasiado cerca
 	local point = pickPoint(failedSpawns >= Config.Director.MaxFailedSpawns)
 	if not point then
@@ -96,13 +100,24 @@ local function spawnOne()
 		return false
 	end
 	failedSpawns = 0
-	local kind = math.random() < Config.Director.FastChance and "Fast" or "Common"
+	local kind = forcedKind or (math.random() < Config.Director.FastChance and "Fast" or "Common")
 	Zombies.spawn(kind, point)
 	return true
 end
 
+-- Un tanque, si no se pasó del máximo de tanques vivos para este número de jugadores
+local function spawnTank()
+	if Zombies.getAlive("Tank") >= getScaling().MaxTanks then
+		return false
+	end
+	return spawnOne("Tank")
+end
+
 -- Horda: aparece de golpe, respetando el límite de vivos. size es el tamaño al 100% (4 jugadores).
 function Director.spawnHorde(size)
+	if Config.Director.Tank.InHorde then
+		spawnTank()
+	end
 	local count = math.floor(size * getScaling().HordeScale + 0.5)
 	for _ = 1, count do
 		if Zombies.getAlive() >= getMaxAlive() then
@@ -116,8 +131,13 @@ end
 function Director.start()
 	task.spawn(function()
 		while true do
-			if zone and #Players:GetPlayers() > 0 and Zombies.getAlive() < getMaxAlive() then
-				spawnOne()
+			if zone and #Players:GetPlayers() > 0 then
+				if boost and os.clock() >= nextTankTime and spawnTank() then
+					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval
+				end
+				if Zombies.getAlive() < getMaxAlive() then
+					spawnOne()
+				end
 			end
 			task.wait(boost and Config.Director.ExtractionInterval or Config.Director.SpawnInterval)
 		end

@@ -11,11 +11,25 @@ local Points = require(script.Parent.Points)
 local PropModel = require(script.Parent.PropModel)
 local Weapons = require(script.Parent.Weapons)
 local CajaMisteriosa = require(script.Parent.ZombieData.CajaMisteriosa)
+local WeaponModel = require(script.Parent.WeaponModel)
+local RifleAsalto = require(script.Parent.ZombieData.RifleAsalto)
+local Escopeta = require(script.Parent.ZombieData.Escopeta)
+local Subfusil = require(script.Parent.ZombieData.Subfusil)
 
 local WeaponBox = {}
 
 local boxSpots = {} -- [zona] = { Vector3, ... } candidatos que calcula MapBuilder
 local current = nil -- caja activa: { model, prompt, label, display, state, rollId, pick, connection }
+
+-- Modelo 3D de cada arma de la caja. Si alguna no tiene modelo, sale como un cubo de luz.
+local WEAPON_MODELS = {
+	Rifle = RifleAsalto,
+	Shotgun = Escopeta,
+	SMG = Subfusil,
+}
+local DISPLAY_SCALE = 1.5 -- el arma sale más grande que en la mano para que se vea desde lejos
+local RISE_TIME = 0.6 -- segundos que tarda el arma en salir de la caja
+local HEIGHT_START, HEIGHT_END = 0.6, 3.8 -- altura sobre la base: dentro de la caja -> flotando encima
 
 local RARITY_COLOR = {
 	["Común"] = Color3.fromRGB(220, 220, 220),
@@ -44,11 +58,60 @@ local function setLabel(box, text, color)
 	box.base:SetAttribute("PlateColor", color or Color3.fromRGB(245, 200, 70))
 end
 
+-- Muestra el arma `name` sobre la caja (el modelo 3D, o el cubo de luz si no tiene) con la luz de su rareza
+local function hideWeapon(box)
+	if box.shown == box.display then
+		box.display.Transparency = 1
+	elseif box.shown then
+		box.shown.Parent = nil
+	end
+	box.shown = nil
+end
+
+local placeWeapon -- se define más abajo
+
+local function showWeapon(box, name)
+	hideWeapon(box)
+	local color = RARITY_COLOR[Config.Weapons[name].Rarity]
+	box.display.Color = color
+	box.light.Color = color
+	local weaponModel = box.models[name]
+	if weaponModel then
+		weaponModel.Parent = box.model
+		box.shown = weaponModel
+	else
+		box.display.Transparency = 0
+		box.shown = box.display
+	end
+	placeWeapon(box, 0) -- que aparezca ya en su sitio, sin esperar al siguiente cuadro
+end
+
+-- Coloca el arma que se muestra: sale de la caja, gira y flota
+function placeWeapon(box, dt)
+	local shown = box.shown
+	if not shown then
+		return
+	end
+	local elapsed = os.clock() - box.openedAt
+	local rise = 1 - (1 - math.clamp(elapsed / RISE_TIME, 0, 1)) ^ 3 -- sale rápido y frena
+	local height = HEIGHT_START + (HEIGHT_END - HEIGHT_START) * rise
+	if box.state == "ready" then
+		height += math.sin(os.clock() * 2) * 0.2
+	end
+	box.angle += dt * (box.state == "spinning" and 7 or 1.6)
+	local cframe = box.base.CFrame * CFrame.new(0, height, 0) * CFrame.Angles(0, box.angle, 0)
+	if shown:IsA("Model") then
+		shown:PivotTo(cframe)
+	else
+		shown.CFrame = cframe
+	end
+end
+
 local function resetToIdle(box)
 	box.state = "idle"
 	box.pick = nil
 	box.model:SetAttribute("Open", false)
-	box.display.Transparency = 1
+	hideWeapon(box)
 	box.prompt.ActionText = "Comprar caja de armas"
 	box.prompt.ObjectText = `{Config.WeaponBox.Cost} latas`
 	box.prompt.HoldDuration = 0.5
@@ -69,8 +132,20 @@ local function build(position)
 	display.CanCollide = false
 	display.Material = Enum.Material.Neon
 	display.Transparency = 1
-	display.CFrame = base.CFrame * CFrame.new(0, 3.5, 0)
+	display.CFrame = base.CFrame * CFrame.new(0, HEIGHT_END, 0)
 	display.Parent = model
+
+	-- Luz del color de la rareza sobre la caja
+	local light = Instance.new("PointLight")
+	light.Range = 14
+	light.Brightness = 2
+	light.Parent = display
+
+	-- Modelos 3D de las armas, listos (fuera del mundo) hasta que se necesiten
+	local models = {}
+	for name, data in WEAPON_MODELS do
+		models[name] = WeaponModel.build(data, DISPLAY_SCALE)
+	end
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Style = Enum.ProximityPromptStyle.Custom -- la interfaz la dibuja PromptUi.luau
@@ -84,7 +159,7 @@ local function build(position)
 	CollectionService:AddTag(base, "Plate")
 
 	model.Parent = workspace.Map
-	return { model = model, base = base, display = display, prompt = prompt, state = "idle", rollId = 0 }
+	return { model = model, base = base, display = display, light = light, models = models, angle = 0, openedAt = 0, state = "idle", prompt = prompt, rollId = 0 }
 end
 
 local function onTriggered(box, player)
@@ -107,7 +182,7 @@ local function onTriggered(box, player)
 
 		-- Las armas giran unos segundos y se detiene en una al azar
 		local pick = rollWeapon()
-		box.display.Transparency = 0
+		box.openedAt = os.clock()
 		local music = Instance.new("Sound")
 		music.SoundId = Config.Sounds.BoxSpin
 		music.Volume = Config.Sounds.Volume.Box
@@ -122,7 +197,7 @@ local function onTriggered(box, player)
 			end
 			local name = pool[math.random(#pool)]
 			setLabel(box, Config.Weapons[name].Name, RARITY_COLOR[Config.Weapons[name].Rarity])
-			box.display.Color = RARITY_COLOR[Config.Weapons[name].Rarity]
+			showWeapon(box, name)
 			task.wait(0.1)
 		end
 		music:Destroy()
@@ -133,7 +208,7 @@ local function onTriggered(box, player)
 		local cfg = Config.Weapons[pick]
 		box.state = "ready"
 		box.pick = pick
-		box.display.Color = RARITY_COLOR[cfg.Rarity]
+		showWeapon(box, pick)
 		setLabel(box, `{cfg.Name} ({cfg.Rarity})`, RARITY_COLOR[cfg.Rarity])
 		box.prompt.ActionText = `Tomar {cfg.Name}`
 		box.prompt.ObjectText = cfg.Rarity
@@ -181,7 +256,7 @@ function WeaponBox.place(zoneName)
 	-- Gira mientras la caja existe
 	box.connection = RunService.Heartbeat:Connect(function(dt)
 		if box.state ~= "idle" then
-			box.display.CFrame = box.base.CFrame * CFrame.new(0, 3.5, 0) * CFrame.Angles(0, os.clock() * 3, 0)
+			placeWeapon(box, dt)
 		end
 	end)
 	current = box

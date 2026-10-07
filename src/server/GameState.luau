@@ -3,7 +3,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
-local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -274,20 +273,18 @@ local function extraction()
 	end
 
 	-- La van entra por el fondo de la calle
-	local van = MapBuilder.makeVan()
-	van:PivotTo(map.vanStart)
+	-- El servidor solo dice de dónde a dónde y cuándo: cada cliente anima la entrada (VanAnimator), así se ve fluida
+	local van = MapBuilder.makeVan(map.vanStart.Position)
+	local arrivalTime = Config.Game.VanArriveTime
+	van:SetAttribute("From", map.vanStart)
+	van:SetAttribute("To", map.vanStop)
+	van:SetAttribute("Duration", arrivalTime)
+	van:SetAttribute("Start", workspace:GetServerTimeNow())
 	van.Parent = workspace.Map
-
-	local position = Instance.new("CFrameValue")
-	position.Value = map.vanStart
-	position.Changed:Connect(function(value)
-		van:PivotTo(value)
-	end)
-	local tween = TweenService:Create(position, TweenInfo.new(6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Value = map.vanStop })
 	setStage("Extraction", "¡La van está llegando!", "Van")
-	tween:Play()
-	tween.Completed:Wait()
-	position:Destroy()
+	task.wait(arrivalTime)
+	van:PivotTo(map.vanStop) -- posición final real (colisiones y detección de quién subió)
+	van:SetAttribute("Arrived", true)
 
 	setStage("Extraction", "¡Súbanse a la van!", "Board")
 	local reached = waitUntil(function()

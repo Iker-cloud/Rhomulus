@@ -89,6 +89,29 @@ function ZombieModel.build(data, stats, position)
 		part.Parent = model
 	end
 
+	-- Caja invisible que cubre torso, cabeza y piernas: el cuerpo son bloques sueltos con huecos y sin esta caja
+	-- las balas se cuelan entre ellos (los brazos siguen siendo piezas reales)
+	local low, high
+	for _, piece in data.parts do
+		local group = piece.group
+		if group:sub(1, 6) ~= "brazo_" and group:sub(1, 10) ~= "antebrazo_" then
+			local center, half = piece.cf.Position, piece.size / 2
+			low = low and low:Min(center - half) or center - half
+			high = high and high:Max(center + half) or center + half
+		end
+	end
+	if low and high then
+		local size = high - low
+		local hitbox = newPart("Hitbox", Vector3.new(math.max(size.X, 2), size.Y, math.max(size.Z, 1.5)), CFrame.new((low + high) / 2))
+		hitbox.Transparency = 1
+		hitbox.CanQuery = true
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = hitbox
+		weld.Parent = hitbox
+		hitbox.Parent = model
+	end
+
 	-- Articulaciones: arrancan en la pose del modelo y se doblan con Transform
 	for _, joint in data.joints do
 		local parentAnchor = anchors[joint.parent]

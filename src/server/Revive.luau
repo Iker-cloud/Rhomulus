@@ -179,10 +179,22 @@ local function onCharacter(player, character)
 
 	revivePrompt.ObjectText = player.DisplayName
 
+	-- Mientras mantiene E, quien revive lleva este atributo (hora en que terminaría); el cliente lo usa para arrodillarlo
+	local function setReviving(helper, on)
+		if helper.Character then
+			helper.Character:SetAttribute("Reviving", on and workspace:GetServerTimeNow() + Config.Revive.HoldTime + 0.5 or nil)
+		end
+	end
+
+	revivePrompt.PromptButtonHoldEnded:Connect(function(helper)
+		setReviving(helper, false)
+	end)
+
 	revivePrompt.PromptButtonHoldBegan:Connect(function(helper)
 		if not canHelp(helper, player) then
 			return
 		end
+		setReviving(helper, true)
 		say(helper.Character, randomOf(Config.Revive.ReviverPhrases))
 		task.delay(Config.Revive.ReplyDelay, function()
 			if PlayerState.get(player) == "Downed" then
@@ -192,6 +204,7 @@ local function onCharacter(player, character)
 	end)
 
 	revivePrompt.Triggered:Connect(function(helper)
+		setReviving(helper, false)
 		if canHelp(helper, player) then
 			PlayerState.revive(player, helper)
 		end

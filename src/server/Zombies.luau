@@ -13,6 +13,7 @@ local Zombies = {}
 local MODELS = {
 	Common = require(script.Parent.ZombieData.Brotado),
 	Fast = require(script.Parent.ZombieData.Desbocado),
+	Tank = require(script.Parent.ZombieData.Tanque),
 }
 
 local folder = Instance.new("Folder")
@@ -38,7 +39,7 @@ end
 
 local function think(humanoid, root, stats)
 	local path = PathfindingService:CreatePath({
-		AgentRadius = 1.5,
+		AgentRadius = stats.AgentRadius or 1.5,
 		AgentHeight = 5.5,
 		AgentCanJump = true,
 	})
@@ -88,12 +89,12 @@ local function think(humanoid, root, stats)
 	end
 end
 
--- Zombies vivos ahora mismo (lo usa el director para respetar el límite)
-function Zombies.getAlive()
+-- Zombies vivos ahora mismo (lo usa el director para respetar el límite); con `kind` cuenta solo ese tipo
+function Zombies.getAlive(kind)
 	local count = 0
 	for _, model in folder:GetChildren() do
 		local humanoid = model:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.Health > 0 then
+		if humanoid and humanoid.Health > 0 and (not kind or model:GetAttribute("Kind") == kind) then
 			count += 1
 		end
 	end
@@ -105,7 +106,7 @@ function Zombies.clear()
 	folder:ClearAllChildren()
 end
 
--- Crea un zombie del tipo dado ("Common" o "Fast") en la posición (a nivel del suelo). Devuelve el modelo.
+-- Crea un zombie del tipo dado ("Common", "Fast" o "Tank") en la posición (a nivel del suelo). Devuelve el modelo.
 -- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
 function Zombies.spawn(kind, position)
 	local stats = Config.Zombie[kind]

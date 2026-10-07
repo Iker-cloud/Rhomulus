@@ -9,6 +9,7 @@ local PropModel = require(script.Parent.PropModel)
 local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
 local Generador = require(script.Parent.ZombieData.Generador)
 local Radio = require(script.Parent.ZombieData.Radio)
+local Furgoneta = require(script.Parent.ZombieData.Furgoneta)
 
 local MapBuilder = {}
 
@@ -215,8 +216,8 @@ function MapBuilder.build(config)
 	label(radio, "RADIO", Color3.fromRGB(110, 225, 150))
 
 	-- Van de extracción
-	refs.vanStart = CFrame.new(0, 3.5, 236)
-	refs.vanStop = CFrame.new(0, 3.5, 175)
+	refs.vanStart = CFrame.new(0, 0, 236) -- a nivel del suelo; el frente de la furgoneta mira hacia -Z (hacia el equipo)
+	refs.vanStop = CFrame.new(0, 0, 175)
 	refs.vanVolume = volume(map, "VanVolume", -12, 12, 165, 185, 12)
 
 	-- Estaciones de munición (una por zona, en la acera): la caja de munición, mirando hacia la calle.
@@ -259,29 +260,29 @@ function MapBuilder.build(config)
 	return refs
 end
 
--- La van llega desde el fondo de la calle (se crea solo al llamar el rescate)
-function MapBuilder.makeVan()
-	local model = Instance.new("Model")
+-- La van llega desde el fondo de la calle (se crea solo al llamar el rescate). Es el modelo de furgoneta-de-rescate.glb
+-- con las ruedas en articulaciones propias; el cliente la anima al llegar (VanAnimator).
+function MapBuilder.makeVan(position)
+	local model, hitbox = PropModel.build(Furgoneta, position, 0, { wheels = true })
 	model.Name = "Van"
+	hitbox.CanCollide = false -- los sobrevivientes entran caminando
+	hitbox.Anchored = true
+	hitbox.PivotOffset = hitbox.CFrame:Inverse() * CFrame.new(position) -- el pivote del modelo es el punto del suelo (así PivotTo lo coloca donde se pide)
 
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Size = Vector3.new(8, 6, 16)
-	body.Color = Color3.fromRGB(235, 235, 235)
-	body.Anchored = true
-	body.CanCollide = false
-	body.Parent = model
+	-- Faros delanteros: luz sobre la calle
+	for _, name in { "faro_izq", "faro_der" } do
+		local lamp = model:FindFirstChild(name)
+		if lamp then
+			local light = Instance.new("SpotLight")
+			light.Face = Enum.NormalId.Back -- el frente del modelo mira hacia -Z; el foco sale hacia ese lado
+			light.Brightness = 3
+			light.Range = 45
+			light.Angle = 60
+			light.Parent = lamp
+		end
+	end
 
-	local cab = Instance.new("Part")
-	cab.Name = "Cab"
-	cab.Size = Vector3.new(8, 4, 5)
-	cab.Color = Color3.fromRGB(200, 200, 205)
-	cab.Anchored = true
-	cab.CanCollide = false
-	cab.CFrame = body.CFrame * CFrame.new(0, -1, -10.5)
-	cab.Parent = model
-
-	model.PrimaryPart = body
+	CollectionService:AddTag(model, "VanRig")
 	return model
 end
 

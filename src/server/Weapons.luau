@@ -127,9 +127,22 @@ local function onFire(player, origin, direction)
 	slot.ammo -= 1
 	sendAmmo(player)
 
+	-- El rayo atraviesa a todos los jugadores (un compañero en la línea de fuego no debe bloquear la bala)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character }
+	local ignored = {}
+	for _, other in Players:GetPlayers() do
+		if other.Character then
+			table.insert(ignored, other.Character)
+		end
+	end
+	params.FilterDescendantsInstances = ignored
+
+	-- Segunda búsqueda, solo contra zombies y con una esfera: si el rayo fino pasa rozando a uno, cuenta como acierto
+	-- siempre que no haya una pared en medio
+	local zombieParams = RaycastParams.new()
+	zombieParams.FilterType = Enum.RaycastFilterType.Include
+	zombieParams.FilterDescendantsInstances = { workspace.Zombies }
 
 	local unit = direction.Unit
 	local hits = {} -- [Humanoid] = { model, damage }
@@ -138,6 +151,13 @@ local function onFire(player, origin, direction)
 	for _ = 1, cfg.Pellets do
 		local dir = spread(unit, cfg.Spread)
 		local result = workspace:Raycast(origin, dir * cfg.Range, params)
+		if not (result and result.Instance:IsDescendantOf(workspace.Zombies)) then
+			local limit = result and (result.Position - origin).Magnitude or cfg.Range
+			local near = workspace:Spherecast(origin, Config.HitTolerance, dir * limit, zombieParams)
+			if near then
+				result = near
+			end
+		end
 		table.insert(endPoints, result and result.Position or origin + dir * cfg.Range)
 
 		if result then

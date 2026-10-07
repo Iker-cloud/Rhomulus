@@ -15,6 +15,14 @@ local PROFILES = {
 		lean = 0, twist = 0.12, headBob = 0.05, jaw = 0.08, jawAttack = 0.5,
 		lungeArmL = 0.9, lungeArmR = 0.5,
 	},
+	-- Tanque: paso lento y pesado, con los brazos enormes balanceándose
+	Tanque = {
+		freq = 0.5,
+		legL = 0.45, legR = 0.45, kneeL = 0.55, kneeR = 0.55,
+		armL = 0.35, armR = 0.35, elbowL = 0.25, elbowR = 0.25,
+		lean = 0.1, twist = 0.18, headBob = 0.04, jaw = 0.1, jawAttack = 0.5,
+		lungeArmL = 1.3, lungeArmR = 1.3,
+	},
 	Desbocado = {
 		freq = 0.55,
 		legL = 0.95, legR = 0.95, kneeL = 1.2, kneeR = 1.2,
