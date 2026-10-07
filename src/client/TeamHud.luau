@@ -87,7 +87,7 @@ function TeamHud.start()
 
 	local panel = Instance.new("Frame")
 	panel.BackgroundTransparency = 1
-	panel.Position = UDim2.fromOffset(20, 20)
+	panel.Position = UDim2.fromOffset(20, 76) -- debajo de la barra superior de Roblox (menú y chat)
 	panel.Size = UDim2.fromOffset(220, 0)
 	panel.AutomaticSize = Enum.AutomaticSize.Y
 	panel.Parent = gui
