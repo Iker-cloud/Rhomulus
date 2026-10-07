@@ -87,6 +87,7 @@ local function buildRig(player, character)
 		dip = 0, -- baja el arma al sacar otra
 		key = nil,
 		last = {},
+		anim = {},
 		touched = false,
 	}
 end
@@ -125,14 +126,24 @@ local function reloadHand(hold, t, fore, mag, belt)
 	return mag:Lerp(fore, smooth((t - 0.85) / 0.15))
 end
 
+-- Escribe el Transform de una articulación mezclado con la animación normal según `weight`.
+-- La animación normal también escribe estos Transform (y a veces repite el mismo valor), así que se recuerda la última
+-- pose que puso ella (rig.anim): si el valor actual no es el que escribimos nosotros, es de la animación.
 local function writeJoint(rig, name, transform, weight)
 	local motor = rig.motors[name]
-	-- Si la animación normal no cambió la articulación desde la última vez, parte de la pose neutra
-	local base = motor.Transform
-	if base == rig.last[name] then
-		base = CFrame.identity
+	local current = motor.Transform
+	if current ~= rig.last[name] then
+		rig.anim[name] = current
 	end
-	local result = weight >= 0.999 and transform or base:Lerp(transform, weight)
+	if weight <= 0.001 then
+		-- Sin peso: manda la animación normal (si veníamos escribiendo, se le devuelve su pose)
+		if rig.last[name] ~= nil then
+			rig.last[name] = nil
+			motor.Transform = rig.anim[name] or CFrame.identity
+		end
+		return
+	end
+	local result = weight >= 0.999 and transform or (rig.anim[name] or CFrame.identity):Lerp(transform, weight)
 	rig.last[name] = result
 	motor.Transform = result
 end
@@ -144,8 +155,9 @@ local function release(rig)
 	rig.touched = false
 	for name, motor in rig.motors do
 		if motor.Transform == rig.last[name] then
-			motor.Transform = CFrame.identity
+			motor.Transform = rig.anim[name] or CFrame.identity
 		end
+		rig.last[name] = nil
 	end
 end
 
@@ -231,7 +243,7 @@ local function update(rig, dt)
 
 	local lowPitch = (hold.LowPitch or Hold.LowPitch) + 0.25 * math.clamp(rig.pitch, -0.5, 0.5)
 	local pitch = lowPitch + (rig.pitch - lowPitch) * raise + hold.Rise * rig.kick + extraPitch - 0.8 * rig.dip
-	local frame = CFrame.new(anchor) * yaw * CFrame.Angles(0, -Hold.Convergence * raise, 0) * CFrame.Angles(pitch, 0, 0)
+	local frame = CFrame.new(anchor) * yaw * CFrame.Angles(0, -(hold.Convergence or Hold.Convergence) * raise, 0) * CFrame.Angles(pitch, 0, 0)
 	local gunRot = frame.Rotation * GUN_FROM_AIM * CFrame.Angles(cantRoll, 0, 0)
 	local gripAim = hold.LowGrip:Lerp(hold.HighGrip, raise)
 	local gripWorld = frame * gripAim + gunRot * Vector3.new(hold.Kick * rig.kick, 0, 0)

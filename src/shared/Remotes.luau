@@ -14,6 +14,8 @@ local NAMES = {
 	"Results", -- servidor -> todos: (won, stats) al terminar la partida
 	"Drop", -- cliente -> servidor: soltar al compañero que se carga
 	"Shot", -- servidor -> todos: (shooter, from, endPoints, weaponKey) trazadores y sonido
+	"Sprint", -- cliente -> servidor: (bool) quiere correr
+	"Crit", -- servidor -> cliente: (killed) el disparo le dio a la cabeza de un zombie
 	"Aim", -- cliente -> servidor: (pitch, aiming) hacia dónde mira, para que los demás vean el arma
 }
 

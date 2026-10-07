@@ -1,5 +1,6 @@
 -- Barra de vida de los zombies y los maniquíes: nombre arriba, calavera en un círculo, barra inclinada y el número de vida.
--- Solo aparece sobre los zombies heridos y cercanos. Se dibuja en el cliente a partir de Humanoid.DisplayName.
+-- Solo aparece sobre los zombies heridos y cercanos, y se queda un momento tras cada golpe (así también se ve en los que
+-- mueren de uno o dos tiros). Se dibuja en el cliente a partir de Humanoid.DisplayName.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -12,6 +13,7 @@ local BAR_WIDTH = 112
 local BAR_HEIGHT = 14
 local SLANT = 8
 local SHOW_DISTANCE = 60
+local HOLD_AFTER_HIT = 1.2 -- segundos que sigue visible después de recibir daño, aunque ya haya muerto
 
 local BLOOD = Color3.fromRGB(226, 75, 60)
 local LOW = Color3.fromRGB(255, 142, 50)
@@ -119,6 +121,8 @@ local function build(model)
 		ring = ring,
 		number = number,
 		displayed = humanoid.Health / humanoid.MaxHealth,
+		lastHealth = humanoid.Health,
+		lastHit = -100,
 		drawnWidth = -1,
 		drawnColor = nil,
 	}
@@ -166,9 +170,15 @@ function EnemyBars.start()
 		local camera = workspace.CurrentCamera
 		for _, bar in bars do
 			local humanoid = bar.humanoid
+			local now = os.clock()
+			if humanoid.Health < bar.lastHealth then
+				bar.lastHit = now
+			end
+			bar.lastHealth = humanoid.Health
 			local damaged = humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth
+			local recentlyHit = now - bar.lastHit < HOLD_AFTER_HIT
 			local near = (bar.root.Position - camera.CFrame.Position).Magnitude <= SHOW_DISTANCE
-			local visible = damaged and near
+			local visible = (damaged or recentlyHit) and near
 			-- Se apaga por completo (la transparencia sola no oculta bien los carteles)
 			if bar.gui.Enabled ~= visible then
 				bar.gui.Enabled = visible

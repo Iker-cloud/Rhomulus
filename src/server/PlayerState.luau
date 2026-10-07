@@ -14,6 +14,7 @@ local PlayerState = {}
 PlayerState.Changed = Instance.new("BindableEvent")
 
 local bleedTokens = {} -- [Player] = number, invalida desangrados anteriores
+local sprinting = {} -- [Player] = true mientras mantiene Shift (lo dice el cliente; solo vale en estado Normal)
 local safePoint = nil -- CFrame del último punto seguro; nil = aparición por defecto
 
 local function getHumanoid(player)
@@ -40,9 +41,16 @@ function PlayerState.refreshSpeed(player)
 		humanoid.WalkSpeed = Config.Player.DownedWalkSpeed
 	elseif player:GetAttribute("Carrying") then
 		humanoid.WalkSpeed = Config.Player.CarrySpeed
+	elseif sprinting[player] then
+		humanoid.WalkSpeed = Config.Player.SprintSpeed
 	else
 		humanoid.WalkSpeed = Config.Player.WalkSpeed
 	end
+end
+
+function PlayerState.setSprinting(player, on)
+	sprinting[player] = on or nil
+	PlayerState.refreshSpeed(player)
 end
 
 function PlayerState.setSafePoint(cframe)
@@ -169,6 +177,11 @@ function PlayerState.start()
 	end
 
 	Remotes.SelfRevive.OnServerEvent:Connect(PlayerState.selfRevive)
+	Remotes.Sprint.OnServerEvent:Connect(function(player, on)
+		if typeof(on) == "boolean" then
+			PlayerState.setSprinting(player, on)
+		end
+	end)
 
 	Players.PlayerAdded:Connect(setup)
 	for _, player in Players:GetPlayers() do
@@ -176,6 +189,7 @@ function PlayerState.start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		bleedTokens[player] = nil
+		sprinting[player] = nil
 	end)
 end
 

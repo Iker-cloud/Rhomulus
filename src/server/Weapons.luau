@@ -108,6 +108,23 @@ local function spread(direction, degrees)
 	return cf.LookVector
 end
 
+-- ¿El rayo pasa por la cabeza del zombie? (la caja invisible del zombie tapa la cabeza, así que se mide la cercanía)
+local function isHeadshot(model, origin, direction, hitDistance)
+	local head
+	for _, name in Config.Headshot.PartNames do
+		head = model:FindFirstChild(name)
+		if head then
+			break
+		end
+	end
+	if not (head and head:IsA("BasePart")) then
+		return false
+	end
+	local along = math.clamp((head.Position - origin):Dot(direction), 0, hitDistance + Config.Headshot.Depth)
+	local radius = head.Size.Magnitude * Config.Headshot.RadiusScale
+	return (head.Position - (origin + direction * along)).Magnitude <= radius
+end
+
 local function onFire(player, origin, direction)
 	local state = states[player]
 	local character = player.Character
@@ -179,16 +196,21 @@ local function onFire(player, origin, direction)
 			if target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
 				local hit = hits[target]
 				if not hit then
-					hit = { model = model, damage = 0 }
+					hit = { model = model, damage = 0, crit = false }
 					hits[target] = hit
 				end
-				hit.damage += cfg.Damage
+				local crit = isHeadshot(model, origin, dir, (result.Position - origin).Magnitude)
+				hit.damage += crit and cfg.Damage * Config.Headshot.Multiplier or cfg.Damage
+				hit.crit = hit.crit or crit
 			end
 		end
 	end
 
 	for target, hit in hits do
 		target:TakeDamage(hit.damage)
+		if hit.crit then
+			Remotes.Crit:FireClient(player, target.Health <= 0)
+		end
 		if target.Health <= 0 and hit.model.Parent == workspace.Zombies then
 			Stats.add(player, "Kills")
 			Points.add(Config.Points.Kill[hit.model:GetAttribute("Kind")] or 0)

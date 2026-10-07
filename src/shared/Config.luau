@@ -75,7 +75,7 @@ return {
 		HandGrip = CFrame.new(0, -0.16, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 1, 0), Vector3.new(0, 0, -1), Vector3.new(-1, 0, 0)),
 		LowPitch = -0.9, -- inclinación del arma en reposo (rad, negativo = hacia el suelo; cada arma puede poner el suyo)
 		RaiseTime = 1.5, -- segundos que el arma sigue arriba después de disparar
-		Convergence = 0.1, -- al apuntar el arma gira un poco hacia la derecha (rad): la cámara está sobre el hombro derecho y la mira queda al centro
+		Convergence = 0.1, -- al apuntar el arma gira hacia la derecha (rad): la cámara está sobre el hombro derecho y la mira queda al centro. Cada arma puede poner la suya
 		RaiseSpeed = 9, -- qué tan rápido sube y baja
 		Belt = Vector3.new(-0.7, -1.4, -0.1), -- donde la mano izquierda busca cargadores y cartuchos (cadera izquierda)
 
@@ -98,10 +98,13 @@ return {
 		Rifle = {
 			Scale = 0.9,
 			Grip = Vector3.new(0.3, 0.31, 0),
-			Fore = Vector3.new(-0.55, 0.52, 0),
+			Fore = Vector3.new(-0.2, 0.52, 0),
 			Mag = Vector3.new(-0.19, 0.25, 0),
 			Muzzle = Vector3.new(-1.95, 0.646, 0),
-			HighGrip = Vector3.new(0.4, -0.5, -0.35),
+			-- Apuntando: a la altura del hombro y a la derecha, girada hacia la mira. Medido con la pose real: se ve desde
+			-- la cámara sobre el hombro y no atraviesa el brazo (las armas largas no pueden ir al centro del pecho)
+			HighGrip = Vector3.new(0.7, 0.3, -0.5),
+			Convergence = 0.35,
 			LowGrip = Vector3.new(0.7, -0.85, -0.3),
 			TwoHanded = true,
 			Reload = "Mag",
@@ -112,10 +115,11 @@ return {
 		Shotgun = {
 			Scale = 0.9,
 			Grip = Vector3.new(0.289, 0.177, 0),
-			Fore = Vector3.new(-0.5, 0.3, 0),
+			Fore = Vector3.new(-0.2, 0.3, 0),
 			Mag = Vector3.new(0, 0.32, 0), -- puerto de carga
 			Muzzle = Vector3.new(-1.254, 0.485, 0),
-			HighGrip = Vector3.new(0.4, -0.5, -0.35),
+			HighGrip = Vector3.new(0.7, 0.3, -0.5),
+			Convergence = 0.35,
 			LowGrip = Vector3.new(0.7, -0.85, -0.3),
 			TwoHanded = true,
 			Reload = "Shell", -- cartuchos de uno en uno
@@ -127,10 +131,11 @@ return {
 		SMG = {
 			Scale = 0.9,
 			Grip = Vector3.new(0.2, 0.45, 0),
-			Fore = Vector3.new(-0.288, 0.3, 0),
+			Fore = Vector3.new(-0.15, 0.55, 0),
 			Mag = Vector3.new(-0.288, 0.3, 0),
 			Muzzle = Vector3.new(-1.29, 0.774, 0),
-			HighGrip = Vector3.new(0.4, -0.5, -0.4),
+			HighGrip = Vector3.new(0.7, 0.3, -0.5),
+			Convergence = 0.15,
 			LowGrip = Vector3.new(0.7, -0.85, -0.3),
 			TwoHanded = true,
 			Reload = "Mag",
@@ -142,7 +147,7 @@ return {
 
 	-- Sonidos (Creator Store, gratis). Cambia cualquier id aquí para sustituirlo.
 	Sounds = {
-		Volume = { Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },
+		Volume = { Headshot = 0.7, Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },
 		Shot = {
 			Pistol = "rbxassetid://132539859090895",
 			Rifle = "rbxassetid://113879008765178",
@@ -153,6 +158,8 @@ return {
 		Reload = "rbxassetid://117963160131194",
 		ReloadShotgun = "rbxassetid://139827026287805",
 		DryFire = "rbxassetid://117629133235583",
+		Headshot = "rbxassetid://117629133235583", -- provisional: el clic de DryFire, agudo. Cambia el id por un "ding" cuando haya uno
+		HeadshotPitch = 2,
 		ZombieGrowls = {
 			"rbxassetid://129294628821291",
 			"rbxassetid://100949226522885",
@@ -202,6 +209,11 @@ return {
 		ZoneComplete = 100,
 	},
 
+	-- Tiro a la cabeza: cuenta si el rayo pasa a menos de (tamaño del cráneo * RadiusScale) del centro de la cabeza.
+	-- Depth = cuánto más allá del impacto en la caja del zombie se sigue buscando la cabeza.
+	-- Ojo: el servidor no ve las animaciones de los zombies (se animan en el cliente): la cabeza se toma en su pose base.
+	Headshot = { Multiplier = 2, RadiusScale = 0.4, Depth = 1.5, PartNames = { "Head", "saco_cabeza" } }, -- saco_cabeza = cabeza del maniquí
+
 	-- Tolerancia de puntería: radio (en studs) de la esfera con la que se busca un zombie cuando el rayo no le da.
 	-- Compensa el retraso de red: en pantalla los zombies van un poco por detrás de donde están en el servidor.
 	HitTolerance = 0.8,
@@ -221,6 +233,7 @@ return {
 
 	Player = {
 		WalkSpeed = 16,
+		SprintSpeed = 24, -- mantener Shift (no al apuntar, disparar o recargar)
 		DownedWalkSpeed = 4,
 		CarrySpeed = 9,
 		BleedTime = 30, -- segundos caído antes de morir

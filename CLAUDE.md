@@ -28,6 +28,7 @@
 - Poses de sobrevivientes (`client/PoseAnimator`): caído (se arrastra), arrodillado al revivir (atributo `Reviving`) y colgado al ser cargado.
 - Furgoneta: entra animada en el cliente (`client/VanAnimator`: frenada, ruedas, baliza, pitido). Armas: salen de la caja subiendo y girando (`WeaponBox`/`WeaponModel`).
 - Armas en la mano (`server/WeaponRig` + `client/WeaponAnimator` + `client/ArmIK`): el arma activa va en la mano derecha; brazos con cinemática inversa; reposo con el arma baja y al apuntar (clic derecho) o disparar sube; retroceso visual + sacudida de cámara; recarga por tipo (cargador / cartucho a cartucho); fogonazo. Primaria a la espalda y pistola en la cadera cuando no están en la mano. Todo se ajusta en `Config.WeaponHold`.
+- Críticos: un tiro a la cabeza hace x2 (`Config.Headshot`); el servidor lo mide por cercanía del rayo a la pieza `Head` (o `saco_cabeza` del maniquí) y avisa al tirador con `Remotes.Crit` (`client/CritMarker`: marcador rojo + sonido provisional). Correr: `client/Sprint` + `PlayerState.setSprinting`, velocidad en `Config.Player.SprintSpeed`.
 
 **Pendiente (en orden):**
 1. **Probar con 2 o más jugadores** (ya se probó una vez con Isaac en el juego publicado; falta ver las poses nuevas, la furgoneta y el Tanque): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
@@ -45,7 +46,7 @@
 - `character/Animate.client.luau`: animación de los sobrevivientes (reemplaza el script de Roblox).
 - `assets/*.glb` + `tools/glb_to_lua.py`: modelos 3D de origen y su conversor. Uso: `python tools/glb_to_lua.py <archivo-sin-.glb> <Modulo> [escala] [articulaciones]` (para cajas: articulación `tapa`). Los modelos se construyen con bloques nativos de Roblox, no se suben mallas.
 
-**Controles:** clic = disparar (mantener = automática), clic derecho = apuntar, `R` recargar, `1`/`2`/`Q` cambiar de arma, `V` primera/tercera persona, `E` interactuar (revivir, abrir caja, comprar, generador, radio), `F` cargar a un caído, `G` soltar, `H` levantarse solo (1 jugador), `Y` listo en el lobby.
+**Controles:** clic = disparar (mantener = automática), clic derecho = apuntar, `R` recargar, `1`/`2`/`Q` cambiar de arma, `V` primera/tercera persona, `E` interactuar (revivir, abrir caja, comprar, generador, radio), `F` cargar a un caído, `G` soltar, `H` levantarse solo (1 jugador), `Shift` correr (mantener; se cancela al apuntar, disparar o recargar; el Shift lock está desactivado), `Y` listo en el lobby.
 
 **Cosas que aprendimos (para no repetir errores):**
 - Si cambia `default.project.json` (carpetas nuevas), hay que **reiniciar `rojo serve`** y reconectar el plugin. Mantener una sola sesión de Rojo corriendo.

@@ -80,6 +80,11 @@ local function switchTo(newSlot)
 	Remotes.Switch:FireServer(newSlot)
 end
 
+-- ¿Está recargando? (Sprint cancela la carrera mientras tanto)
+function Shooting.isReloading()
+	return reloading
+end
+
 function Shooting.start()
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
