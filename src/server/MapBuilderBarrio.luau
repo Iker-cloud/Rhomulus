@@ -2,7 +2,8 @@
 -- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2, 3 y 6).
 -- Se activa con Config.Game.UseNewMap; mientras tanto el mapa de siempre (MapBuilder) sigue intacto.
 --
--- Primer pedazo: lobby (la cochera, z -400..-350) -> tramo 1 ruta Calle (roja, z -350..-130) -> punto seguro 1
+-- Hecho hasta ahora: lobby (la cochera, z -400..-350) -> tramo 1, rutas Calle (roja, z -350..-130) y Callejón
+-- (amarilla, x -120..-60) -> punto seguro 1
 -- (la tienda, z -130..-90) -> vestíbulo de salida provisional (z -90..-78), que termina la prueba con victoria.
 -- La Baseplate de Studio solo llega hasta z = -256: todo lo que se pisa lleva su propio piso.
 -- Ejes: X lateral, Y altura (suelo en 0), Z avance. Devuelve las mismas referencias que MapBuilder.build.
@@ -275,7 +276,11 @@ end
 local function buildLobby(map, refs)
 	local wall = C.blanco
 	slab(map, "LobbyFondo", -60, 60, -400, -395, 20, wall)
-	slab(map, "LobbyLadoW", -60, -45, -395, -355, 20, wall)
+	-- Pared oeste con la puerta del Callejón (12 × 14, z -380..-368)
+	slab(map, "LobbyLadoW", -60, -45, -395, -380, 20, wall)
+	slab(map, "LobbyLadoW", -60, -45, -368, -355, 20, wall)
+	block(map, "LobbyDintelW", Vector3.new(15, 6, 12), Vector3.new(-52.5, 17, -374), wall)
+	floor(map, "LobbyPisoW", -60, -45, -380, -368, C.concreto)
 	slab(map, "LobbyLadoE", 45, 60, -395, -355, 20, wall)
 	slab(map, "LobbyFrenteW", -60, -15, -355, -350, 20, wall)
 	slab(map, "LobbyFrenteE", 15, 60, -355, -350, 20, wall)
@@ -286,7 +291,8 @@ local function buildLobby(map, refs)
 	-- Franja baja de terracota en las paredes interiores
 	for _, strip in {
 		{ Vector3.new(90, 3, 0.2), Vector3.new(0, 1.5, -394.9) },
-		{ Vector3.new(0.2, 3, 40), Vector3.new(-44.9, 1.5, -375) },
+		{ Vector3.new(0.2, 3, 15), Vector3.new(-44.9, 1.5, -387.5) },
+		{ Vector3.new(0.2, 3, 13), Vector3.new(-44.9, 1.5, -361.5) },
 		{ Vector3.new(0.2, 3, 40), Vector3.new(44.9, 1.5, -375) },
 		{ Vector3.new(30, 3, 0.2), Vector3.new(-30, 1.5, -355.1) },
 		{ Vector3.new(30, 3, 0.2), Vector3.new(30, 1.5, -355.1) },
@@ -297,6 +303,8 @@ local function buildLobby(map, refs)
 	-- Puerta enrollable de 30 × 14 hacia la calle
 	refs.lobbyDoor = door(map, "LobbyDoor", -351, 30, 14)
 	refs.lobbyDoor.Material = Enum.Material.CorrodedMetal
+	local westDoor = block(map, "LobbyDoorW", Vector3.new(2, 14, 12), Vector3.new(-46, 7, -374), Color3.fromRGB(150, 110, 60), Enum.Material.CorrodedMetal)
+	refs.extraLobbyDoors = { westDoor }
 	refs.lobbySpawn = CFrame.lookAt(Vector3.new(0, 3, -375), Vector3.new(0, 3, -350))
 
 	-- Foco colgado (luz cálida)
@@ -336,7 +344,8 @@ local function buildLobby(map, refs)
 
 	-- Cartel de la ruta sobre la puerta (se ve desde dentro) y flecha en la calle
 	sign(map, "CartelCalle", "↑ CALLE", Vector3.new(12, 5, 0.4), Vector3.new(0, 17, -355.4), C.rojo)
-	sign(map, "CartelPerro", "CUIDADO CON EL PERRO", Vector3.new(8, 3, 0.4), CFrame.new(-44.7, 8, -365) * CFrame.Angles(0, -math.pi / 2, 0), C.mostaza, C.oscuro)
+	sign(map, "CartelCallejon", "↑ CALLEJÓN", Vector3.new(12, 5, 0.4), CFrame.new(-44.7, 17, -374) * CFrame.Angles(0, -math.pi / 2, 0), C.amarillo, C.oscuro)
+	sign(map, "CartelPerro", "CUIDADO CON EL PERRO", Vector3.new(6, 3, 0.4), CFrame.new(-44.7, 8, -361) * CFrame.Angles(0, -math.pi / 2, 0), C.mostaza, C.oscuro)
 	sign(map, "CartelRendir", "AQUÍ NO SE RINDE NADIE", Vector3.new(14, 4, 0.4), CFrame.new(44.7, 9, -378) * CFrame.Angles(0, math.pi / 2, 0), C.terracota)
 
 	-- Radio sobre una mesa, carro viejo sin ruedas, llantas, bidones y cajas
@@ -400,8 +409,15 @@ local function buildStreet(map, refs, rng, spawns)
 			end
 		end
 
-		-- Nichos de los pasajes de cruce: piso, muro del fondo (hasta que existan las otras rutas) y punto de aparición
+		-- Pasajes de cruce: al oeste abiertos hacia el Callejón; al este, nichos con muro al fondo (hasta que exista
+		-- la ruta Escalera) y punto de aparición
 		for _, z in CROSSINGS do
+			if side == -1 then
+				floor(map, "PasajePiso", -60, -35, z - 4, z + 4, C.acera)
+				floorArrow(map, Vector3.new(-40, 0, z), C.amarillo, -math.pi / 2)
+				sign(map, "CartelCallejon", "← CALLEJÓN", Vector3.new(8, 3, 0.4), CFrame.new(-34.5, 9, z + 9) * CFrame.Angles(0, -math.pi / 2, 0), C.amarillo, C.oscuro)
+				continue
+			end
 			local nx1, nx2 = math.min(35 * side, 47 * side), math.max(35 * side, 47 * side)
 			floor(map, "PasajePiso", nx1, nx2, z - 4, z + 4, C.acera)
 			local backX1, backX2 = math.min(47 * side, 60 * side), math.max(47 * side, 60 * side)
@@ -428,9 +444,13 @@ local function buildStreet(map, refs, rng, spawns)
 	end
 
 	-- Embudo hacia la tienda: la calle se estrecha a 40 (zona de espera exterior de 40 × 20)
-	slab(map, "EmbudoW", -60, -20, -150, -130, 18, C.salmon)
+	-- El Callejón llega a la zona de espera por un pasaje de 9 (z -148..-139) que cruza el bloque oeste
+	slab(map, "EmbudoW", -60, -20, -150, -148, 18, C.salmon)
+	slab(map, "EmbudoW", -60, -20, -139, -130, 18, C.salmon)
+	floor(map, "PasajeCallejon", -60, -20, -148, -139, C.acera)
+	floorArrow(map, Vector3.new(-40, 0, -143.5), C.amarillo, math.pi / 2)
 	slab(map, "EmbudoE", 20, 60, -150, -130, 18, C.turquesa)
-	deco(block(map, "EsquinaRoja", Vector3.new(0.3, 1, 18), Vector3.new(-19.8, 3, -140), C.rojo, Enum.Material.SmoothPlastic))
+	deco(block(map, "EsquinaRoja", Vector3.new(0.3, 1, 9), Vector3.new(-19.8, 3, -134.5), C.rojo, Enum.Material.SmoothPlastic))
 	deco(block(map, "EsquinaRoja", Vector3.new(0.3, 1, 18), Vector3.new(19.8, 3, -140), C.rojo, Enum.Material.SmoothPlastic))
 	sandbags(map, -12, -138, 0)
 	sandbags(map, 13, -141, 90)
@@ -468,8 +488,262 @@ local function buildStreet(map, refs, rng, spawns)
 	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
 	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
 
-	-- Lugares posibles de la caja de armas (libres de obstáculos)
-	refs.boxSpots.Zone1 = { Vector3.new(0, 0, -286), Vector3.new(-18, 0, -212), Vector3.new(-8, 0, -168) }
+	-- Lugares posibles de la caja de armas de la ruta Calle (libres de obstáculos); una caja por ruta
+	table.insert(refs.boxSpots.Zone1, { Vector3.new(0, 0, -286), Vector3.new(-18, 0, -212), Vector3.new(-8, 0, -168) })
+end
+
+-- Casa genérica (bloque sólido) con puerta y ventanas en las caras que dan a un lugar transitable.
+-- `isOpen(x, z)` dice si ese punto del suelo es transitable.
+local function houseBlock(parent, rng, x1, x2, z1, z2, isOpen)
+	local height = rng:NextNumber() < 0.35 and 26 or 17
+	slab(parent, "Casa", x1, x2, z1, z2, height, HOUSE_COLORS[rng:NextInteger(1, #HOUSE_COLORS)])
+	local roof = deco(slab(parent, "Techo", x1, x2, z1, z2, 0.6, ROOF_COLORS[rng:NextInteger(1, 2)], Enum.Material.CorrodedMetal))
+	roof.Position += Vector3.new(0, height, 0)
+
+	local anyOpen = false
+	for _, face in {
+		{ axis = "X", at = x2, dir = 1, a1 = z1, a2 = z2 },
+		{ axis = "X", at = x1, dir = -1, a1 = z1, a2 = z2 },
+		{ axis = "Z", at = z2, dir = 1, a1 = x1, a2 = x2 },
+		{ axis = "Z", at = z1, dir = -1, a1 = x1, a2 = x2 },
+	} do
+		local length = face.a2 - face.a1
+		-- Pieza pegada a la fachada: `t` = posición a lo largo de la cara
+		local function facePart(name, t, y, width, tall, color, material)
+			local size = face.axis == "X" and Vector3.new(0.3, tall, width) or Vector3.new(width, tall, 0.3)
+			local out = face.at + face.dir * 0.15
+			local position = face.axis == "X" and Vector3.new(out, y, t) or Vector3.new(t, y, out)
+			deco(block(parent, name, size, position, color, material))
+		end
+		local function outside(t)
+			if face.axis == "X" then
+				return isOpen(face.at + face.dir * 0.5, t)
+			end
+			return isOpen(t, face.at + face.dir * 0.5)
+		end
+		if length >= 6 and (outside(face.a1 + length * 0.25) or outside(face.a1 + length * 0.5) or outside(face.a1 + length * 0.75)) then
+			anyOpen = true
+			local doorT = face.a1 + rng:NextInteger(3, math.max(3, math.floor(length) - 3))
+			facePart("Puerta", doorT, 3.5, 4, 7, C.oscuro, Enum.Material.Wood)
+			for level = 1, height >= 24 and 3 or 2 do
+				local t = face.a1 + 3
+				while t <= face.a2 - 3 do
+					if level > 1 or math.abs(t - doorT) > 4 then
+						facePart("Ventana", t, 4.5 + (level - 1) * 8, 3, 3, C.oscuro, Enum.Material.Glass)
+					end
+					t += 6
+				end
+			end
+		end
+	end
+
+	if anyOpen and rng:NextNumber() < 0.3 then
+		deco(pole(parent, "TanqueAgua", Vector3.new((x1 + x2) / 2, height + 0.6, (z1 + z2) / 2), 4, 4, C.cobalto, Enum.Material.Plastic))
+	end
+end
+
+-- Montón de latas sueltas: se recoge con E (CanPiles). Devuelve el modelo y su prompt.
+local function canPile(parent, position)
+	local model = Instance.new("Model")
+	model.Name = "Latas"
+	deco(block(model, "LatasCaja", Vector3.new(2.6, 1.2, 2.6), position + Vector3.new(0, 0.6, 0), C.madera, Enum.Material.WoodPlanks))
+	local colors = { C.rojo, C.lima, C.lonaNaranja, C.azul, C.mostaza }
+	for i, color in colors do
+		local angle = i * math.pi * 2 / #colors
+		deco(pole(model, "Lata", position + Vector3.new(math.cos(angle) * 0.75, 1.2, math.sin(angle) * 0.75), 1, 0.7, color))
+	end
+	deco(pole(model, "Lata", position + Vector3.new(0, 2.2, 0), 1, 0.7, C.concreto))
+	local hitbox = deco(block(model, "Hitbox", Vector3.new(3, 3, 3), position + Vector3.new(0, 1.5, 0)))
+	hitbox.Transparency = 1
+	label(hitbox, "LATAS", C.mostaza, 16)
+	model.Parent = parent
+	return model, prompt(hitbox, "Recoger latas", 0.5)
+end
+
+-- Parte 4: tramo 1, ruta Callejón (amarilla). Franja de x -120 a -60, entre el borde del mapa y las casas de la calle.
+-- El trazado son rectángulos transitables { nombre, x1, x2, z1, z2 }; el resto de la franja se rellena con casas.
+-- Recorrido: puerta oeste del lobby -> patio -> plazoleta 1 -> plazoleta 2 -> cruce 2 -> plazoleta 3 -> embudo de la tienda.
+-- Los fondos de los callejones laterales (S1, S2, S3) son los puntos de aparición.
+local ALLEY = {
+	{ "Patio", -86, -60, -382, -366 },
+	{ "A1", -77, -68, -366, -306 },
+	{ "C1", -68, -60, -314, -306 }, -- cruce 1 hacia la calle
+	{ "P1", -88, -68, -306, -286 }, -- plazoleta 1
+	{ "L1", -97, -88, -298, -289 },
+	{ "A2", -106, -97, -320, -246 }, -- de z -320 a -298 es el callejón lateral S1
+	{ "P2", -106, -86, -246, -226 }, -- plazoleta 2
+	{ "C2", -86, -60, -244, -236 }, -- cruce 2 hacia la calle (también es parte del recorrido)
+	{ "S2", -106, -97, -226, -206 }, -- callejón lateral S2
+	{ "A3", -77, -68, -236, -180 },
+	{ "P3", -88, -68, -180, -160 }, -- plazoleta 3
+	{ "C3", -68, -60, -174, -166 }, -- cruce 3 hacia la calle
+	{ "S3", -106, -88, -176, -168 }, -- callejón lateral S3
+	{ "A4", -77, -68, -160, -148 },
+	{ "E", -77, -60, -148, -139 }, -- salida hacia el embudo de la tienda
+}
+local ALLEY_BAND = { x1 = -120, x2 = -60, z1 = -400, z2 = -130 }
+local PLAZAS = { P1 = true, P2 = true, P3 = true }
+
+local function inRects(list, x, z)
+	for _, r in list do
+		if x > r[2] and x < r[3] and z > r[4] and z < r[5] then
+			return true
+		end
+	end
+	return false
+end
+
+local function buildAlley(map, refs, rng, spawns)
+	local rects = {}
+	for _, r in ALLEY do
+		rects[r[1]] = r
+	end
+	-- Lugares transitables vecinos fuera de la franja (pasajes de la calle y puerta del lobby), para las fachadas
+	local neighbors = { { "Puerta", -60, -45, -380, -368 }, { "Embudo", -60, -20, -148, -139 } }
+	for _, z in CROSSINGS do
+		table.insert(neighbors, { "Cruce", -60, -35, z - 4, z + 4 })
+	end
+	local function isOpen(x, z)
+		return inRects(ALLEY, x, z) or inRects(neighbors, x, z)
+	end
+
+	-- Pisos
+	for _, r in ALLEY do
+		local plaza = PLAZAS[r[1]]
+		local color = plaza and Color3.fromRGB(150, 140, 125) or C.acera
+		floor(map, "Piso" .. r[1], r[2], r[3], r[4], r[5], color, plaza and Enum.Material.Cobblestone or Enum.Material.Concrete)
+	end
+
+	-- Relleno de casas: rectángulos de celdas de 1 stud que no son transitables, partidos en casas
+	local band = ALLEY_BAND
+	local width, depth = band.x2 - band.x1, band.z2 - band.z1
+	local used = {}
+	local function solid(i, j)
+		return not used[i * 1000 + j] and not inRects(ALLEY, band.x1 + i - 0.5, band.z1 + j - 0.5)
+	end
+	for j = 1, depth do
+		for i = 1, width do
+			if solid(i, j) then
+				local i2 = i
+				while i2 < width and solid(i2 + 1, j) do
+					i2 += 1
+				end
+				local j2 = j
+				while j2 < depth do
+					local rowSolid = true
+					for k = i, i2 do
+						if not solid(k, j2 + 1) then
+							rowSolid = false
+							break
+						end
+					end
+					if not rowSolid then
+						break
+					end
+					j2 += 1
+				end
+				for a = i, i2 do
+					for b = j, j2 do
+						used[a * 1000 + b] = true
+					end
+				end
+				-- Partir en casas de 12 a 22 de largo y como mucho 22 de fondo
+				local x1, x2 = band.x1 + i - 1, band.x1 + i2
+				local z1, z2 = band.z1 + j - 1, band.z1 + j2
+				local columns = math.ceil((x2 - x1) / 22)
+				local z = z1
+				while z < z2 do
+					local length = math.min(rng:NextInteger(12, 22), z2 - z)
+					if z2 - (z + length) < 8 then
+						length = z2 - z
+					end
+					for c = 0, columns - 1 do
+						local cx1 = x1 + (x2 - x1) * c / columns
+						local cx2 = x1 + (x2 - x1) * (c + 1) / columns
+						houseBlock(map, rng, cx1, cx2, z, z + length, isOpen)
+					end
+					z += length
+				end
+			end
+		end
+	end
+
+	-- Franjas amarillas en las paredes del recorrido
+	for _, stripe in {
+		{ Vector3.new(0.3, 1, 60), Vector3.new(-76.85, 6, -336) }, -- A1, pared oeste
+		{ Vector3.new(0.3, 1, 43), Vector3.new(-97.15, 6, -267.5) }, -- A2, pared este
+		{ Vector3.new(0.3, 1, 56), Vector3.new(-76.85, 6, -208) }, -- A3, pared oeste
+	} do
+		deco(block(map, "FranjaAmarilla", stripe[1], stripe[2], C.amarillo, Enum.Material.SmoothPlastic))
+	end
+
+	-- Murales con frases en español (en las paredes de las plazoletas)
+	sign(map, "Mural", "ESPERANZA", Vector3.new(16, 7, 0.4), Vector3.new(-78, 8, -286.3), C.grafiti, C.blanco)
+	sign(map, "Mural", "AQUÍ VIVE GENTE", Vector3.new(14, 7, 0.4), CFrame.new(-105.7, 8, -236) * CFrame.Angles(0, -math.pi / 2, 0), C.turquesa, C.blanco)
+	sign(map, "Mural", "NADIE SE QUEDA ATRÁS", Vector3.new(10, 5, 0.4), Vector3.new(-82.5, 10, -160.3), C.mostaza, C.oscuro)
+
+	-- Flechas amarillas del recorrido y rojas en los cruces hacia la calle
+	for _, arrow in {
+		{ -64, -374, -math.pi / 2 },
+		{ -72.5, -358, 0 },
+		{ -72.5, -330, 0 },
+		{ -93, -293.5, -math.pi / 2 },
+		{ -101.5, -265, 0 },
+		{ -82, -240, math.pi / 2 },
+		{ -72.5, -222, 0 },
+		{ -72.5, -154, 0 },
+		{ -66, -143.5, math.pi / 2 },
+	} do
+		floorArrow(map, Vector3.new(arrow[1], 0, arrow[2]), C.amarillo, arrow[3])
+	end
+	floorArrow(map, Vector3.new(-64, 0, -310), C.rojo, math.pi / 2)
+	floorArrow(map, Vector3.new(-64, 0, -170), C.rojo, math.pi / 2)
+
+	-- Tendederos que cruzan de lado a lado a 9 de alto
+	for _, line in { { -72.5, -340, 9 }, { -101.5, -272, 9 }, { -72.5, -205, 9 }, { -73, -377, 26 } } do
+		local x, z, length = line[1], line[2], line[3]
+		deco(block(map, "Tendedero", Vector3.new(length, 0.1, 0.1), Vector3.new(x, 9, z), C.blanco))
+		for i, cloth in { C.lonaAzul, C.grafiti, C.mostaza, C.lima } do
+			deco(block(map, "Ropa", Vector3.new(1.6, 2, 0.1), Vector3.new(x - length / 2 + i * length / 5, 8, z), cloth, Enum.Material.Fabric))
+		end
+	end
+
+	-- Cobertura baja y detalles (el paso nunca queda en menos de 6)
+	barrel(map, -76, -350)
+	barrel(map, -69, -222, C.lonaVerde)
+	barrel(map, -105, -262, C.lonaAzul)
+	block(map, "Caja", Vector3.new(3, 3, 3), Vector3.new(-83, 1.5, -379), C.madera, Enum.Material.WoodPlanks)
+	sandbags(map, -71, -298, 0)
+	sandbags(map, -96, -238, 90)
+	sandbags(map, -80, -171, 0)
+	for _, moto in { { -70.5, -328, 80 }, { -103, -243, 20 } } do
+		local cf = CFrame.new(moto[1], 0.6, moto[2]) * CFrame.Angles(0, math.rad(moto[3]), 0)
+		deco(block(map, "Moto", Vector3.new(1.8, 1.2, 5.5), cf, C.rojo, Enum.Material.Metal))
+	end
+
+	-- Puntos de aparición al fondo de los callejones laterales
+	local S1, S2, S3 = Vector3.new(-101.5, 0, -317), Vector3.new(-101.5, 0, -209), Vector3.new(-104, 0, -172)
+	for _, point in { S1, S2, S3 } do
+		marker(spawns, point)
+	end
+
+	-- Emboscadas: al entrar por primera vez en cada plazoleta salen zombies del callejón lateral más cercano
+	local ambushPoints = {
+		P1 = { S1, Vector3.new(-101.5, 0, -262) },
+		P2 = { S2, Vector3.new(-72.5, 0, -200) },
+		P3 = { S3, Vector3.new(-72.5, 0, -200) },
+	}
+	for name, points in ambushPoints do
+		local r = rects[name]
+		table.insert(refs.ambushes, { volume = volume(map, "Emboscada" .. name, r[2], r[3], r[4], r[5], 12), points = points })
+	end
+
+	-- Latas sueltas (una por plazoleta) y caja de armas (en una de las plazoletas, al azar)
+	for _, position in { Vector3.new(-85, 0, -289), Vector3.new(-104, 0, -236), Vector3.new(-80, 0, -178) } do
+		local model, pilePrompt = canPile(map, position)
+		table.insert(refs.canPiles, { model = model, prompt = pilePrompt })
+	end
+	table.insert(refs.boxSpots.Zone1, { Vector3.new(-78, 0, -290), Vector3.new(-92, 0, -230), Vector3.new(-83, 0, -164) })
 end
 
 -- Parte 6: punto seguro 1, la tienda de barrio (60 × 40 × 16) con reja de entrada y de salida de 24 × 14.
@@ -572,18 +846,21 @@ function MapBuilderBarrio.build(config)
 	zone1Spawns.Parent = spawnRoot
 
 	local rng = Random.new(config.Seed)
-	local refs = { ammoStations = {}, boxSpots = {} }
+	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {} }
 
 	buildLobby(map, refs)
 	buildStreet(map, refs, rng, zone1Spawns)
+	buildAlley(map, refs, rng, zone1Spawns)
 	buildSafePoint(map, refs)
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
-	for _, spot in refs.boxSpots.Zone1 do
-		local params = OverlapParams.new()
-		params.RespectCanCollide = true
-		if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7), params) > 0 then
-			warn(`MapBuilderBarrio: el lugar de la caja de armas {spot} está tapado`)
+	local params = OverlapParams.new()
+	params.RespectCanCollide = true
+	for _, group in refs.boxSpots.Zone1 do
+		for _, spot in group do
+			if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7), params) > 0 then
+				warn(`MapBuilderBarrio: el lugar de la caja de armas {spot} está tapado`)
+			end
 		end
 	end
 

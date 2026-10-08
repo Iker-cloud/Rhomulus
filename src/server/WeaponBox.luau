@@ -1,4 +1,4 @@
--- Caja de armas (una por zona, en un lugar al azar de la zona) y estaciones de munición.
+-- Caja de armas (una por zona, o una por ruta en el mapa nuevo, en un lugar al azar) y estaciones de munición.
 -- La caja cuesta latas del equipo; las armas giran unos segundos y se detiene en una al azar.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,8 +18,8 @@ local Subfusil = require(script.Parent.ZombieData.Subfusil)
 
 local WeaponBox = {}
 
-local boxSpots = {} -- [zona] = { Vector3, ... } candidatos que calcula MapBuilder
-local current = nil -- caja activa: { model, prompt, label, display, state, rollId, pick, connection }
+local boxSpots = {} -- [zona] = { Vector3, ... } candidatos que calcula MapBuilder (o una lista por ruta: { { Vector3, ... }, ... })
+local active = {} -- cajas en el mapa: [caja] = true. Cada caja: { model, prompt, display, state, rollId, pick, connection }
 
 -- Modelo 3D de cada arma de la caja. Si alguna no tiene modelo, sale como un cubo de luz.
 local WEAPON_MODELS = {
@@ -163,7 +163,7 @@ local function build(position)
 end
 
 local function onTriggered(box, player)
-	if box ~= current or PlayerState.get(player) ~= "Normal" then
+	if not active[box] or PlayerState.get(player) ~= "Normal" then
 		return
 	end
 
@@ -192,7 +192,7 @@ local function onTriggered(box, player)
 		local pool = Config.WeaponBox.Pool
 		local steps = math.floor(Config.WeaponBox.SpinTime / 0.1)
 		for i = 1, steps do
-			if box ~= current then
+			if not active[box] then
 				return
 			end
 			local name = pool[math.random(#pool)]
@@ -201,7 +201,7 @@ local function onTriggered(box, player)
 			task.wait(0.1)
 		end
 		music:Destroy()
-		if box ~= current then
+		if not active[box] then
 			return
 		end
 
@@ -218,7 +218,7 @@ local function onTriggered(box, player)
 
 		-- Si nadie la toma a tiempo, se pierde
 		task.delay(Config.WeaponBox.TakeTime, function()
-			if box == current and box.state == "ready" and box.rollId == id then
+			if active[box] and box.state == "ready" and box.rollId == id then
 				resetToIdle(box)
 			end
 		end)
@@ -230,23 +230,17 @@ local function onTriggered(box, player)
 	end
 end
 
--- Quita la caja actual (cambio de zona o fin de partida)
+-- Quita las cajas (cambio de zona o fin de partida)
 function WeaponBox.clear()
-	if current then
-		current.connection:Disconnect()
-		current.model:Destroy()
-		current = nil
+	for box in active do
+		box.connection:Disconnect()
+		box.model:Destroy()
 	end
+	table.clear(active)
 end
 
--- Coloca la caja en un lugar al azar de la zona
-function WeaponBox.place(zoneName)
-	WeaponBox.clear()
-	local spots = boxSpots[zoneName]
-	if not spots or #spots == 0 then
-		return
-	end
-
+-- Pone una caja en uno de los lugares de la lista, al azar
+local function spawnBox(spots)
 	local box = build(spots[math.random(#spots)])
 	resetToIdle(box)
 	box.prompt.Triggered:Connect(function(player)
@@ -259,7 +253,22 @@ function WeaponBox.place(zoneName)
 			placeWeapon(box, dt)
 		end
 	end)
-	current = box
+	active[box] = true
+end
+
+-- Coloca las cajas de la zona: una lista de lugares = una caja; una lista de listas = una caja por ruta
+function WeaponBox.place(zoneName)
+	WeaponBox.clear()
+	local spots = boxSpots[zoneName]
+	if not spots or #spots == 0 then
+		return
+	end
+	local groups = typeof(spots[1]) == "Vector3" and { spots } or spots
+	for _, group in groups do
+		if #group > 0 then
+			spawnBox(group)
+		end
+	end
 end
 
 -- refs viene de MapBuilder (candidatos de la caja y estaciones de munición)

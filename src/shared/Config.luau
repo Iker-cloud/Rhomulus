@@ -338,6 +338,19 @@ return {
 		},
 	},
 
+	-- Mapa nuevo: emboscadas de las plazoletas del callejón (server/Ambushes). La primera vez que alguien entra a una
+	-- plazoleta salen unos pocos zombies de los callejones laterales.
+	Ambush = {
+		Size = 8, -- zombies al 100% (4 jugadores); se escala con Director.ByPlayers.HordeScale (con 1 jugador: 2)
+		MinDistance = 22, -- nunca aparecen más cerca que esto de un jugador
+	},
+
+	-- Mapa nuevo: montones de latas sueltas (server/CanPiles). Se recogen con E, una vez por partida.
+	CanPiles = {
+		Amount = 50,
+		HoldTime = 0.5,
+	},
+
 	Game = {
 		-- Mapa 1 nuevo, Morro Esperanza (server/MapBuilderBarrio). De momento solo llega hasta el punto seguro 1:
 		-- al cruzar su puerta de salida se gana la prueba. false = el mapa de siempre (server/MapBuilder).

@@ -7,6 +7,8 @@ local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Ambushes = require(script.Parent.Ambushes)
+local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
 local MapBuilder = require(script.Parent.MapBuilder)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
@@ -182,8 +184,16 @@ local function waitForPrompt(prompt)
 	return ok
 end
 
+-- Puertas del lobby: la principal y, en el mapa nuevo, una por cada ruta extra (Callejón)
+local function setLobbyDoors(open)
+	setDoor(map.lobbyDoor, open)
+	for _, extra in map.extraLobbyDoors or {} do
+		setDoor(extra, open)
+	end
+end
+
 local function resetMap()
-	setDoor(map.lobbyDoor, false)
+	setLobbyDoors(false)
 	setDoor(map.safeEntryDoor, true)
 	setDoor(map.safeExitDoor, false)
 	if map.gate then -- el mapa nuevo todavía no tiene portón
@@ -202,9 +212,11 @@ end
 local function lobby()
 	Director.setZone(nil)
 	Director.setBoost(false)
+	Ambushes.disarm()
 	Zombies.clear()
 	Stats.reset()
 	Points.reset()
+	CanPiles.reset()
 	WeaponBox.clear()
 	Weapons.resetAll()
 	resetMap()
@@ -231,7 +243,7 @@ local function lobby()
 
 	setStage("Lobby", "¡Empezamos!", "Start")
 	task.wait(2)
-	setDoor(map.lobbyDoor, true)
+	setLobbyDoors(true)
 end
 
 local function zone1()
@@ -239,6 +251,7 @@ local function zone1()
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone1")
 	WeaponBox.place("Zone1")
+	Ambushes.arm(map.ambushes)
 	local ok = waitUntil(function()
 		return allInside(map.safeVolume)
 	end, true)
@@ -251,6 +264,7 @@ end
 local function safeRoom()
 	setDoor(map.safeEntryDoor, false) -- cierra la puerta detrás del equipo
 	Director.setZone(nil)
+	Ambushes.disarm()
 	Zombies.clear()
 	WeaponBox.clear()
 
@@ -366,6 +380,7 @@ end
 
 local function result(won)
 	Director.setZone(nil)
+	Ambushes.disarm()
 	Director.setBoost(false)
 	Zombies.clear()
 	WeaponBox.clear()
@@ -380,6 +395,7 @@ function GameState.start()
 	local builder = Config.Game.UseNewMap and MapBuilderBarrio or MapBuilder
 	map = builder.build(Config.Game)
 	WeaponBox.init(map)
+	CanPiles.init(map.canPiles)
 
 	Players.PlayerAdded:Connect(function(player)
 		if stage == "Lobby" then

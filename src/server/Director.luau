@@ -128,6 +128,35 @@ function Director.spawnHorde(size)
 	end
 end
 
+-- Mini-horda (emboscada del callejón): pocos zombies desde `points`, sin tanque y respetando el límite de vivos.
+-- Pueden aparecer a la vista (salen de callejones laterales), pero nunca a menos de Config.Ambush.MinDistance.
+function Director.spawnAmbush(size, points)
+	local count = math.max(1, math.floor(size * getScaling().HordeScale + 0.5))
+	for _ = 1, count do
+		if Zombies.getAlive() >= getMaxAlive() then
+			break
+		end
+		local candidates = {}
+		for _, point in points do
+			local clear = true
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if root and (root.Position - point).Magnitude < Config.Ambush.MinDistance then
+					clear = false
+				end
+			end
+			if clear then
+				table.insert(candidates, point)
+			end
+		end
+		if #candidates == 0 then
+			return
+		end
+		Zombies.spawn(math.random() < Config.Director.FastChance and "Fast" or "Common", candidates[math.random(#candidates)])
+		task.wait(Config.Director.HordeSpawnDelay)
+	end
+end
+
 function Director.start()
 	task.spawn(function()
 		while true do
