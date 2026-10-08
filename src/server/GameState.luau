@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Director = require(script.Parent.Director)
 local MapBuilder = require(script.Parent.MapBuilder)
+local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -47,6 +48,9 @@ local OBJECTIVES = {
 	end,
 	Run = function()
 		return map.vanStop.Position, "VAN"
+	end,
+	Exit = function()
+		return map.exitVolume.Position, "SALIDA"
 	end,
 }
 
@@ -142,7 +146,7 @@ local LIGHT_ON = Color3.fromRGB(120, 255, 60)
 
 -- Cambia el color de una luz del modelo (generador: luz_estado; radio: led_llamada y led_senal)
 local function setLight(model, partName, color)
-	local part = model:FindFirstChild(partName)
+	local part = model and model:FindFirstChild(partName)
 	if part then
 		part.Color = color
 	end
@@ -182,7 +186,9 @@ local function resetMap()
 	setDoor(map.lobbyDoor, false)
 	setDoor(map.safeEntryDoor, true)
 	setDoor(map.safeExitDoor, false)
-	setDoor(map.gate, false)
+	if map.gate then -- el mapa nuevo todavía no tiene portón
+		setDoor(map.gate, false)
+	end
 	setLight(map.generatorModel, "luz_estado", LIGHT_OFF)
 	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
 	setLight(map.radioModel, "led_senal", LIGHT_OFF)
@@ -346,6 +352,18 @@ local function extraction()
 	return true
 end
 
+-- Mapa nuevo (solo hasta el punto seguro 1): la prueba se gana al cruzar la puerta de salida
+local function testExit()
+	setStage("SafeRoom", "Fin del tramo de prueba. Salgan por la puerta", "Exit")
+	local ok = waitUntil(function()
+		return allInside(map.exitVolume)
+	end, true)
+	if ok then
+		Points.add(Config.Points.ZoneComplete)
+	end
+	return ok
+end
+
 local function result(won)
 	Director.setZone(nil)
 	Director.setBoost(false)
@@ -359,7 +377,8 @@ end
 function GameState.start()
 	-- La partida decide cuándo reaparece cada jugador (el siguiente punto seguro)
 	Players.CharacterAutoLoads = false
-	map = MapBuilder.build(Config.Game)
+	local builder = Config.Game.UseNewMap and MapBuilderBarrio or MapBuilder
+	map = builder.build(Config.Game)
 	WeaponBox.init(map)
 
 	Players.PlayerAdded:Connect(function(player)
@@ -378,7 +397,14 @@ function GameState.start()
 	task.spawn(function()
 		while true do
 			lobby()
-			local won = zone1() and safeRoom() and zone2() and extraction()
+			local won = zone1() and safeRoom()
+			if won then
+				if map.exitVolume then
+					won = testExit()
+				else
+					won = zone2() and extraction()
+				end
+			end
 			result(won)
 		end
 	end)

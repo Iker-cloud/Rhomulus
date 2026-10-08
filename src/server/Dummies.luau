@@ -41,7 +41,8 @@ local function spawnDummy(position)
 end
 
 function Dummies.start()
-	for _, position in Config.Dummy.Positions do
+	local positions = Config.Game.UseNewMap and Config.Dummy.PositionsNewMap or Config.Dummy.Positions
+	for _, position in positions do
 		spawnDummy(position)
 	end
 end

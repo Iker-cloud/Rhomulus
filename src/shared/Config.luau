@@ -339,6 +339,9 @@ return {
 	},
 
 	Game = {
+		-- Mapa 1 nuevo, Morro Esperanza (server/MapBuilderBarrio). De momento solo llega hasta el punto seguro 1:
+		-- al cruzar su puerta de salida se gana la prueba. false = el mapa de siempre (server/MapBuilder).
+		UseNewMap = false,
 		Seed = 7, -- semilla del mapa generado
 		SafeRoomTime = 10, -- segundos de descanso en el punto seguro
 		GeneratorHoldTime = 4,
@@ -359,6 +362,11 @@ return {
 			Vector3.new(-8, 0, -243),
 			Vector3.new(0, 0, -243),
 			Vector3.new(8, 0, -243),
+		},
+		PositionsNewMap = { -- lobby de Morro Esperanza (la cochera)
+			Vector3.new(-8, 0, -388),
+			Vector3.new(0, 0, -388),
+			Vector3.new(8, 0, -388),
 		},
 	},
 }

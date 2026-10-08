@@ -41,7 +41,7 @@
 
 **Mapa de código** (`src/`):
 - `shared/Config.luau`: **todos** los valores de balance, sonidos, animaciones y textos de precios. `shared/Remotes.luau`: único canal cliente-servidor.
-- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponRig`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
+- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponRig`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `MapBuilderBarrio` (mapa 1 Morro Esperanza en construcción: de momento lobby + calle roja del tramo 1 + punto seguro 1; se activa con `Config.Game.UseNewMap`), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
 - `client/`: HUDs (`AmmoHud`, `HealthHud`, `LatasHud`, `TeamHud`, `RadioHud`, `GameHud`, `ResultHud`, `DownedHud`, `EnemyBars`, `Plates`, `PromptUi`), `ZombieAnimator`, `DummyAnimator`, `PropAnimator`, `SoundController`, `CameraController`, `Shooting`, `WeaponAnimator`, `ArmIK`, `Icons`, `Slant`.
 - `character/Animate.client.luau`: animación de los sobrevivientes (reemplaza el script de Roblox).
 - `assets/*.glb` + `tools/glb_to_lua.py`: modelos 3D de origen y su conversor. Uso: `python tools/glb_to_lua.py <archivo-sin-.glb> <Modulo> [escala] [articulaciones]` (para cajas: articulación `tapa`). Los modelos se construyen con bloques nativos de Roblox, no se suben mallas.
