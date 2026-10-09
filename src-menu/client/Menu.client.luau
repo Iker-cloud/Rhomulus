@@ -278,6 +278,12 @@ local function setStatus(msg)
 	status.Text = msg and spaced(string.upper(msg), 2) or DEFAULT_STATUS
 end
 rule(main, 120, 912, 1680)
+local DESCRIPTIONS = {
+	"Entra a una partida con desconocidos (hasta 4). El mapa se vota al llegar.",
+	"Crea una sala privada con código para jugar con tus amigos. Tú eliges el mapa.",
+	"Escribe el código que te dio el anfitrión para entrar a su sala.",
+}
+local desc = text(main, "", OSW, 40, Vector2.new(120, 874), { width = 1100, transparency = 1 })
 local arrow = text(main, "▶", OSW, 38, Vector2.new(52, 520), { width = 40, transparency = 1 })
 local items = {
 	{ "JUGAR", function()
@@ -321,9 +327,13 @@ for i, item in items do
 	b.MouseEnter:Connect(function()
 		arrow.Position = UDim2.fromOffset(52, y + 72)
 		arrow.TextTransparency = 0
+		desc.Text = DESCRIPTIONS[i]
+		desc.TextTransparency = 1
+		fade(desc, 0.2, { TextTransparency = 0 })
 	end)
 	b.MouseLeave:Connect(function()
 		arrow.TextTransparency = 1
+		fade(desc, 0.15, { TextTransparency = 1 })
 	end)
 end
 
