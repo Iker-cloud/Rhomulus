@@ -17,6 +17,7 @@ local NAMES = {
 	"Sprint", -- cliente -> servidor: (bool) quiere correr
 	"Crit", -- servidor -> cliente: (killed) el disparo le dio a la cabeza de un zombie
 	"Aim", -- cliente -> servidor: (pitch, aiming) hacia dónde mira, para que los demás vean el arma
+	"UseMedkit", -- cliente -> servidor: (jugador o nil) usar el botiquín en un compañero o en uno mismo
 }
 
 local folder

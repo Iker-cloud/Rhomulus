@@ -396,6 +396,16 @@ return {
 		MinDistance = 22, -- nunca aparecen más cerca que esto de un jugador
 	},
 
+	-- Botiquín (server/Medkits + client/MedkitHud): se recoge con E (uno como máximo) y se usa con la tecla Key,
+	-- en el compañero herido al que se mira (a menos de Range) o en uno mismo. Cura Heal de vida en Time segundos.
+	Medkit = {
+		Heal = 80,
+		Time = 5,
+		Range = 7,
+		Key = Enum.KeyCode.Four,
+		KeyLabel = "4", -- lo que se muestra en pantalla
+	},
+
 	-- Mapa nuevo: montones de latas sueltas (server/CanPiles). Se recogen con E, una vez por partida.
 	CanPiles = {
 		Amount = 50,

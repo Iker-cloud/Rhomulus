@@ -1,10 +1,11 @@
 -- Mapa 1, Morro Esperanza (barrio de Rhomulus), en bloques de colores generados por código.
--- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2 a 6).
+-- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2 a 7 y 10).
 -- Se activa con Config.Game.UseNewMap; mientras tanto el mapa de siempre (MapBuilder) sigue intacto.
 --
 -- Hecho hasta ahora: lobby (la cochera, z -400..-350) -> tramo 1, rutas Calle (roja, z -350..-130) y Callejón
 -- (amarilla, x -120..-60) y Escalera (azul, x 60..120) -> punto seguro 1
--- (la tienda, z -130..-90) -> vestíbulo de salida provisional (z -90..-78), que termina la prueba con victoria.
+-- (la tienda, z -130..-90) -> tramo 2, ruta Calle (plaza con el generador, z -90..160) -> punto seguro 2 (la iglesia,
+-- z 160..200) -> vestíbulo de salida provisional (z 200..212), que termina la prueba con victoria.
 -- La Baseplate de Studio solo llega hasta z = -256: todo lo que se pisa lleva su propio piso.
 -- Ejes: X lateral, Y altura (suelo en 0), Z avance. Devuelve las mismas referencias que MapBuilder.build.
 local CollectionService = game:GetService("CollectionService")
@@ -15,6 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Atmosphere = require(script.Parent.Atmosphere)
 local PropModel = require(script.Parent.PropModel)
 local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
+local Generador = require(script.Parent.ZombieData.Generador)
 
 local MapBuilderBarrio = {}
 
@@ -574,6 +576,20 @@ local function canPile(parent, position)
 	return model, prompt(hitbox, "Recoger latas", 0.5)
 end
 
+-- Botiquín que se recoge con E (server/Medkits). `position` es el centro de la base (sobre una mesa o el suelo).
+local function medkitPickup(parent, position)
+	local model = Instance.new("Model")
+	model.Name = "Botiquin"
+	local box = deco(block(model, "BotiquinCaja", Vector3.new(1.6, 1, 1.2), position + Vector3.new(0, 0.5, 0), C.blanco, Enum.Material.SmoothPlastic))
+	deco(block(model, "BotiquinCruz", Vector3.new(1.62, 0.25, 0.7), box.Position, C.rojo, Enum.Material.SmoothPlastic))
+	deco(block(model, "BotiquinCruz", Vector3.new(1.62, 0.7, 0.25), box.Position, C.rojo, Enum.Material.SmoothPlastic))
+	local hitbox = deco(block(model, "Hitbox", Vector3.new(2.5, 2.5, 2.5), position + Vector3.new(0, 1, 0)))
+	hitbox.Transparency = 1
+	label(hitbox, "BOTIQUÍN", C.rojo, 14)
+	model.Parent = parent
+	return model, prompt(hitbox, "Tomar botiquín", 0.3)
+end
+
 -- Parte 4: tramo 1, ruta Callejón (amarilla). Franja de x -120 a -60, entre el borde del mapa y las casas de la calle.
 -- El trazado son rectángulos transitables { nombre, x1, x2, z1, z2 }; el resto de la franja se rellena con casas.
 -- Recorrido: puerta oeste del lobby -> patio -> plazoleta 1 -> plazoleta 2 -> cruce 2 -> plazoleta 3 -> embudo de la tienda.
@@ -953,8 +969,8 @@ local function buildSafePoint(map, refs)
 	floor(map, "TiendaPiso", -28, 28, -128, -92, Color3.fromRGB(170, 160, 140), Enum.Material.Slate)
 
 	-- Bloques a los lados de la tienda (por aquí llegarán luego el callejón y la escalera)
-	slab(map, "TiendaBloqueW", -60, -30, -130, -76, 20, C.mostaza)
-	slab(map, "TiendaBloqueE", 30, 60, -130, -76, 20, C.lima)
+	slab(map, "TiendaBloqueW", -60, -30, -130, -90, 20, C.mostaza)
+	slab(map, "TiendaBloqueE", 30, 60, -130, -90, 20, C.lima)
 
 	refs.safeEntryDoor = door(map, "SafeEntryDoor", -129, 24, 14)
 	refs.safeExitDoor = door(map, "SafeExitDoor", -91, 24, 14)
@@ -974,12 +990,10 @@ local function buildSafePoint(map, refs)
 	sandbags(map, 24, -124, 0)
 	crates(map, 23, -114)
 
-	-- Botiquines (el sistema todavía no existe: de momento son adorno, marcados con el atributo Medkit)
-	for i, z in { -113, -107 } do
-		local kit = deco(block(map, "Botiquin" .. i, Vector3.new(1.6, 1, 1.2), Vector3.new(-21, 4.5, z), C.blanco, Enum.Material.SmoothPlastic))
-		kit:SetAttribute("Medkit", true)
-		deco(block(map, "BotiquinCruz", Vector3.new(1.62, 0.25, 0.7), kit.Position, C.rojo, Enum.Material.SmoothPlastic))
-		deco(block(map, "BotiquinCruz", Vector3.new(1.62, 0.7, 0.25), kit.Position, C.rojo, Enum.Material.SmoothPlastic))
+	-- Botiquines sobre el mostrador (2 por punto seguro)
+	for _, z in { -113, -107 } do
+		local kit, kitPrompt = medkitPickup(map, Vector3.new(-21, 4, z))
+		table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
 	end
 
 	-- Estación de munición
@@ -1009,12 +1023,237 @@ local function buildSafePoint(map, refs)
 	beaconLight.Range = 40
 	beaconLight.Brightness = 3
 	beaconLight.Parent = beacon
+end
 
-	-- Vestíbulo de salida provisional: cruzar la puerta de salida termina la prueba (hasta que exista el tramo 2)
-	floor(map, "VestibuloPiso", -30, 30, -90, -78, C.acera)
-	slab(map, "VestibuloFondo", -60, 60, -78, -76, 20, C.concreto)
-	sign(map, "CartelFin", "PRÓXIMAMENTE: LA PLAZA Y LA FERIA", Vector3.new(30, 4, 0.4), Vector3.new(0, 8, -78.3), C.rojo)
-	refs.exitVolume = volume(map, "ExitVolume", -30, 30, -88, -78, 12)
+-- Parte 7: tramo 2, ruta Calle (roja). La calle sigue tras la tienda (z -90..-10), se abre en la plaza del generador
+-- (z -10..110, x -50..50) y termina en el atrio de la iglesia (z 110..160). Los cruces hacia el Callejón y la Escalera
+-- del tramo 2 (z -40, 40 y 120) son nichos cerrados hasta que existan esas rutas; en su fondo aparecen zombies.
+-- El generador abre la iglesia (punto seguro 2): GameState lo trata como el portón del mapa de siempre (refs.gate).
+
+-- Fila de casas pegadas de 12 a 22 de largo entre z1 y z2, con la fachada en faceX mirando hacia faceDir
+local function sideRow(map, rng, x1, x2, z1, z2, faceX, faceDir)
+	local z = z1
+	while z < z2 do
+		local length = math.min(rng:NextInteger(12, 22), z2 - z)
+		if z2 - (z + length) < 8 then
+			length = z2 - z
+		end
+		building(map, rng, x1, x2, z, z + length, rng:NextNumber() < 0.35 and 26 or 17, faceX, faceDir)
+		z += length
+	end
+end
+
+-- Nicho cerrado de un cruce: pasaje de 8 que entra `depth` desde la fachada (faceX) y muro hasta outerX; zombies al fondo
+local function closedNiche(map, spawns, faceX, outerX, z, depth)
+	local side = outerX > faceX and 1 or -1
+	local inner = faceX + side * depth
+	floor(map, "NichoPiso", math.min(faceX, inner), math.max(faceX, inner), z - 4, z + 4, C.acera)
+	slab(map, "NichoMuro", math.min(inner, outerX), math.max(inner, outerX), z - 4, z + 4, 18, C.concreto)
+	deco(block(map, "NichoGrafiti", Vector3.new(0.3, 3, 5), Vector3.new(inner - side * 0.2, 5, z), C.grafiti, Enum.Material.SmoothPlastic))
+	marker(spawns, Vector3.new(inner - side * 3, 0, z))
+end
+
+-- Farol de plaza (12 de alto)
+local function plazaLamp(map, x, z)
+	deco(pole(map, "FarolPlaza", Vector3.new(x, 0, z), 12, 0.6, C.oscuro))
+	Atmosphere.bulb(map, Vector3.new(x, 12.3, z))
+end
+
+local function bench(map, x, z, angle)
+	block(map, "Banca", Vector3.new(6, 1.6, 1.6), CFrame.new(x, 0.8, z) * CFrame.Angles(0, math.rad(angle), 0), C.madera, Enum.Material.Wood)
+end
+
+local function deadTree(map, x, z)
+	pole(map, "Arbol", Vector3.new(x, 0, z), 9, 1.4, C.tierra, Enum.Material.Wood)
+	for i, angle in { 30, 150, 260 } do
+		local cf = CFrame.new(x, 7 + i * 0.6, z) * CFrame.Angles(0, math.rad(angle), math.rad(40)) * CFrame.new(1.5, 0, 0)
+		deco(block(map, "Rama", Vector3.new(3.5, 0.5, 0.5), cf, C.tierra, Enum.Material.Wood))
+	end
+end
+
+local function buildTramo2Calle(map, refs, rng, spawns, config)
+	-- Calle desde la tienda hasta la plaza
+	floor(map, "Asfalto2", -30, 30, -90, -10, C.asfalto, Enum.Material.Asphalt)
+	floor(map, "Acera2W", -35, -30, -90, -10, C.acera)
+	floor(map, "Acera2E", 30, 35, -90, -10, C.acera)
+	for _, side in { -1, 1 } do
+		local x1, x2 = math.min(35 * side, 60 * side), math.max(35 * side, 60 * side)
+		sideRow(map, rng, x1, x2, -90, -44, 35 * side, -side)
+		sideRow(map, rng, x1, x2, -36, -10, 35 * side, -side)
+		closedNiche(map, spawns, 35 * side, 60 * side, -40, 12)
+		for _, z in { -70, -22 } do
+			local top = Vector3.new(33 * side, 17, z)
+			deco(pole(map, "Poste", Vector3.new(33 * side, 0, z), 18, 0.8, C.concreto, Enum.Material.Concrete))
+			deco(block(map, "PosteBrazo", Vector3.new(3, 0.3, 0.3), top + Vector3.new(-side * 1.5, 0, 0), C.concreto))
+			Atmosphere.bulb(map, top + Vector3.new(-side * 3, -0.4, 0))
+		end
+	end
+	car(map, -12, -62, 20, C.mostaza)
+	crates(map, 21, -52)
+	container(map, -24, -28, 15)
+	car(map, 14, -24, -70, C.cobalto)
+
+	-- Plaza: adoquín, casas alrededor y cruces en z = 40
+	floor(map, "Plaza", -50, 50, -10, 110, Color3.fromRGB(165, 160, 150), Enum.Material.Cobblestone)
+	for _, side in { -1, 1 } do
+		local x1, x2 = math.min(50 * side, 60 * side), math.max(50 * side, 60 * side)
+		sideRow(map, rng, x1, x2, -10, 36, 50 * side, -side)
+		sideRow(map, rng, x1, x2, 44, 110, 50 * side, -side)
+		closedNiche(map, spawns, 50 * side, 60 * side, 40, 8)
+	end
+	-- Fuente rota en el centro
+	pole(map, "Fuente", Vector3.new(0, 0, 50), 2, 12, C.concreto, Enum.Material.Concrete)
+	deco(pole(map, "FuenteAgua", Vector3.new(0, 1.95, 50), 0.2, 10.4, Color3.fromRGB(28, 40, 46), Enum.Material.Glass))
+	pole(map, "FuenteColumna", Vector3.new(0, 0, 50), 6, 1.6, C.blanco, Enum.Material.Concrete)
+	deco(block(map, "FuenteTrozo", Vector3.new(2, 1, 1.4), CFrame.new(3.5, 2.5, 47.5) * CFrame.Angles(0.4, 0.6, 0.2), C.blanco))
+	-- Monumento, bancas, árboles secos, faroles, kiosco, carros y puestos abandonados
+	block(map, "Pedestal", Vector3.new(4, 4, 4), Vector3.new(-30, 2, 85), C.concreto)
+	block(map, "Estatua", Vector3.new(1.6, 5, 1.6), Vector3.new(-30, 6.5, 85), C.oxido, Enum.Material.Metal)
+	for _, b in { { -14, 36, 0 }, { 14, 36, 0 }, { -14, 64, 0 }, { 14, 64, 0 }, { -22, 50, 90 }, { 22, 50, 90 } } do
+		bench(map, b[1], b[2], b[3])
+	end
+	deadTree(map, -40, 30)
+	deadTree(map, 40, 72)
+	deadTree(map, -40, 72)
+	for _, lamp in { { -40, 10 }, { 40, 10 }, { -40, 92 }, { 40, 92 } } do
+		plazaLamp(map, lamp[1], lamp[2])
+	end
+	block(map, "Kiosco", Vector3.new(8, 3, 8), Vector3.new(36, 1.5, 100), C.turquesa)
+	deco(block(map, "KioscoTecho", Vector3.new(9, 0.5, 9), Vector3.new(36, 9, 100), C.oxido, Enum.Material.CorrodedMetal))
+	for _, corner in { Vector3.new(-3.8, 0, -3.8), Vector3.new(3.8, 0, -3.8), Vector3.new(-3.8, 0, 3.8), Vector3.new(3.8, 0, 3.8) } do
+		deco(pole(map, "KioscoPalo", Vector3.new(36, 0, 100) + corner, 9, 0.3, C.concreto))
+	end
+	car(map, -20, 15, 30, C.salmon)
+	car(map, 18, 85, -20, C.lima)
+	stall(map, -35, 60, C.lonaVerde)
+	stall(map, 8, 10, C.lonaAzul)
+
+	-- Generador (abre la iglesia) con cobertura alrededor
+	local generatorModel, generator = PropModel.build(Generador, Vector3.new(30, 0, 40), 0)
+	generator.Name = "Generator"
+	generatorModel.Parent = map
+	refs.generator = generator
+	refs.generatorModel = generatorModel
+	refs.generatorPrompt = prompt(generator, "Encender generador", config.GeneratorHoldTime)
+	label(generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
+	sandbags(map, 23, 34, 45)
+	sandbags(map, 37, 47, 45)
+	crates(map, 39, 33)
+
+	-- Estación de munición (acera oeste de la plaza), botiquín en un puesto y caja de armas en la plaza
+	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-47.5, 0, 20), math.rad(-90))
+	hitbox.Name = "AmmoStation"
+	model.Parent = map
+	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
+	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	local kit, kitPrompt = medkitPickup(map, Vector3.new(-35, 3, 61.2))
+	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	refs.boxSpots.Zone2 = { { Vector3.new(-30, 0, 45), Vector3.new(0, 0, 95), Vector3.new(20, 0, 0) } }
+
+	-- Atrio de la iglesia con su escalinata y cruces en z = 120
+	floor(map, "Atrio", -30, 30, 110, 160, Color3.fromRGB(185, 180, 170), Enum.Material.Slate)
+	for _, side in { -1, 1 } do
+		local x1, x2 = math.min(30 * side, 60 * side), math.max(30 * side, 60 * side)
+		sideRow(map, rng, x1, x2, 110, 116, 30 * side, -side)
+		closedNiche(map, spawns, 30 * side, 60 * side, 120, 12)
+		sideRow(map, rng, x1, x2, 124, 160, 30 * side, -side)
+		plazaLamp(map, 25 * side, 132)
+	end
+	stairs(map, -20, 20, 126)
+
+	-- Flechas rojas hacia la plaza y la iglesia
+	for _, z in { -80, -30, 100, 150 } do
+		floorArrow(map, Vector3.new(0, 0, z), C.rojo)
+	end
+end
+
+-- Parte 10: punto seguro 2, la iglesia (z 160..200, x -30..30, 20 de alto, fachada de 30 y campanario de 40).
+-- La reja de entrada (refs.gate) solo se abre al encender el generador.
+local function buildChurch(map, refs)
+	local wall = C.blanco
+	slab(map, "IglesiaFachadaW", -30, -12, 160, 162, 30, wall)
+	slab(map, "IglesiaFachadaE", 12, 30, 160, 162, 30, wall)
+	block(map, "IglesiaDintel", Vector3.new(24, 16, 2), Vector3.new(0, 22, 161), wall)
+	deco(block(map, "Cruz", Vector3.new(1, 6, 0.6), Vector3.new(0, 33, 160.4), C.oscuro))
+	deco(block(map, "Cruz", Vector3.new(4, 1, 0.6), Vector3.new(0, 34, 160.4), C.oscuro))
+	slab(map, "IglesiaLadoW", -30, -28, 162, 198, 20, wall)
+	slab(map, "IglesiaLadoE", 28, 30, 162, 198, 20, wall)
+	slab(map, "IglesiaFondoW", -30, -12, 198, 200, 20, wall)
+	slab(map, "IglesiaFondoE", 12, 30, 198, 200, 20, wall)
+	block(map, "IglesiaFondoDintel", Vector3.new(24, 6, 2), Vector3.new(0, 17, 199), wall)
+	block(map, "IglesiaTecho", Vector3.new(60, 1, 40), Vector3.new(0, 20.5, 180), C.oxido, Enum.Material.CorrodedMetal)
+	floor(map, "IglesiaPiso", -28, 28, 162, 198, Color3.fromRGB(120, 90, 60), Enum.Material.WoodPlanks)
+	slab(map, "IglesiaBloqueW", -60, -30, 160, 214, 20, C.salmon)
+	slab(map, "IglesiaBloqueE", 30, 60, 160, 214, 20, C.turquesa)
+
+	-- Campanario de 40 con la campana y la baliza azul encima
+	slab(map, "Campanario", 31, 41, 149, 161, 40, wall)
+	deco(pole(map, "Campana", Vector3.new(36, 40, 155), 3, 3, Color3.fromRGB(180, 140, 60), Enum.Material.Metal))
+	deco(pole(map, "Baliza", Vector3.new(36, 43, 155), 24, 1, C.concreto))
+	local beacon = deco(block(map, "BalizaLuz", Vector3.new(2.5, 3, 2.5), Vector3.new(36, 68.5, 155), C.azul, Enum.Material.Neon))
+	local beaconLight = Instance.new("PointLight")
+	beaconLight.Color = C.azul
+	beaconLight.Range = 40
+	beaconLight.Brightness = 3
+	beaconLight.Parent = beacon
+
+	refs.gate = door(map, "ChurchEntryDoor", 161, 24, 14)
+	refs.gateText = { label = "IGLESIA", open = "abrir la iglesia", run = "a la iglesia" }
+	refs.church = {
+		exitDoor = door(map, "ChurchExitDoor", 199, 24, 14),
+		volume = volume(map, "ChurchVolume", -28, 28, 162, 198, 12),
+		spawn = CFrame.lookAt(Vector3.new(0, 3, 180), Vector3.new(0, 3, 200)),
+	}
+
+	-- Interior: altar con velas, bancas tiradas a los lados, vitrales; la nave central queda libre para descansar
+	block(map, "Altar", Vector3.new(8, 3, 3), Vector3.new(0, 1.5, 194), wall)
+	deco(block(map, "AltarMantel", Vector3.new(8.2, 0.1, 3.2), Vector3.new(0, 3.02, 194), C.rojo, Enum.Material.Fabric))
+	for _, x in { -3.8, -0.6, 0.6, 3.8 } do
+		deco(pole(map, "Vela", Vector3.new(x, 3, 195), 0.7, 0.3, Color3.fromRGB(255, 220, 150), Enum.Material.Neon))
+	end
+	for _, x in { -2.5, 2.5 } do
+		local kit, kitPrompt = medkitPickup(map, Vector3.new(x, 3, 193.8))
+		table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	end
+	for i, z in { 172, 178, 184, 190 } do
+		block(map, "Banca", Vector3.new(9, 1.6, 2), CFrame.new(-21.5, 0.8, z) * CFrame.Angles(0, math.rad(({ 0, 12, -8, 25 })[i]), 0), C.madera, Enum.Material.Wood)
+	end
+	for i, z in { 182, 188 } do
+		block(map, "Banca", Vector3.new(9, 1.6, 2), CFrame.new(21.5, 0.8, z) * CFrame.Angles(0, math.rad(({ -15, 6 })[i]), 0), C.madera, Enum.Material.Wood)
+	end
+	for i, z in { 170, 182, 194 } do
+		local color = ({ C.rojo, C.azul, C.amarillo })[i]
+		for _, x in { -27.8, 27.8 } do
+			deco(block(map, "Vitral", Vector3.new(0.3, 6, 3), Vector3.new(x, 11, z), color, Enum.Material.Neon)).Transparency = 0.3
+		end
+	end
+
+	-- Munición, radio con la segunda pista y el cartel del barrio
+	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25.5, 0, 170), math.rad(90))
+	hitbox.Name = "AmmoStation"
+	model.Parent = map
+	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
+	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	block(map, "MesaRadio", Vector3.new(4, 3, 2.5), Vector3.new(-25, 1.5, 166), C.madera, Enum.Material.Wood)
+	deco(block(map, "RadioIglesia", Vector3.new(2.4, 1.4, 1.2), Vector3.new(-25, 3.7, 166), C.oscuro, Enum.Material.Metal))
+	sign(map, "Pista2", "Rhomulus cayó, pero el Refugio Remo sigue en pie", Vector3.new(9, 4, 0.4), CFrame.new(-27.7, 8, 166) * CFrame.Angles(0, -math.pi / 2, 0), C.blanco, C.oscuro)
+	sign(map, "CartelIglesia", "AQUÍ NADIE SE QUEDA ATRÁS", Vector3.new(20, 4, 0.4), Vector3.new(0, 17, 197.6), C.mostaza, C.oscuro)
+
+	-- Luz cálida y estable (aquí se respira)
+	for _, z in { 172, 188 } do
+		local lamp = deco(block(map, "Lampara", Vector3.new(1.2, 1.2, 1.2), Vector3.new(0, 17, z), Color3.fromRGB(255, 220, 160), Enum.Material.Neon))
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 200, 140)
+		light.Range = 30
+		light.Brightness = 1.6
+		light.Parent = lamp
+	end
+
+	-- Vestíbulo de salida provisional: cruzar la puerta de salida termina la prueba (hasta que exista el tramo 3)
+	floor(map, "VestibuloPiso", -30, 30, 200, 212, C.acera)
+	slab(map, "VestibuloFondo", -60, 60, 212, 214, 20, C.concreto)
+	sign(map, "CartelFin", "PRÓXIMAMENTE: LA TERMINAL Y EL ESTADIO", Vector3.new(30, 4, 0.4), Vector3.new(0, 8, 211.7), C.rojo)
+	refs.exitVolume = volume(map, "ExitVolume", -30, 30, 202, 212, 12)
 end
 
 function MapBuilderBarrio.build(config)
@@ -1035,23 +1274,30 @@ function MapBuilderBarrio.build(config)
 	local zone1Spawns = Instance.new("Folder")
 	zone1Spawns.Name = "Zone1"
 	zone1Spawns.Parent = spawnRoot
+	local zone2Spawns = Instance.new("Folder")
+	zone2Spawns.Name = "Zone2"
+	zone2Spawns.Parent = spawnRoot
 
 	local rng = Random.new(config.Seed)
-	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {} }
+	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {}, medkits = {} }
 
 	buildLobby(map, refs)
 	buildStreet(map, refs, rng)
 	buildAlley(map, refs, rng, zone1Spawns)
 	buildStairs(map, refs, rng, zone1Spawns)
 	buildSafePoint(map, refs)
+	buildTramo2Calle(map, refs, rng, zone2Spawns, config)
+	buildChurch(map, refs)
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
 	local params = OverlapParams.new()
 	params.RespectCanCollide = true
-	for _, group in refs.boxSpots.Zone1 do
-		for _, spot in group do
-			if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7), params) > 0 then
-				warn(`MapBuilderBarrio: el lugar de la caja de armas {spot} está tapado`)
+	for _, groups in refs.boxSpots do -- cada zona tiene una lista de lugares por ruta
+		for _, group in groups do
+			for _, spot in group do
+				if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7), params) > 0 then
+					warn(`MapBuilderBarrio: el lugar de la caja de armas {spot} está tapado`)
+				end
 			end
 		end
 	end

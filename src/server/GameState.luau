@@ -11,6 +11,7 @@ local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
+local Medkits = require(script.Parent.Medkits)
 local MapBuilder = require(script.Parent.MapBuilder)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
@@ -35,10 +36,10 @@ local OBJECTIVES = {
 		return map.generator.Position, "GENERADOR"
 	end,
 	Warning = function()
-		return map.gate.Position, "PORTÓN"
+		return map.gate.Position, map.gateText.label
 	end,
 	Horde = function()
-		return map.gate.Position, "PORTÓN"
+		return map.gate.Position, map.gateText.label
 	end,
 	Radio = function()
 		return map.radioModel:GetPivot().Position, "RADIO"
@@ -197,8 +198,9 @@ local function resetMap()
 	setLobbyDoors(false)
 	setDoor(map.safeEntryDoor, true)
 	setDoor(map.safeExitDoor, false)
-	if map.gate then -- el mapa nuevo todavía no tiene portón
-		setDoor(map.gate, false)
+	setDoor(map.gate, false)
+	if map.church then
+		setDoor(map.church.exitDoor, false)
 	end
 	setLight(map.generatorModel, "luz_estado", LIGHT_OFF)
 	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
@@ -218,6 +220,7 @@ local function lobby()
 	Stats.reset()
 	Points.reset()
 	CanPiles.reset()
+	Medkits.reset()
 	WeaponBox.clear()
 	Weapons.resetAll()
 	resetMap()
@@ -262,25 +265,26 @@ local function zone1()
 	return ok
 end
 
-local function safeRoom()
-	setDoor(map.safeEntryDoor, false) -- cierra la puerta detrás del equipo
+-- `room` = { entryDoor, exitDoor, spawn }: el punto seguro 1 de cada mapa o la iglesia del mapa nuevo
+local function safeRoom(room)
+	setDoor(room.entryDoor, false) -- cierra la puerta detrás del equipo
 	Director.setZone(nil)
 	Ambushes.disarm()
 	Zombies.clear()
 	WeaponBox.clear()
 
-	PlayerState.setSafePoint(map.safeSpawn)
+	PlayerState.setSafePoint(room.spawn)
 	respawn(true) -- los caídos de antes reaparecen aquí
 	Weapons.refillAll() -- recarga gratis del punto seguro
 	setStage("SafeRoom", "Punto seguro. Descansen", "Safe")
 	task.wait(Config.Game.SafeRoomTime)
 
-	setDoor(map.safeExitDoor, true)
+	setDoor(room.exitDoor, true)
 	return true
 end
 
 local function zone2()
-	setStage("Zone2", "Enciendan el generador para abrir el portón", "Generator")
+	setStage("Zone2", `Enciendan el generador para {map.gateText.open}`, "Generator")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
@@ -294,12 +298,14 @@ local function zone2()
 	setDoor(map.gate, true)
 	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
 	task.wait(Config.Game.HordeWarning)
-	setStage("Zone2", "¡HORDA! Corran al portón", "Horde")
+	setStage("Zone2", `¡HORDA! Corran {map.gateText.run}`, "Horde")
 	Atmosphere.blackout(map.generator.Position) -- el generador sobrecarga la red: los faroles cercanos revientan
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
+	-- Mapa de siempre: la entrada de la extracción; mapa nuevo: la iglesia
+	local goal = map.church and map.church.volume or map.extractionVolume
 	local ok = waitUntil(function()
-		return allInside(map.extractionVolume)
+		return allInside(goal)
 	end, true)
 	if ok then
 		Points.add(Config.Points.ZoneComplete)
@@ -368,7 +374,7 @@ local function extraction()
 	return true
 end
 
--- Mapa nuevo (solo hasta el punto seguro 1): la prueba se gana al cruzar la puerta de salida
+-- Mapa nuevo (todavía sin extracción): la prueba se gana al cruzar la puerta de salida de la iglesia
 local function testExit()
 	setStage("SafeRoom", "Fin del tramo de prueba. Salgan por la puerta", "Exit")
 	local ok = waitUntil(function()
@@ -399,6 +405,9 @@ function GameState.start()
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)
 	CanPiles.init(map.canPiles)
+	Medkits.init(map.medkits)
+	-- El mapa de siempre llama "portón" a lo que abre el generador; el nuevo lo define (la iglesia)
+	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
 
 	Players.PlayerAdded:Connect(function(player)
 		if stage == "Lobby" then
@@ -416,10 +425,11 @@ function GameState.start()
 	task.spawn(function()
 		while true do
 			lobby()
-			local won = zone1() and safeRoom()
+			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, spawn = map.safeSpawn })
 			if won then
-				if map.exitVolume then
-					won = testExit()
+				if map.church then
+					-- Mapa nuevo (hasta la iglesia): generador -> horda -> iglesia -> descanso -> salida de prueba
+					won = zone2() and safeRoom({ entryDoor = map.gate, exitDoor = map.church.exitDoor, spawn = map.church.spawn }) and testExit()
 				else
 					won = zone2() and extraction()
 				end
