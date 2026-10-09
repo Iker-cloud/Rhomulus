@@ -69,7 +69,7 @@ function Atmosphere.decorate(map)
 	if not A.Enabled then
 		return
 	end
-	if not map.exitVolume then -- el mapa de siempre (MapBuilder) no trae faroles
+	if not map.medkits then -- el mapa de siempre (MapBuilder) no trae faroles
 		oldMapLamps(workspace.Map)
 	end
 	local rng = Random.new(Config.Game.Seed)

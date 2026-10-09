@@ -393,6 +393,7 @@ return {
 	Ambush = {
 		Size = 8, -- zombies al 100% (4 jugadores); se escala con Director.ByPlayers.HordeScale (con 1 jugador: 2)
 		FieldSize = 12, -- emboscada grande de la cancha (ruta Escalera); con 1 jugador: 3
+		TerminalSize = 14, -- emboscada de la terminal (más un Tanque); con 1 jugador: 4
 		MinDistance = 22, -- nunca aparecen más cerca que esto de un jugador
 	},
 

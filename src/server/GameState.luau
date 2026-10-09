@@ -60,8 +60,8 @@ local OBJECTIVES = {
 	Run = function()
 		return map.vanStop.Position, "VAN"
 	end,
-	Exit = function()
-		return map.exitVolume.Position, "SALIDA"
+	Stadium = function()
+		return map.stadiumVolume.Position, "ESTADIO"
 	end,
 }
 
@@ -353,6 +353,7 @@ end
 local function extraction()
 	-- Sin zombies nuevos mientras llaman a la radio (solo quedan los de la horda)
 	Director.setZone(nil)
+	Ambushes.disarm()
 	WeaponBox.place("Extraction")
 	setStage("Extraction", "Llamen al rescate con la radio", "Radio")
 	PlayerState.resetSelfRevives()
@@ -411,11 +412,15 @@ local function extraction()
 	return true
 end
 
--- Mapa nuevo (todavía sin extracción): la prueba se gana al cruzar la puerta de salida de la iglesia
-local function testExit()
-	setStage("SafeRoom", "Fin del tramo de prueba. Salgan por la puerta", "Exit")
+-- Mapa nuevo, tramo 3: cruzar la terminal hasta la puerta del estadio (emboscada con Tanque en el camino)
+local function zone3()
+	setStage("Zone3", "Crucen la terminal hasta el estadio", "Stadium")
+	PlayerState.resetSelfRevives()
+	Director.setZone("Zone3")
+	WeaponBox.place("Zone3")
+	Ambushes.arm(map.ambushesZone3)
 	local ok = waitUntil(function()
-		return allInside(map.exitVolume)
+		return allInside(map.stadiumVolume)
 	end, true)
 	if ok then
 		Points.add(Config.Points.ZoneComplete)
@@ -466,8 +471,8 @@ function GameState.start()
 			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, extraExits = map.safeExtraExits, spawn = map.safeSpawn })
 			if won then
 				if map.church then
-					-- Mapa nuevo (hasta la iglesia): generador -> horda -> iglesia -> descanso -> salida de prueba
-					won = zone2() and safeRoom({ entryDoor = map.gate, exitDoor = map.church.exitDoor, spawn = map.church.spawn }) and testExit()
+					-- Mapa nuevo: generador -> horda -> iglesia -> descanso -> terminal -> estadio -> extracción
+					won = zone2() and safeRoom({ entryDoor = map.gate, exitDoor = map.church.exitDoor, spawn = map.church.spawn }) and zone3() and extraction()
 				else
 					won = zone2() and extraction()
 				end

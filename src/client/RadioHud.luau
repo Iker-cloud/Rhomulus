@@ -13,6 +13,7 @@ local TONES = {
 	Waiting = { Color3.fromRGB(120, 190, 120), "COMANDANTE" },
 	Start = { Color3.fromRGB(70, 215, 200), "COMANDANTE" },
 	Advance = { Color3.fromRGB(245, 190, 50), "COMANDANTE" },
+	Stadium = { Color3.fromRGB(245, 190, 50), "COMANDANTE" },
 	Safe = { Color3.fromRGB(90, 170, 255), "ENFERMERÍA" },
 	Generator = { Color3.fromRGB(255, 140, 50), "TÉCNICO" },
 	Gas = { Color3.fromRGB(255, 140, 50), "TÉCNICO" },

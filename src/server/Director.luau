@@ -128,15 +128,11 @@ function Director.spawnHorde(size)
 	end
 end
 
--- Mini-horda (emboscada del callejón): pocos zombies desde `points`, sin tanque y respetando el límite de vivos.
+-- Mini-horda (emboscada): pocos zombies desde `points` y respetando el límite de vivos; con withTank sale también un Tanque.
 -- Pueden aparecer a la vista (salen de callejones laterales), pero nunca a menos de Config.Ambush.MinDistance.
-function Director.spawnAmbush(size, points)
-	local count = math.max(1, math.floor(size * getScaling().HordeScale + 0.5))
-	for _ = 1, count do
-		if Zombies.getAlive() >= getMaxAlive() then
-			break
-		end
-		local candidates = {}
+function Director.spawnAmbush(size, points, withTank)
+	local function freePoints()
+		local list = {}
 		for _, point in points do
 			local clear = true
 			for _, player in Players:GetPlayers() do
@@ -146,9 +142,26 @@ function Director.spawnAmbush(size, points)
 				end
 			end
 			if clear then
-				table.insert(candidates, point)
+				table.insert(list, point)
 			end
 		end
+		return list
+	end
+
+	-- Con withTank sale además un Tanque (respeta el máximo de tanques vivos de este número de jugadores)
+	if withTank and Zombies.getAlive("Tank") < getScaling().MaxTanks then
+		local candidates = freePoints()
+		if #candidates > 0 then
+			Zombies.spawn("Tank", candidates[math.random(#candidates)])
+		end
+	end
+
+	local count = math.max(1, math.floor(size * getScaling().HordeScale + 0.5))
+	for _ = 1, count do
+		if Zombies.getAlive() >= getMaxAlive() then
+			break
+		end
+		local candidates = freePoints()
 		if #candidates == 0 then
 			return
 		end
