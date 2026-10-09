@@ -500,6 +500,17 @@ function GameState.start()
 		if stage == "Lobby" or stage == "Vote" then
 			player:SetAttribute("Ready", false)
 			player:LoadCharacter()
+		elseif stage ~= "Result" then
+			-- Entra con la partida empezada: aparece junto a un compañero que siga de pie (si no hay, en el último punto seguro)
+			for _, other in Players:GetPlayers() do
+				local root = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+				if root and PlayerState.get(other) == "Normal" then
+					PlayerState.spawnAt(player, root.CFrame * CFrame.new(0, 2, 0))
+					break
+				end
+			end
+			player:SetAttribute("Ready", true)
+			player:LoadCharacter()
 		end
 	end)
 

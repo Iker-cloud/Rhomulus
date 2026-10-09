@@ -16,6 +16,7 @@ PlayerState.Changed = Instance.new("BindableEvent")
 local bleedTokens = {} -- [Player] = number, invalida desangrados anteriores
 local sprinting = {} -- [Player] = true mientras mantiene Shift (lo dice el cliente; solo vale en estado Normal)
 local safePoint = nil -- CFrame del último punto seguro; nil = aparición por defecto
+local spawnOverride = {} -- [Player] = CFrame donde aparece la próxima vez (quien entra con la partida empezada: junto a un compañero)
 
 local function getHumanoid(player)
 	local character = player.Character
@@ -51,6 +52,11 @@ end
 function PlayerState.setSprinting(player, on)
 	sprinting[player] = on or nil
 	PlayerState.refreshSpeed(player)
+end
+
+-- Hace que el próximo personaje de `player` aparezca en `cframe` (una sola vez) en vez de en el punto seguro
+function PlayerState.spawnAt(player, cframe)
+	spawnOverride[player] = cframe
 end
 
 function PlayerState.setSafePoint(cframe)
@@ -148,10 +154,12 @@ local function onCharacter(player, character)
 	setState(player, "Normal")
 	PlayerState.refreshSpeed(player)
 
-	if safePoint then
+	local base = spawnOverride[player] or safePoint
+	spawnOverride[player] = nil
+	if base then
 		local root = character:WaitForChild("HumanoidRootPart")
 		-- Dispersos para que no reaparezcan encimados
-		local target = safePoint * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6))
+		local target = base * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6))
 		-- Con StreamingEnabled el suelo del mapa recién construido tarda en llegar al cliente: se espera quieto a que cargue
 		-- (si no, el personaje cae al vacío). RequestStreamAroundAsync devuelve cuando ya llegó o al pasar el tiempo.
 		root.Anchored = true
