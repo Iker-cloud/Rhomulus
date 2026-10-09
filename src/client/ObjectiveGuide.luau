@@ -29,14 +29,16 @@ function ObjectiveGuide.start()
 	beacon.CastShadow = false
 	beacon.Material = Enum.Material.Neon
 	beacon.Color = G.Color
-	beacon.Transparency = 0.35
+	beacon.Transparency = G.ShowBeam and 0.35 or 1 -- sin columna: la pieza queda invisible y solo sirve de ancla del cartel
 	beacon.Size = Vector3.new(G.BeaconWidth, G.BeaconHeight, G.BeaconWidth)
 
-	local light = Instance.new("PointLight")
-	light.Color = G.Color
-	light.Range = 30
-	light.Brightness = 2
-	light.Parent = beacon
+	if G.ShowBeam then
+		local light = Instance.new("PointLight")
+		light.Color = G.Color
+		light.Range = 30
+		light.Brightness = 2
+		light.Parent = beacon
+	end
 
 	local sign = Instance.new("BillboardGui")
 	sign.Size = UDim2.fromOffset(240, 70)

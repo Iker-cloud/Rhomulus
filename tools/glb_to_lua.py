@@ -155,7 +155,7 @@ for i, n in enumerate(nodes):
     cf = to_roblox(ctr)
     is_ball = shape == "Ball"
     material = gltf["materials"][prim.get("material", 0)]
-    base = material["pbrMetallicRoughness"]["baseColorFactor"]
+    base = material["pbrMetallicRoughness"].get("baseColorFactor", [1, 1, 1, 1])  # las texturas no traen color
     emissive = material.get("emissiveFactor")
     color = [round(srgb(base[k]) * 255) for k in range(3)]
     parts.append({
@@ -166,6 +166,8 @@ for i, n in enumerate(nodes):
         "cf": [round(v, 4) for v in cf],
         "color": color,
         "neon": bool(emissive and max(emissive) > 0.1),
+        # las piezas con textura no traen color: el constructor del mapa decide cómo se ven según el nombre del material
+        "mat": material["name"] if (material["pbrMetallicRoughness"].get("baseColorTexture") or material.get("emissiveTexture")) else None,
     })
     # extremos para la altura
     for p in pos:
@@ -226,7 +228,7 @@ for p in parts:
         f"\t\t{{ name = \"{p['name']}\", group = \"{p['group']}\", shape = \"{p['shape']}\", "
         f"size = Vector3.new({p['size'][0]:g}, {p['size'][1]:g}, {p['size'][2]:g}), "
         f"cf = {fmt_cf(p['cf'])}, color = Color3.fromRGB({p['color'][0]}, {p['color'][1]}, {p['color'][2]})"
-        + (", neon = true" if p["neon"] else "") + " },"
+        + (", neon = true" if p["neon"] else "") + (f", mat = \"{p['mat']}\"" if p.get("mat") else "") + " },"
     )
 lines.append("\t},")
 lines.append("}")

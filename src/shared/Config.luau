@@ -189,7 +189,7 @@ return {
 			-- Sonido por zona del mapa nuevo (client/NightSounds): suena en bucle dentro de la caja, o con campanas cada cierto tiempo
 			Zones = {
 				{ name = "Iglesia", box = { -60, 60, 140, 214 }, bell = "rbxassetid://9113803790", bellInterval = { 14, 26 }, bellVolume = 0.7 },
-				{ name = "Mercado", box = { -114, -66, -32, 52 }, loop = "rbxassetid://9112852458", volume = 0.3 }, -- llovizna sobre lámina
+				{ name = "Mercado", box = { -120, -64, -32, 78 }, loop = "rbxassetid://9112852458", volume = 0.3 }, -- llovizna sobre lámina
 				{ name = "Terminal", box = { -62, 62, 200, 330 }, loop = "rbxassetid://9112792684", volume = 0.22 }, -- motores y grillos lejos
 				{ name = "Estadio", box = { -122, 122, 330, 440 }, loop = "rbxassetid://9125602882", volume = 0.28 }, -- tonos huecos
 			},
@@ -242,6 +242,7 @@ return {
 	Guide = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 205, 60),
+		ShowBeam = false, -- columna de luz en el mundo (apagada: basta con el cartel de nombre y distancia)
 		BeaconHeight = 140, -- altura de la columna de luz (studs)
 		BeaconWidth = 4,
 		EdgeMargin = 70, -- px que separan la flecha del borde de la pantalla
@@ -296,10 +297,27 @@ return {
 		},
 	},
 
+	-- Prueba de acción al revivir (server/SkillCheck + client/SkillCheck): mientras se mantiene E sale un aro con una zona
+	-- buena y una aguja que lo recorre; hay que pulsar Espacio (o tocar el aro) cuando la aguja pasa por la zona.
+	-- Si se falla, el revivir se reinicia. Es fácil a propósito: zona grande y aguja lenta.
+	SkillCheck = {
+		Enabled = true,
+		Times = { 0.25, 0.55 }, -- en qué parte de Revive.HoldTime sale cada prueba (una por valor)
+		Period = 1.4, -- segundos que tarda la aguja en dar la vuelta completa
+		ZoneSize = 80, -- grados de la zona buena (de 360)
+		ZoneMin = 100, -- la zona empieza al azar entre estos dos ángulos (grados desde arriba, hacia la derecha)
+		ZoneMax = 280,
+		Tolerance = 0.12, -- segundos de margen por latencia
+		Delay = 0.35, -- la aguja arranca esto después de aparecer el aro
+		RetryDelay = 0.8, -- tras fallar, segundos antes de poder volver a intentar
+		FailPhrases = { "¡Se me resbaló!", "Otra vez, aguanta", "Casi..." },
+	},
+
 	Zombie = {
 		ThinkInterval = 0.2, -- cada cuánto decide (ataque, objetivo)
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
-		CorpseTime = 2, -- segundos que el cadáver queda antes de borrarse
+		CorpseTime = 3.6, -- segundos que el cadáver queda antes de borrarse (caída, espasmo y desvanecimiento; ver ZombieAnimator)
+		DeathFade = 0.9, -- los últimos segundos del cadáver se desvanece y se hunde
 
 		-- Modelos: el común = zombie-el-brotado.glb, el rápido = zombie-el-desbocado.glb (ver tools/glb_to_lua.py).
 		-- ModelDetail: "full" = todas las piezas; "light" quita dientes, dedos, vértebras y otros detalles pequeños.

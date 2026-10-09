@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
+local SkillCheck = require(script.Parent.SkillCheck)
 local Points = require(script.Parent.Points)
 
 local Revive = {}
@@ -14,6 +15,7 @@ local Revive = {}
 local carrying = {} -- [carrier] = target
 local carriedBy = {} -- [target] = carrier
 local welds = {} -- [target] = WeldConstraint
+local sessions = {} -- [helper] = { target, checks pasadas, falló } mientras mantiene E con las pruebas de acción activas
 
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("Carried")
@@ -188,13 +190,63 @@ local function onCharacter(player, character)
 
 	revivePrompt.PromptButtonHoldEnded:Connect(function(helper)
 		setReviving(helper, false)
+		local session = sessions[helper]
+		if session then
+			Remotes.SkillCheck:FireClient(helper, "cancel")
+			-- Un momento de gracia: al completarse el hold puede soltar antes de que llegue Triggered
+			task.delay(0.3, function()
+				if sessions[helper] == session then
+					sessions[helper] = nil
+				end
+			end)
+		end
 	end)
+
+	-- Falla una prueba: se cancela el revivir (el prompt se apaga un momento y hay que volver a empezar)
+	local function failSession(helper, session)
+		if session.failed then
+			return
+		end
+		session.failed = true
+		Remotes.SkillCheck:FireClient(helper, "result", false)
+		setReviving(helper, false)
+		say(helper.Character, randomOf(Config.SkillCheck.FailPhrases))
+		revivePrompt.Enabled = false
+		task.delay(Config.SkillCheck.RetryDelay, function()
+			sessions[helper] = nil
+			updatePrompts(player)
+		end)
+	end
 
 	revivePrompt.PromptButtonHoldBegan:Connect(function(helper)
 		if not canHelp(helper, player) then
 			return
 		end
 		setReviving(helper, true)
+		if Config.SkillCheck.Enabled then
+			local session = { target = player, passed = 0, failed = false, check = nil }
+			sessions[helper] = session
+			session.fail = function()
+				failSession(helper, session)
+			end
+			for index, fraction in Config.SkillCheck.Times do
+				task.delay(fraction * Config.Revive.HoldTime, function()
+					if sessions[helper] ~= session or session.failed or not canHelp(helper, player) then
+						return
+					end
+					local check = SkillCheck.new(Config.SkillCheck, workspace:GetServerTimeNow(), index)
+					session.check = check
+					Remotes.SkillCheck:FireClient(helper, "start", check.id, check.start, check.period, check.zoneStart, check.zoneSize)
+					-- Si no pulsa a tiempo, falla
+					task.delay(Config.SkillCheck.Delay + check.period + Config.SkillCheck.Tolerance + 0.3, function()
+						if sessions[helper] == session and session.check == check and not check.done then
+							check.done = true
+							session.fail()
+						end
+					end)
+				end)
+			end
+		end
 		say(helper.Character, randomOf(Config.Revive.ReviverPhrases))
 		task.delay(Config.Revive.ReplyDelay, function()
 			if PlayerState.get(player) == "Downed" then
@@ -205,6 +257,14 @@ local function onCharacter(player, character)
 
 	revivePrompt.Triggered:Connect(function(helper)
 		setReviving(helper, false)
+		if Config.SkillCheck.Enabled then
+			local session = sessions[helper]
+			sessions[helper] = nil
+			-- Solo se revive si superó todas las pruebas de esta pasada
+			if not session or session.failed or session.passed < #Config.SkillCheck.Times then
+				return
+			end
+		end
 		if canHelp(helper, player) then
 			PlayerState.revive(player, helper)
 		end
@@ -252,6 +312,22 @@ function Revive.start()
 	end)
 
 	Remotes.Drop.OnServerEvent:Connect(drop)
+
+	-- Pulsación de la prueba de acción: el servidor decide con la hora que dice el cliente (ya limitada por SkillCheck.judge)
+	Remotes.SkillCheckPress.OnServerEvent:Connect(function(helper, id, pressTime)
+		local session = sessions[helper]
+		local check = session and session.check
+		if not check or check.done or typeof(id) ~= "number" or typeof(pressTime) ~= "number" or check.id ~= id then
+			return
+		end
+		check.done = true
+		if SkillCheck.judge(check, pressTime, workspace:GetServerTimeNow(), Config.SkillCheck) then
+			session.passed += 1
+			Remotes.SkillCheck:FireClient(helper, "result", true)
+		else
+			session.fail()
+		end
+	end)
 end
 
 return Revive

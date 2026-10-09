@@ -53,8 +53,9 @@ local function buildRig(player, character)
 		kneeL = joint(character, "LeftLowerLeg", "LeftKnee"),
 		kneeR = joint(character, "RightLowerLeg", "RightKnee"),
 	}
-	for _, motor in joints do
-		if not motor then
+	-- Ojo: un campo nil no existe en la tabla, así que hay que comprobar cada nombre (con un for sobre `joints` nunca se ve)
+	for _, name in { "root", "waist", "neck", "shoulderL", "shoulderR", "elbowL", "elbowR", "hipL", "hipR", "kneeL", "kneeR" } do
+		if not joints[name] then
 			return nil -- no es un R15 completo (todavía)
 		end
 	end
@@ -137,6 +138,15 @@ local function update(rig, dt)
 	if not (root and humanoid) or humanoid.Health <= 0 then
 		return
 	end
+	-- Si el avatar cambió las piezas después de crear el rig, busca las articulaciones nuevas
+	if not rig.joints.root:IsDescendantOf(character) then
+		local fresh = buildRig(player, character)
+		if fresh then
+			rig.joints = fresh.joints
+			rig.last = {}
+		end
+		return
+	end
 
 	local carried = character:GetAttribute("Carried") == true
 	local downed = player:GetAttribute("State") == "Downed" and not carried
@@ -197,6 +207,12 @@ local function track(player, character)
 	end
 	-- Las piezas llegan poco a poco (el avatar tarda en cargar): reintenta hasta tener todas las articulaciones
 	task.spawn(function()
+		-- Roblox reemplaza las piezas del avatar justo después de CharacterAdded: con las articulaciones viejas la pose
+		-- se escribía en piezas que ya no existen (pasaba con 1 jugador, que reaparece al empezar la partida)
+		local deadline = os.clock() + 15
+		while character.Parent and not player:HasAppearanceLoaded() and os.clock() < deadline do
+			task.wait(0.2)
+		end
 		while character.Parent do
 			local rig = buildRig(player, character)
 			if rig then

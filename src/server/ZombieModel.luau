@@ -136,6 +136,7 @@ function ZombieModel.build(data, stats, position)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.RequiresNeck = false
+	humanoid.BreakJointsOnDeath = false -- el cadáver conserva las articulaciones: el cliente anima la caída (ZombieAnimator)
 	humanoid.Parent = model
 
 	model:SetAttribute("JointCount", #data.joints) -- el cliente espera a tenerlas todas antes de animar

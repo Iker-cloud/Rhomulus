@@ -64,9 +64,9 @@ local function buildRig(player, character)
 		elbowL = joint(character, "LeftLowerArm", "LeftElbow"),
 		wristL = joint(character, "LeftHand", "LeftWrist"),
 	}
-	for _, motor in motors do
-		if not motor then
-			return nil -- no es un R15 completo (todavía)
+	for _, name in { "shoulderR", "elbowR", "wristR", "shoulderL", "elbowL", "wristL" } do
+		if not motors[name] then
+			return nil -- no es un R15 completo (todavía): un campo nil no existe en la tabla, hay que comprobar cada nombre
 		end
 	end
 	if not (character:FindFirstChild("UpperTorso") and character:FindFirstChild("HumanoidRootPart")) then
@@ -278,6 +278,12 @@ local function track(player, character)
 	end
 	-- Las piezas llegan poco a poco: reintenta hasta tener todas las articulaciones
 	task.spawn(function()
+		-- Roblox reemplaza las piezas del avatar justo después de CharacterAdded: con las articulaciones viejas la pose
+		-- se escribía en piezas que ya no existen (pasaba con 1 jugador, que reaparece al empezar la partida)
+		local deadline = os.clock() + 15
+		while character.Parent and not player:HasAppearanceLoaded() and os.clock() < deadline do
+			task.wait(0.2)
+		end
 		while character.Parent do
 			local rig = buildRig(player, character)
 			if rig then

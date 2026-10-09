@@ -116,6 +116,14 @@ function Zombies.spawn(kind, position)
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()
+		-- Se queda quieto y deja de recibir balas; el cliente anima la caída, el espasmo y el desvanecimiento
+		root.Anchored = true
+		for _, part in model:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.CanQuery = false
+			end
+		end
+		model:SetAttribute("DeadAt", workspace:GetServerTimeNow())
 		task.wait(Config.Zombie.CorpseTime)
 		model:Destroy()
 	end)
