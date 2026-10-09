@@ -151,7 +151,7 @@ local function sign(parent, name, text, size, cframe, background, textColor)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 40
+	gui.PixelsPerStud = 25
 	gui.LightInfluence = 0.3
 	gui.Parent = board
 	local textLabel = Instance.new("TextLabel")
@@ -255,7 +255,7 @@ local function building(parent, rng, x1, x2, z1, z2, height, faceX, faceDir)
 			if level > 1 or math.abs(z - doorZ) > 4 then
 				deco(block(parent, "Ventana", Vector3.new(0.3, 3, 3), Vector3.new(skin, y, z), C.oscuro, Enum.Material.Glass))
 			end
-			z += 6
+			z += 8 -- ventanas más separadas: la mitad del peso del mapa eran ventanas
 		end
 	end
 
@@ -550,7 +550,7 @@ local function houseBlock(parent, rng, x1, x2, z1, z2, isOpen)
 					if level > 1 or math.abs(t - doorT) > 4 then
 						facePart("Ventana", t, 4.5 + (level - 1) * 8, 3, 3, C.oscuro, Enum.Material.Glass)
 					end
-					t += 6
+					t += 8
 				end
 			end
 		end

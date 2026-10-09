@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local player = Players.LocalPlayer
 local A = Config.Atmosphere
 local DARK = Color3.fromRGB(45, 40, 35) -- foco apagado
+local CULL_DISTANCE = 110 -- los faroles más lejos que esto no gastan luz (en celular cada luz cuesta)
 
 local NightLights = {}
 
@@ -20,7 +21,7 @@ local function setOn(bulb, data, on)
 		return
 	end
 	data.on = on
-	data.light.Enabled = on
+	data.light.Enabled = on and not data.far
 	bulb.Material = on and Enum.Material.Neon or Enum.Material.SmoothPlastic
 	bulb.Color = on and data.color or DARK
 end
@@ -75,7 +76,13 @@ end
 local function update()
 	local now = workspace:GetServerTimeNow()
 	local clock = os.clock()
+	local cameraPosition = workspace.CurrentCamera.CFrame.Position
 	for bulb, data in lamps do
+		local far = (bulb.Position - cameraPosition).Magnitude > CULL_DISTANCE
+		if far ~= data.far then
+			data.far = far
+			data.light.Enabled = data.on and not far
+		end
 		if bulb:GetAttribute("Broken") or (bulb:GetAttribute("BlackoutUntil") or 0) > now then
 			setOn(bulb, data, false)
 		elseif bulb:GetAttribute("Flicker") then
