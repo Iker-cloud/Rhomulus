@@ -1,5 +1,5 @@
 -- Mapa 1, Morro Esperanza (barrio de Rhomulus), en bloques de colores generados por código.
--- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2 a 7 y 10).
+-- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2 a 10).
 -- Se activa con Config.Game.UseNewMap; mientras tanto el mapa de siempre (MapBuilder) sigue intacto.
 --
 -- Hecho hasta ahora: lobby (la cochera, z -400..-350) -> tramo 1, rutas Calle (roja, z -350..-130) y Callejón
@@ -966,7 +966,9 @@ local function buildSafePoint(map, refs)
 	slab(map, "TiendaLadoW", -30, -28, -128, -122, 16, wall)
 	slab(map, "TiendaLadoW", -30, -28, -110, -92, 16, wall)
 	block(map, "TiendaDintelW", Vector3.new(2, 2, 12), Vector3.new(-29, 15, -116), wall)
-	slab(map, "TiendaLadoE", 28, 30, -128, -92, 16, wall)
+	slab(map, "TiendaLadoE", 28, 30, -128, -122, 16, wall)
+	slab(map, "TiendaLadoE", 28, 30, -110, -92, 16, wall)
+	block(map, "TiendaDintelE", Vector3.new(2, 2, 12), Vector3.new(29, 15, -116), wall)
 	block(map, "TiendaTecho", Vector3.new(60, 1, 40), Vector3.new(0, 16.5, -110), C.concreto, Enum.Material.CorrodedMetal)
 	floor(map, "TiendaPiso", -28, 28, -128, -92, Color3.fromRGB(170, 160, 140), Enum.Material.Slate)
 
@@ -974,14 +976,17 @@ local function buildSafePoint(map, refs)
 	slab(map, "TiendaBloqueW", -60, -30, -130, -122, 20, C.mostaza)
 	slab(map, "TiendaBloqueW", -60, -30, -110, -90, 20, C.mostaza)
 	floor(map, "TiendaSalidaW", -60, -28, -122, -110, C.acera)
-	slab(map, "TiendaBloqueE", 30, 60, -130, -90, 20, C.lima)
+	slab(map, "TiendaBloqueE", 30, 60, -130, -122, 20, C.lima)
+	slab(map, "TiendaBloqueE", 30, 60, -110, -90, 20, C.lima)
+	floor(map, "TiendaSalidaE", 28, 60, -122, -110, C.acera)
 
 	refs.safeEntryDoor = door(map, "SafeEntryDoor", -129, 24, 14)
 	refs.safeExitDoor = door(map, "SafeExitDoor", -91, 24, 14)
 	-- Salida oeste al Callejón del tramo 2 (se abre a la vez que la del norte)
-	refs.safeExtraExits = { block(map, "SafeExitDoorW", Vector3.new(2, 14, 12), Vector3.new(-29, 7, -116), Color3.fromRGB(150, 110, 60), Enum.Material.DiamondPlate) }
+	refs.safeExtraExits = { block(map, "SafeExitDoorW", Vector3.new(2, 14, 12), Vector3.new(-29, 7, -116), Color3.fromRGB(150, 110, 60), Enum.Material.DiamondPlate), block(map, "SafeExitDoorE", Vector3.new(2, 14, 12), Vector3.new(29, 7, -116), Color3.fromRGB(150, 110, 60), Enum.Material.DiamondPlate) }
 	sign(map, "CartelCallejon2", "← CALLEJÓN", Vector3.new(8, 3, 0.4), Vector3.new(-20, 11, -92.3), C.amarillo, C.oscuro)
 	sign(map, "CartelCalle2", "CALLE ↑", Vector3.new(8, 3, 0.4), Vector3.new(20, 11, -92.3), C.rojo)
+	sign(map, "CartelEscalera2", "ESCALERA →", Vector3.new(8, 3, 0.4), CFrame.new(27.7, 11, -116) * CFrame.Angles(0, math.pi / 2, 0), C.azul)
 	refs.safeVolume = volume(map, "SafeVolume", -28, 28, -128, -92, 12)
 	refs.safeSpawn = CFrame.lookAt(Vector3.new(0, 3, -112), Vector3.new(0, 3, -90))
 
@@ -996,7 +1001,7 @@ local function buildSafePoint(map, refs)
 	block(map, "Refrigerador", Vector3.new(3, 7, 3), Vector3.new(-25.5, 3.5, -96), C.blanco, Enum.Material.SmoothPlastic)
 	block(map, "Refrigerador", Vector3.new(3, 7, 3), Vector3.new(-25.5, 3.5, -124), C.blanco, Enum.Material.SmoothPlastic)
 	sandbags(map, 24, -124, 0)
-	crates(map, 23, -114)
+	crates(map, 21, -100)
 
 	-- Botiquines sobre el mostrador (2 por punto seguro)
 	for _, z in { -113, -107 } do
@@ -1040,9 +1045,16 @@ local function openCrossing(map, faceX, z)
 	sign(map, "CartelCallejon", "← CALLEJÓN", Vector3.new(8, 3, 0.4), CFrame.new(faceX + 0.5, 9, z + 9) * CFrame.Angles(0, -math.pi / 2, 0), C.amarillo, C.oscuro)
 end
 
+-- Cruce abierto hacia la Escalera desde la calle, la plaza o el atrio (fachada en faceX, hasta x = 62)
+local function openCrossingE(map, faceX, z)
+	floor(map, "CrucePiso", faceX, 62, z - 4, z + 4, C.acera)
+	floorArrow(map, Vector3.new(faceX + 5, 0, z), C.azul, math.pi / 2)
+	sign(map, "CartelEscalera", "ESCALERA →", Vector3.new(8, 3, 0.4), CFrame.new(faceX - 0.5, 9, z + 9) * CFrame.Angles(0, math.pi / 2, 0), C.azul)
+end
+
 -- Parte 7: tramo 2, ruta Calle (roja). La calle sigue tras la tienda (z -90..-10), se abre en la plaza del generador
 -- (z -10..110, x -50..50) y termina en el atrio de la iglesia (z 110..160). Los cruces hacia el Callejón y la Escalera
--- del tramo 2 (z -40, 40 y 120) son nichos cerrados hasta que existan esas rutas; en su fondo aparecen zombies.
+-- del tramo 2 (z -40, 40 y 120) están abiertos.
 -- El generador abre la iglesia (punto seguro 2): GameState lo trata como el portón del mapa de siempre (refs.gate).
 
 -- Fila de casas pegadas de 12 a 22 de largo entre z1 y z2, con la fachada en faceX mirando hacia faceDir
@@ -1056,16 +1068,6 @@ local function sideRow(map, rng, x1, x2, z1, z2, faceX, faceDir)
 		building(map, rng, x1, x2, z, z + length, rng:NextNumber() < 0.35 and 26 or 17, faceX, faceDir)
 		z += length
 	end
-end
-
--- Nicho cerrado de un cruce: pasaje de 8 que entra `depth` desde la fachada (faceX) y muro hasta outerX; zombies al fondo
-local function closedNiche(map, spawns, faceX, outerX, z, depth)
-	local side = outerX > faceX and 1 or -1
-	local inner = faceX + side * depth
-	floor(map, "NichoPiso", math.min(faceX, inner), math.max(faceX, inner), z - 4, z + 4, C.acera)
-	slab(map, "NichoMuro", math.min(inner, outerX), math.max(inner, outerX), z - 4, z + 4, 18, C.concreto)
-	deco(block(map, "NichoGrafiti", Vector3.new(0.3, 3, 5), Vector3.new(inner - side * 0.2, 5, z), C.grafiti, Enum.Material.SmoothPlastic))
-	marker(spawns, Vector3.new(inner - side * 3, 0, z))
 end
 
 -- Farol de plaza (12 de alto)
@@ -1098,7 +1100,7 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		if side == -1 then
 			openCrossing(map, -35, -40)
 		else
-			closedNiche(map, spawns, 35 * side, 60 * side, -40, 12)
+			openCrossingE(map, 35, -40)
 		end
 		for _, z in { -70, -22 } do
 			local top = Vector3.new(33 * side, 17, z)
@@ -1121,7 +1123,7 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		if side == -1 then
 			openCrossing(map, -50, 40)
 		else
-			closedNiche(map, spawns, 50 * side, 60 * side, 40, 8)
+			openCrossingE(map, 50, 40)
 		end
 	end
 	-- Fuente rota en el centro
@@ -1181,7 +1183,7 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		if side == -1 then
 			openCrossing(map, -30, 120)
 		else
-			closedNiche(map, spawns, 30 * side, 60 * side, 120, 12)
+			openCrossingE(map, 30, 120)
 		end
 		sideRow(map, rng, x1, x2, 124, 160, 30 * side, -side)
 		plazaLamp(map, 25 * side, 132)
@@ -1427,6 +1429,172 @@ local function buildMarket(map, refs, rng, spawns)
 	end
 end
 
+-- Parte 9: tramo 2, ruta Escalera (azul): detrás de la iglesia. Franja de x 60 a 120 entre la tienda y la iglesia.
+-- Recorrido: salida este de la tienda -> patio -> pasaje F1 -> F2 -> F3 (con el cementerio a un lado) -> atrio lateral
+-- de 40 × 40 junto a la iglesia, que se junta con el atrio de la calle. Cruces abiertos a la calle en z = -40, 40 y 120.
+-- Pocos zombies (2 puntos de aparición), más latas, un botiquín y una emboscada pequeña en el atrio.
+local ESC2_ROUTE = {
+	{ "Patio3", 60, 86, -124, -108 },
+	{ "F1", 68, 78, -108, -30 },
+	{ "A1e", 78, 86, -90, -82 }, -- alcoba sin salida (aparición)
+	{ "A3e", 78, 86, -60, -52 }, -- alcoba sin salida (latas)
+	{ "C1e", 60, 68, -44, -36 }, -- cruce hacia la calle
+	{ "J1", 68, 96, -34, -20 },
+	{ "F2", 86, 96, -20, 50 },
+	{ "C2e", 60, 86, 36, 44 }, -- cruce hacia la plaza
+	{ "F3", 86, 96, 50, 118 },
+	{ "A2e", 76, 86, 80, 88 }, -- alcoba sin salida (aparición)
+	{ "Cementerio", 96, 116, 70, 90 },
+	{ "Atrio3", 62, 102, 118, 158 }, -- atrio lateral 40 × 40
+	{ "C3e", 60, 66, 116, 124 }, -- cruce hacia el atrio de la calle
+}
+local ESC2_BAND = { x1 = 60, x2 = 120, z1 = -130, z2 = 214 }
+
+-- Lápida (cobertura baja) y cruz de madera
+local function gravestone(map, x, z, angle)
+	block(map, "Lapida", Vector3.new(1.8, 3, 0.7), CFrame.new(x, 1.5, z) * CFrame.Angles(0, math.rad(angle or 0), 0), C.concreto, Enum.Material.Slate)
+end
+
+local function woodenCross(map, x, z)
+	deco(pole(map, "Cruz", Vector3.new(x, 0, z), 4, 0.4, C.madera, Enum.Material.Wood))
+	deco(block(map, "Cruz", Vector3.new(2.4, 0.4, 0.4), Vector3.new(x, 3.2, z), C.madera, Enum.Material.Wood))
+end
+
+local function buildEscalera2(map, refs, rng, spawns)
+	local rects = {}
+	for _, r in ESC2_ROUTE do
+		rects[r[1]] = r
+	end
+	local neighbors = { { "Tienda", 30, 60, -122, -110 }, { "Cruce", 35, 60, -44, -36 }, { "Cruce", 50, 60, 36, 44 }, { "Cruce", 30, 60, 116, 124 } }
+	local function isOpen(x, z)
+		return inRects(ESC2_ROUTE, x, z) or inRects(neighbors, x, z)
+	end
+
+	for _, r in ESC2_ROUTE do
+		local grave = r[1] == "Cementerio"
+		local plaza = r[1] == "Atrio3"
+		local color = grave and Color3.fromRGB(70, 82, 60) or plaza and Color3.fromRGB(150, 145, 135) or C.acera
+		floor(map, "Piso" .. r[1], r[2], r[3], r[4], r[5], color, grave and Enum.Material.Grass or plaza and Enum.Material.Slate or Enum.Material.Concrete)
+	end
+	fillHouses(map, rng, ESC2_BAND, ESC2_ROUTE, isOpen)
+
+	-- Escalones bajos en los pasajes
+	stairs(map, 68, 78, -100)
+	stairs(map, 86, 96, 10)
+	stairs(map, 86, 96, 96)
+
+	-- Cementerio: capilla, lápidas, cruces de madera y niebla baja
+	block(map, "Capilla", Vector3.new(8, 12, 12), Vector3.new(112, 6, 80), C.blanco, Enum.Material.Concrete)
+	deco(block(map, "CapillaTecho", Vector3.new(9, 0.6, 13), Vector3.new(112, 12.3, 80), C.oxido, Enum.Material.CorrodedMetal))
+	deco(block(map, "CapillaPuerta", Vector3.new(0.3, 7, 4), Vector3.new(107.85, 3.5, 80), C.oscuro, Enum.Material.Wood))
+	deco(block(map, "CapillaCruz", Vector3.new(0.4, 4, 0.4), Vector3.new(112, 14.5, 80), C.oscuro))
+	deco(block(map, "CapillaCruz", Vector3.new(0.4, 0.4, 2.4), Vector3.new(112, 15.5, 80), C.oscuro))
+	for i, x in { 100, 104 } do
+		for j, z in { 73, 78, 83, 88 } do
+			if (i + j) % 3 ~= 0 then
+				gravestone(map, x, z, rng:NextInteger(-12, 12))
+			end
+		end
+	end
+	woodenCross(map, 99, 80)
+	woodenCross(map, 105.5, 75.5)
+	woodenCross(map, 106, 86)
+	deadTree(map, 114, 72)
+	deadTree(map, 98, 71)
+	local fog = deco(block(map, "NieblaCementerio", Vector3.new(20, 1, 20), Vector3.new(106, 0.8, 80), C.blanco))
+	fog.Transparency = 1
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	emitter.Rate = 3
+	emitter.Lifetime = NumberRange.new(7, 10)
+	emitter.Speed = NumberRange.new(0.5, 1.2)
+	emitter.SpreadAngle = Vector2.new(180, 10)
+	emitter.Size = NumberSequence.new(14, 18)
+	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.8), NumberSequenceKeypoint.new(1, 1) })
+	emitter.Color = ColorSequence.new(Color3.fromRGB(150, 165, 190))
+	emitter.LightInfluence = 0.4
+	emitter.Parent = fog
+
+	-- Atrio lateral: bancas, árboles secos, faroles y cobertura
+	for _, b in { { 72, 124, 0 }, { 92, 124, 0 }, { 72, 152, 0 } } do
+		bench(map, b[1], b[2], b[3])
+	end
+	deadTree(map, 98, 128)
+	deadTree(map, 66, 148)
+	plazaLamp(map, 100, 120)
+	plazaLamp(map, 64, 156)
+	crates(map, 99, 132)
+	sandbags(map, 84, 154, 0)
+	car(map, 74, 146, 75, C.mostaza)
+
+	-- Murales y carteles
+	sign(map, "Mural", "AQUÍ DESCANSAN LOS NUESTROS", Vector3.new(14, 5, 0.4), Vector3.new(106, 9, 89.7), C.cobalto, C.blanco)
+	sign(map, "Mural", "LA CAPILLA SIGUE ABIERTA", Vector3.new(12, 5, 0.4), CFrame.new(101.7, 8, 138) * CFrame.Angles(0, math.pi / 2, 0), C.turquesa, C.blanco)
+	sign(map, "Mural", "NO TODO ESTÁ PERDIDO", Vector3.new(12, 5, 0.4), CFrame.new(77.7, 8, -70) * CFrame.Angles(0, math.pi / 2, 0), C.salmon, C.oscuro)
+	sign(map, "CartelEscalera", "→ ESCALERA", Vector3.new(10, 4, 0.4), CFrame.new(73, 9, -123.7) * CFrame.Angles(0, math.pi, 0), C.azul)
+
+	-- Franjas azules, lámparas de pared (de noche son las únicas luces) y tendederos
+	for _, stripe in {
+		{ Vector3.new(0.3, 1, 70), Vector3.new(68.15, 6, -73) }, -- F1, pared oeste
+		{ Vector3.new(0.3, 1, 68), Vector3.new(95.85, 6, 84) }, -- F3, pared este
+	} do
+		deco(block(map, "FranjaAzul", stripe[1], stripe[2], C.azul, Enum.Material.SmoothPlastic))
+	end
+	for _, lamp in { { 77.4, 11, -95 }, { 68.6, 11, -60 }, { 86.6, 11, 0 }, { 95.4, 11, 30 }, { 86.6, 11, 100 }, { 101.4, 11, 145 }, { 107.6, 9, 90 } } do
+		Atmosphere.bulb(map, Vector3.new(lamp[1], lamp[2], lamp[3]))
+	end
+	for _, line in { { 73, -80, 10 }, { 91, 30, 10 } } do
+		local x, z, length = line[1], line[2], line[3]
+		deco(block(map, "Tendedero", Vector3.new(length, 0.1, 0.1), Vector3.new(x, 9, z), C.blanco))
+		for i, cloth in { C.lonaNaranja, C.turquesa, C.blanco, C.grafiti } do
+			deco(block(map, "Ropa", Vector3.new(1.6, 2, 0.1), Vector3.new(x - length / 2 + i * length / 5, 8, z), cloth, Enum.Material.Fabric))
+		end
+	end
+	for _, arrow in {
+		{ 66, -116, math.pi / 2 },
+		{ 73, -100, 0 },
+		{ 73, -50, 0 },
+		{ 82, -25, math.pi / 2 },
+		{ 91, 0, 0 },
+		{ 91, 60, 0 },
+		{ 91, 108, 0 },
+		{ 68, 120, -math.pi / 2 },
+	} do
+		floorArrow(map, Vector3.new(arrow[1], 0, arrow[2]), C.azul, arrow[3])
+	end
+	barrel(map, 70, -70, C.lonaAzul)
+	barrel(map, 94, 40, C.lonaVerde)
+	barrel(map, 88, 112)
+
+	-- Estación de munición (pared este de F1), botiquín sobre una mesa en F2 y caja de armas en el atrio
+	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -80), math.rad(90))
+	hitbox.Name = "AmmoStation"
+	model.Parent = map
+	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
+	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(94.5, 1.5, 32), C.madera, Enum.Material.Wood)
+	local kit, kitPrompt = medkitPickup(map, Vector3.new(94.5, 3, 32))
+	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	table.insert(refs.boxSpots.Zone2, { Vector3.new(84, 0, 130), Vector3.new(94, 0, 142), Vector3.new(76, 0, 134) })
+
+	-- Pocos puntos de aparición: dos alcobas sin salida
+	marker(spawns, Vector3.new(84, 0, -86))
+	marker(spawns, Vector3.new(78, 0, 84))
+
+	-- Latas grandes: una en una alcoba, una en el cementerio y una en el atrio
+	for _, position in { Vector3.new(82, 0, -56), Vector3.new(100, 0, 75.5), Vector3.new(97, 0, 150) } do
+		local pileModel, pilePrompt = canPile(map, position)
+		table.insert(refs.canPiles, { model = pileModel, prompt = pilePrompt, amount = Config.CanPiles.BigAmount })
+	end
+
+	-- Emboscada pequeña al pisar el atrio: apagón y mini-horda desde las esquinas del fondo
+	local atrio = rects.Atrio3
+	table.insert(refs.ambushesZone2, {
+		volume = volume(map, "EmboscadaAtrio", atrio[2], atrio[3], atrio[4], atrio[5], 12),
+		points = { Vector3.new(64, 0, 156), Vector3.new(100, 0, 156), Vector3.new(66, 0, 140) },
+	})
+end
+
 function MapBuilderBarrio.build(config)
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
@@ -1450,7 +1618,7 @@ function MapBuilderBarrio.build(config)
 	zone2Spawns.Parent = spawnRoot
 
 	local rng = Random.new(config.Seed)
-	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {}, medkits = {} }
+	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {}, medkits = {}, ambushesZone2 = {} }
 
 	buildLobby(map, refs)
 	buildStreet(map, refs, rng)
@@ -1460,6 +1628,7 @@ function MapBuilderBarrio.build(config)
 	buildTramo2Calle(map, refs, rng, zone2Spawns, config)
 	buildChurch(map, refs)
 	buildMarket(map, refs, rng, zone2Spawns)
+	buildEscalera2(map, refs, rng, zone2Spawns)
 
 	-- Las garrafas se entregan junto al generador; con cada entrega llegan zombies de la zona 2
 	local generatorPosition = refs.generator.Position

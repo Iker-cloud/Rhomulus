@@ -320,6 +320,7 @@ local function zone2()
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
+	Ambushes.arm(map.ambushesZone2)
 	if map.gas and not fuelGenerator() then
 		return false
 	end
