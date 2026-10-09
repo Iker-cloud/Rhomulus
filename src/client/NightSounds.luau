@@ -123,15 +123,6 @@ function NightSounds.start()
 
 	-- Sonido por zona (solo en el mapa nuevo): bucles que suben al entrar en su zona y campanas cada cierto tiempo
 	local zones = {}
-	if Config.Game.UseNewMap then
-		for _, zone in N.Zones do
-			local entry = { zone = zone, level = 0 }
-			if zone.loop then
-				entry.sound = loop(zone.loop)
-			end
-			table.insert(zones, entry)
-		end
-	end
 	local function insideZone(zone)
 		local root = getRoot()
 		if not root then
@@ -141,6 +132,26 @@ function NightSounds.start()
 		return p.X >= b[1] and p.X <= b[2] and p.Z >= b[3] and p.Z <= b[4]
 	end
 
+	local function buildZones() -- se crean la primera vez que el mapa elegido es Morro Esperanza
+		for _, zone in N.Zones do
+			local entry = { zone = zone, level = 0 }
+			if zone.loop then
+				entry.sound = loop(zone.loop)
+			end
+			table.insert(zones, entry)
+			if zone.bell then
+				task.spawn(function()
+					while true do
+						local interval = zone.bellInterval
+						task.wait(interval[1] + math.random() * (interval[2] - interval[1]))
+						if workspace:GetAttribute("MapId") == "Morro" and insideZone(zone) then
+							playAt(zone.bell, Vector3.new(36, 42, 155), zone.bellVolume, 0.85 + math.random() * 0.1)
+						end
+					end
+				end)
+			end
+		end
+	end
 	local heartLevel = 0
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -156,9 +167,13 @@ function NightSounds.start()
 		wind.Volume += ((outside and A.Volume.Wind or A.Volume.Wind * 0.35) - wind.Volume) * blend
 		sirens.Volume += ((outside and A.Volume.Sirens or 0) - sirens.Volume) * blend
 		drone.Volume += ((outside and A.Volume.Drone or 0) - drone.Volume) * blend
+		local onMorro = workspace:GetAttribute("MapId") == "Morro"
+		if onMorro and #zones == 0 then
+			buildZones()
+		end
 		for _, entry in zones do
 			if entry.sound then
-				entry.level += ((insideZone(entry.zone) and 1 or 0) - entry.level) * blend
+				entry.level += (((onMorro and insideZone(entry.zone)) and 1 or 0) - entry.level) * blend
 				entry.sound.Volume = entry.level * entry.zone.volume
 			end
 		end
@@ -170,20 +185,6 @@ function NightSounds.start()
 	end)
 
 	task.spawn(noiseLoop)
-	-- Campanas lejanas mientras el jugador está en la iglesia (suenan desde el campanario)
-	for _, entry in zones do
-		if entry.zone.bell then
-			task.spawn(function()
-				while true do
-					local interval = entry.zone.bellInterval
-					task.wait(interval[1] + math.random() * (interval[2] - interval[1]))
-					if insideZone(entry.zone) then
-						playAt(entry.zone.bell, Vector3.new(36, 42, 155), entry.zone.bellVolume, 0.85 + math.random() * 0.1)
-					end
-				end
-			end)
-		end
-	end
 end
 
 return NightSounds

@@ -18,6 +18,7 @@ local G = Config.Gas
 local data -- refs.gas: { cans = { { model, body, prompt } }, spots, marketPos, deliverPos, depositSpots, hordePoints }
 local active = false
 local delivered = 0
+local globalsConnected = false -- init se llama en cada mapa nuevo: los eventos globales se conectan una sola vez
 
 local function getRoot(player)
 	return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -154,6 +155,8 @@ end
 
 function GasCans.init(gas)
 	data = gas
+	active = false
+	delivered = 0
 	if not data then
 		return
 	end
@@ -166,6 +169,10 @@ function GasCans.init(gas)
 		end)
 	end
 
+	if globalsConnected then
+		return
+	end
+	globalsConnected = true
 	Remotes.Drop.OnServerEvent:Connect(drop)
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state ~= "Normal" then
@@ -187,7 +194,7 @@ function GasCans.init(gas)
 	local elapsed = 0
 	RunService.Heartbeat:Connect(function(dt)
 		elapsed += dt
-		if not active or elapsed < 0.25 then
+		if not data or not active or elapsed < 0.25 then
 			return
 		end
 		elapsed = 0

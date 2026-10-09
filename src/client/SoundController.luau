@@ -111,7 +111,7 @@ local function startMusic()
 	task.spawn(function()
 		while true do
 			local stage = workspace:GetAttribute("Stage")
-			if stage == "Lobby" or stage == "SafeRoom" or stage == "Result" or stage == nil then
+			if stage == "Lobby" or stage == "Vote" or stage == "SafeRoom" or stage == "Result" or stage == nil then
 				current = "Calm"
 			elseif stage == "Extraction" and workspace:GetAttribute("ExtractionEnd") then
 				current = "Extraction"

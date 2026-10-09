@@ -11,8 +11,10 @@ local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
+local Dummies = require(script.Parent.Dummies)
 local GasCans = require(script.Parent.GasCans)
 local Medkits = require(script.Parent.Medkits)
+local VoteRoom = require(script.Parent.VoteRoom)
 local MapBuilder = require(script.Parent.MapBuilder)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
@@ -23,6 +25,9 @@ local Weapons = require(script.Parent.Weapons)
 local Zombies = require(script.Parent.Zombies)
 
 local GameState = {}
+
+-- Constructor de cada mapa votable (las claves son los id de Config.Maps)
+local BUILDERS = { Prueba = MapBuilder, Morro = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
@@ -220,6 +225,51 @@ local function resetMap()
 		van:Destroy()
 	end
 	workspace:SetAttribute("ExtractionEnd", nil)
+end
+
+-- Construye el mapa elegido (destruye el anterior) y conecta los sistemas que dependen de él
+local function loadMap(id)
+	WeaponBox.clear()
+	Zombies.clear()
+	map = BUILDERS[id].build(Config.Game)
+	Atmosphere.decorate(map)
+	WeaponBox.init(map)
+	CanPiles.init(map.canPiles)
+	Medkits.init(map.medkits)
+	GasCans.init(map.gas)
+	-- El mapa de siempre llama "portón" a lo que abre el generador; el nuevo lo define (la iglesia)
+	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
+	workspace:SetAttribute("MapId", id)
+	Dummies.setLayout(id)
+end
+
+-- Votación del mapa en la sala aparte; al terminar se construye el ganador
+local function vote()
+	Director.setZone(nil)
+	Director.setBoost(false)
+	Ambushes.disarm()
+	Zombies.clear()
+	WeaponBox.clear()
+	workspace:SetAttribute("ObjectivePos", nil)
+	workspace:SetAttribute("ObjectiveName", nil)
+	workspace:SetAttribute("ExtractionEnd", nil)
+
+	PlayerState.setSafePoint(VoteRoom.build().spawn)
+	setStage("Vote", "Voten el mapa en los podios con E", "Vote")
+	respawn(false)
+
+	local winner = VoteRoom.run(function(text)
+		setStage("Vote", text, "Vote")
+	end)
+	local name = winner
+	for _, option in Config.Maps do
+		if option.id == winner then
+			name = option.name
+		end
+	end
+	setStage("Vote", `Mapa elegido: {name}`, "Vote")
+	task.wait(1.5)
+	loadMap(winner)
 end
 
 local function lobby()
@@ -442,18 +492,10 @@ end
 function GameState.start()
 	-- La partida decide cuándo reaparece cada jugador (el siguiente punto seguro)
 	Players.CharacterAutoLoads = false
-	local builder = Config.Game.UseNewMap and MapBuilderBarrio or MapBuilder
-	map = builder.build(Config.Game)
-	Atmosphere.decorate(map)
-	WeaponBox.init(map)
-	CanPiles.init(map.canPiles)
-	Medkits.init(map.medkits)
-	GasCans.init(map.gas)
-	-- El mapa de siempre llama "portón" a lo que abre el generador; el nuevo lo define (la iglesia)
-	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
+	-- El mapa se construye en cada ronda tras la votación (vote -> loadMap)
 
 	Players.PlayerAdded:Connect(function(player)
-		if stage == "Lobby" then
+		if stage == "Lobby" or stage == "Vote" then
 			player:SetAttribute("Ready", false)
 			player:LoadCharacter()
 		end
@@ -467,6 +509,7 @@ function GameState.start()
 
 	task.spawn(function()
 		while true do
+			vote()
 			lobby()
 			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, extraExits = map.safeExtraExits, spawn = map.safeSpawn })
 			if won then

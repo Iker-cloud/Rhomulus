@@ -432,10 +432,18 @@ return {
 		HoldTime = 0.5,
 	},
 
+	-- Mapas que se pueden votar al inicio de cada ronda (server/VoteRoom). id = clave que usa GameState para elegir el constructor.
+	Maps = {
+		{ id = "Prueba", name = "Prueba", desc = "El mapa de siempre: una calle larga, un generador y la extracción.", color = Color3.fromRGB(95, 100, 110) },
+		{ id = "Morro", name = "Morro Esperanza", desc = "El barrio de Rhomulus: 3 rutas, 3 tramos, iglesia, estadio y furgoneta.", color = Color3.fromRGB(190, 70, 50) },
+	},
+	Vote = {
+		Time = 20, -- segundos máximos de votación
+		AfterAllVoted = 1.5, -- si todos ya votaron, se espera esto antes de cerrar
+		NoVotes = "Morro", -- mapa que gana si nadie vota
+	},
+
 	Game = {
-		-- Mapa 1 nuevo, Morro Esperanza (server/MapBuilderBarrio). De momento solo llega hasta el punto seguro 1:
-		-- al cruzar su puerta de salida se gana la prueba. false = el mapa de siempre (server/MapBuilder).
-		UseNewMap = false,
 		Seed = 7, -- semilla del mapa generado
 		SafeRoomTime = 10, -- segundos de descanso en el punto seguro
 		GeneratorHoldTime = 4,

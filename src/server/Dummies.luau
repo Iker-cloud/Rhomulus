@@ -10,6 +10,7 @@ local Data = require(script.Parent.ZombieData.Maniqui)
 
 local Dummies = {}
 
+local layout = 0 -- cambia al elegir otro mapa
 local folder = Instance.new("Folder")
 folder.Name = "Dummies"
 folder.Parent = workspace
@@ -33,18 +34,28 @@ local function spawnDummy(position)
 	CollectionService:AddTag(model, "DummyRig")
 	model.Parent = folder
 
+	local myLayout = layout
 	humanoid.Died:Connect(function()
 		task.wait(Config.Dummy.RespawnTime)
 		model:Destroy()
-		spawnDummy(position)
+		if myLayout == layout then -- si cambió el mapa mientras tanto, no reaparece
+			spawnDummy(position)
+		end
 	end)
 end
 
-function Dummies.start()
-	local positions = Config.Game.UseNewMap and Config.Dummy.PositionsNewMap or Config.Dummy.Positions
+-- Pone los maniquíes del lobby del mapa elegido ("Morro" = el barrio; cualquier otro = el mapa de siempre)
+function Dummies.setLayout(mapId)
+	layout += 1
+	folder:ClearAllChildren()
+	local positions = mapId == "Morro" and Config.Dummy.PositionsNewMap or Config.Dummy.Positions
 	for _, position in positions do
 		spawnDummy(position)
 	end
+end
+
+function Dummies.start()
+	-- los maniquíes se ponen al elegir el mapa (Dummies.setLayout)
 end
 
 return Dummies

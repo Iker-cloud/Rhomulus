@@ -15,6 +15,7 @@ local Medkits = {}
 
 local M = Config.Medkit
 local pickups = {}
+local globalsConnected = false -- init se llama en cada mapa nuevo: los eventos globales se conectan una sola vez
 local healing = {} -- [quien cura] = ficha de la curación en curso
 
 local function getHumanoid(player)
@@ -112,10 +113,13 @@ function Medkits.init(list)
 		end)
 	end
 
-	Remotes.UseMedkit.OnServerEvent:Connect(useMedkit)
-	Players.PlayerRemoving:Connect(function(player)
-		healing[player] = nil
-	end)
+	if not globalsConnected then
+		globalsConnected = true
+		Remotes.UseMedkit.OnServerEvent:Connect(useMedkit)
+		Players.PlayerRemoving:Connect(function(player)
+			healing[player] = nil
+		end)
+	end
 end
 
 -- Al empezar cada partida: los botiquines vuelven a su sitio y nadie lleva uno
