@@ -221,6 +221,17 @@ local function busOnSide(parent, x1, z)
 	deco(block(parent, "AutobusFranja", Vector3.new(30.1, 0.6, 11.1), Vector3.new(cx, 4, z), C.oscuro))
 	deco(block(parent, "AutobusRueda", Vector3.new(2, 2.4, 1.2), Vector3.new(cx - 9, 4, z + 6), C.oscuro))
 	deco(block(parent, "AutobusRueda", Vector3.new(2, 2.4, 1.2), Vector3.new(cx + 9, 4, z + 6), C.oscuro))
+	-- Ventanillas, puerta, luces y letrero de destino
+	for i = -4, 3 do
+		deco(block(parent, "AutobusVentanilla", Vector3.new(2.4, 0.15, 2.2), Vector3.new(cx + 2 + i * 3, 8.12, z + 1.8), C.oscuro, Enum.Material.Glass))
+	end
+	deco(block(parent, "AutobusPuerta", Vector3.new(3, 0.15, 5), Vector3.new(cx + 12.5, 8.1, z + 0.5), C.oxido, Enum.Material.Metal))
+	for _, dz in { -3.2, 3.2 } do
+		deco(block(parent, "AutobusFaro", Vector3.new(0.2, 1, 1.6), Vector3.new(cx + 15.1, 2.5, z + dz), Color3.fromRGB(255, 232, 170), Enum.Material.Neon))
+		deco(block(parent, "AutobusLuzTrasera", Vector3.new(0.2, 1, 1.4), Vector3.new(cx - 15.1, 2.5, z + dz), C.rojo, Enum.Material.Neon))
+	end
+	deco(block(parent, "AutobusLetrero", Vector3.new(0.2, 1.8, 6.5), Vector3.new(cx + 15.1, 6.2, z), C.oscuro, Enum.Material.SmoothPlastic))
+	deco(block(parent, "AutobusLetreroLuz", Vector3.new(0.25, 0.7, 5.4), Vector3.new(cx + 15.12, 6.2, z), Color3.fromRGB(255, 176, 50), Enum.Material.Neon))
 end
 
 -- Puesto de feria abandonado (8 × 9 × 6): mesa con colisión, toldo y cajas de fruta de adorno
@@ -3004,6 +3015,279 @@ end
 -- ancho), se abre en la terminal (x -60..60) con 8 buses chocados en zigzag y termina en un área abierta de 40 × 40 donde
 -- hay una emboscada con Tanque. Los cruces hacia la avenida (oeste) y los andenes (este) en z = 240, 280 y 320 son
 -- nichos cerrados hasta que existan esas rutas. Al final está la puerta sur del estadio.
+---------------------------------------------------------------------------------------------------
+-- Terminal (camino al estadio) y estadio: casas favela en las fachadas, mucha más luz (farolas de pared, guirnaldas,
+-- reflectores con luz real) y detalles. Todo decoración sin colisión salvo lo que ya existía.
+
+-- Reflector con luz estable que apunta a un punto (no parpadea ni se apaga: sirve para ver los combates)
+local function floodLight(parent, position, target, range, brightness)
+	local part = deco(block(parent, "Reflector", Vector3.new(1.4, 1.4, 0.5), CFrame.lookAt(position, target), Color3.fromRGB(255, 246, 225), Enum.Material.Neon))
+	local light = Instance.new("SpotLight")
+	light.Face = Enum.NormalId.Front
+	light.Angle = 80
+	light.Range = range
+	light.Brightness = brightness
+	light.Color = Color3.fromRGB(255, 236, 205)
+	light.Parent = part
+	return part
+end
+
+-- Cambia las casas de colores que dan a la terminal (o a la explanada) por casas favela y les pone una lámpara de pared
+local function skinTerminalHouses(map)
+	local list = {}
+	for _, casa in map:GetChildren() do
+		if casa:IsA("BasePart") and casa.Name == "Casa" and not casa:GetAttribute("Favela") then
+			table.insert(list, casa)
+		end
+	end
+	local skinned = 0
+	for _, casa in list do
+		local p, s = casa.Position, casa.Size
+		local x1, x2, z1, z2 = p.X - s.X / 2, p.X + s.X / 2, p.Z - s.Z / 2, p.Z + s.Z / 2
+		local faceX, faceDir
+		if z2 > 232 and z1 < 330 and math.abs(x1 - 60) < 0.01 then
+			faceX, faceDir = 60, -1
+		elseif z2 > 232 and z1 < 330 and math.abs(x2 + 60) < 0.01 then
+			faceX, faceDir = -60, 1
+		elseif z1 >= 199.9 and z2 <= 232.1 and math.abs(x1 - 30) < 0.01 then
+			faceX, faceDir = 30, -1
+		elseif z1 >= 199.9 and z2 <= 232.1 and math.abs(x2 + 30) < 0.01 then
+			faceX, faceDir = -30, 1
+		end
+		if faceX and z2 - z1 >= 8 then
+			-- Quita lo que la casa vieja ponía encima: puertas, ventanas, techo y tanque
+			for _, d in map:GetChildren() do
+				if d:IsA("BasePart") and d ~= casa then
+					local n = d.Name
+					local inside = d.Position.X > x1 - 0.3 and d.Position.X < x2 + 0.3 and d.Position.Z > z1 - 0.3 and d.Position.Z < z2 + 0.3
+					if inside and (n == "Puerta" or n == "Ventana" or n == "Techo" or n == "TanqueAgua") and d.Position.Y <= s.Y + 5 then
+						d:Destroy()
+					end
+				end
+			end
+			local height = s.Y
+			casa:Destroy()
+			local entry = pickFavela(z2 - z1, height)
+			lastFavela = entry
+			slab(map, "Casa", x1, x2, z1, z2, entry.info.top * FAVELA_SCALE, entry.info.wallColor):SetAttribute("Favela", true)
+			placeFavela(map, entry, x1, x2, z1, z2, faceX, faceDir)
+			Atmosphere.bulb(map, Vector3.new(faceX + faceDir * 1.4, 10.5, (z1 + z2) / 2))
+			skinned += 1
+		end
+	end
+	return skinned
+end
+
+-- Luz y detalles del camino: reflectores en la arena del Tanque, guirnaldas, botes, conos, charcos y la portada de la terminal
+local function terminalDetails(map, rng)
+	local folder = Instance.new("Folder")
+	folder.Name = "TerminalDetalles"
+	folder.Parent = map
+
+	-- Cuatro torres de reflectores alrededor del área de combate (luz estable hacia el centro)
+	for _, spot in { { -24, 292 }, { 24, 292 }, { -24, 328 }, { 24, 328 } } do
+		deco(pole(folder, "TorreLuz", Vector3.new(spot[1], 0, spot[2]), 16, 0.8, C.concreto, Enum.Material.Metal))
+		deco(block(folder, "TorreLuzBrazo", Vector3.new(3.5, 0.4, 0.4), Vector3.new(spot[1] - math.sign(spot[1]) * 1.6, 16, spot[2]), C.concreto, Enum.Material.Metal))
+		floodLight(folder, Vector3.new(spot[1] - math.sign(spot[1]) * 3, 16, spot[2]), Vector3.new(0, 1, 310), 60, 2.4)
+	end
+
+	-- Guirnaldas de bombillas sobre la terminal (de fachada a fachada)
+	for _, z in { 246, 268, 290 } do
+		lightString(folder, z, -58.5, 58.5, 15, 3, 14, rng)
+	end
+
+	-- Portada: pórtico con el rótulo de la terminal, visible al llegar desde la explanada
+	do
+		for _, x in { -15, 15 } do
+			deco(block(folder, "PorticoPilar", Vector3.new(1.4, 17, 1.4), Vector3.new(x, 8.5, 234), C.concreto, Enum.Material.Concrete))
+		end
+		deco(block(folder, "PorticoViga", Vector3.new(32, 1.2, 1.6), Vector3.new(0, 17, 234), MARKET_DARK, Enum.Material.Concrete))
+		local _, gui = blankBoard(folder, "RotuloTerminal", Vector3.new(26, 4.5, 0.4), CFrame.new(0, 14.2, 233.1), RHO_BLACK, 40)
+		boardRect(gui, 0.02, 0.08, 0.96, 0.84, RHO_YELLOW)
+		boardText(gui, "TERMINAL DE BUSES", 0.04, 0.1, 0.92, 0.8, RHO_BLACK, Enum.TextXAlignment.Center)
+		for _, x in { -9, 0, 9 } do
+			deco(block(folder, "PorticoLuz", Vector3.new(3, 0.3, 0.8), Vector3.new(x, 16.2, 232.8), Color3.fromRGB(255, 244, 220), Enum.Material.Neon))
+		end
+	end
+
+	-- Caseta de boletos: toldo a rayas, ventanilla con marco y rótulo
+	do
+		local cx, cz = -45, 322
+		for i = 0, 5 do
+			deco(block(folder, "CasetaToldo", Vector3.new(1.5, 0.25, 3.2), CFrame.new(cx - 3.75 + i * 1.5, 7, cz - 5.2) * CFrame.Angles(math.rad(-14), 0, 0), i % 2 == 0 and C.rojo or C.blanco, Enum.Material.Fabric))
+		end
+		deco(block(folder, "CasetaMarco", Vector3.new(4.8, 3.2, 0.3), Vector3.new(cx, 4.5, cz - 4.1), SAFE_WOOD, Enum.Material.Wood))
+		local _, gui = blankBoard(folder, "RotuloBoletos", Vector3.new(6, 1.6, 0.3), Vector3.new(cx, 8.3, cz - 4.2), RHO_BLACK, 50)
+		boardRect(gui, 0.03, 0.1, 0.94, 0.8, RHO_YELLOW)
+		boardText(gui, "BOLETOS", 0.05, 0.1, 0.9, 0.8, RHO_BLACK, Enum.TextXAlignment.Center)
+		deco(block(folder, "CasetaLuz", Vector3.new(2.2, 0.3, 0.5), Vector3.new(cx, 8.8, cz - 4.4), Color3.fromRGB(255, 214, 150), Enum.Material.Neon))
+	end
+
+	-- Bordillo pintado a rayas rojas y blancas al pie de las fachadas, botes de basura, conos y charcos
+	for _, side in { -1, 1 } do
+		for z = 234, 326, 8 do
+			deco(block(folder, "Bordillo", Vector3.new(0.7, 0.5, 4), Vector3.new(side * 59.4, 0.3, z + 2), C.blanco, Enum.Material.Concrete))
+			deco(block(folder, "Bordillo", Vector3.new(0.7, 0.5, 4), Vector3.new(side * 59.4, 0.3, z + 6), C.rojo, Enum.Material.Concrete))
+		end
+	end
+	for _, bin in { { -57, 245 }, { 57, 258 }, { -57, 296 }, { 57, 300 }, { -57, 318 }, { 57, 322 } } do
+		deco(pole(folder, "Bote", Vector3.new(bin[1], 0, bin[2]), 2.6, 1.8, C.lonaVerde, Enum.Material.Metal))
+		deco(pole(folder, "BoteTapa", Vector3.new(bin[1], 2.6, bin[2]), 0.3, 2, C.oscuro, Enum.Material.Metal))
+	end
+	for _, cone in { { -22, 238 }, { 22, 238 }, { -8, 250 }, { 8, 250 }, { -28, 300 }, { 28, 300 } } do
+		deco(pole(folder, "Cono", Vector3.new(cone[1], 0, cone[2]), 1.8, 1.1, C.lonaNaranja, Enum.Material.SmoothPlastic))
+		deco(pole(folder, "ConoBanda", Vector3.new(cone[1], 0.9, cone[2]), 0.35, 1.15, C.blanco, Enum.Material.SmoothPlastic))
+	end
+	for _, spot in { { -12, 240, 5 }, { 14, 262, 4 }, { -2, 282, 5 }, { 16, 304, 4 }, { -14, 318, 6 }, { 4, 326, 4 } } do
+		deco(pole(folder, "Charco", Vector3.new(spot[1], FLOOR_TOP + 0.03, spot[2]), 0.03, spot[3], Color3.fromRGB(30, 44, 58), Enum.Material.Glass)).Transparency = 0.3
+	end
+	-- Líneas pintadas de las paradas de buses
+	for _, z in { 238, 257, 276, 296, 316 } do
+		deco(block(folder, "LineaParada", Vector3.new(112, 0.05, 0.5), Vector3.new(0, FLOOR_TOP + 0.04, z), C.blanco, Enum.Material.SmoothPlastic))
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Estadio
+
+local function stadiumDetails(map, rng)
+	local folder = Instance.new("Folder")
+	folder.Name = "EstadioDetalles"
+	folder.Parent = map
+	local lineY = FLOOR_TOP + 0.13
+	local white = C.blanco
+
+	-- Marcas del campo: círculo central, áreas y líneas de fondo
+	local function line(size, position)
+		deco(block(folder, "LineaCampo", size, position, white, Enum.Material.SmoothPlastic))
+	end
+	for k = 0, 23 do
+		local a = k * math.pi / 12
+		deco(block(folder, "CirculoCentral", Vector3.new(0.5, 0.05, 2.6), CFrame.new(math.cos(a) * 8, lineY, 368 + math.sin(a) * 8) * CFrame.Angles(0, -a, 0), white, Enum.Material.SmoothPlastic))
+	end
+	deco(pole(folder, "PuntoCentral", Vector3.new(0, lineY - 0.02, 368), 0.05, 1.2, white, Enum.Material.SmoothPlastic))
+	for _, side in { -1, 1 } do
+		local endX = side * 79.8
+		line(Vector3.new(0.5, 0.05, 60), Vector3.new(endX, lineY, 368))
+		line(Vector3.new(16, 0.05, 0.5), Vector3.new(side * 72, lineY, 354)) -- área grande
+		line(Vector3.new(16, 0.05, 0.5), Vector3.new(side * 72, lineY, 382))
+		line(Vector3.new(0.5, 0.05, 28), Vector3.new(side * 64, lineY, 368))
+		line(Vector3.new(6, 0.05, 0.5), Vector3.new(side * 76.9, lineY, 362)) -- área chica
+		line(Vector3.new(6, 0.05, 0.5), Vector3.new(side * 76.9, lineY, 374))
+		line(Vector3.new(0.5, 0.05, 12), Vector3.new(side * 73.9, lineY, 368))
+		-- Red de la portería (la portería ya existe a x = ±78)
+		local net = deco(block(folder, "RedPorteria", Vector3.new(2.4, 5, 8.2), Vector3.new(side * 79.4, 2.5, 368), white, Enum.Material.Fabric))
+		net.Transparency = 0.8
+		local netTop = deco(block(folder, "RedPorteria", Vector3.new(2.4, 0.1, 8.2), Vector3.new(side * 79, 5, 368), white, Enum.Material.Fabric))
+		netTop.Transparency = 0.6
+	end
+	-- Banderines de córner
+	for _, corner in { { -79, 339 }, { 79, 339 }, { -79, 397 }, { 79, 397 } } do
+		deco(pole(folder, "BanderaCorner", Vector3.new(corner[1], 0, corner[2]), 3.4, 0.2, white, Enum.Material.Metal))
+		deco(block(folder, "BanderaCornerTela", Vector3.new(0.1, 1, 1.4), Vector3.new(corner[1], 3, corner[2] + (corner[2] < 368 and 0.7 or -0.7)), C.rojo, Enum.Material.Fabric))
+	end
+	-- Manchas de tierra en las porterías y el centro, y charcos de barro
+	for _, patch in { { -72, 368, 12 }, { 72, 368, 12 }, { 0, 368, 9 }, { -40, 350, 6 }, { 38, 386, 7 } } do
+		deco(pole(folder, "TierraGastada", Vector3.new(patch[1], FLOOR_TOP + 0.1, patch[2]), 0.03, patch[3], C.tierra, Enum.Material.Ground))
+	end
+	for _, spot in { { -30, 372, 4 }, { 24, 356, 5 }, { 56, 378, 3 } } do
+		deco(pole(folder, "Barro", Vector3.new(spot[1], FLOOR_TOP + 0.12, spot[2]), 0.03, spot[3], Color3.fromRGB(58, 44, 30), Enum.Material.Glass)).Transparency = 0.25
+	end
+
+	-- Gradas: asientos de colores por tramos, respaldos y barandas al fondo
+	for _, side in { -1, 1 } do
+		for row = 1, 4 do
+			local a = 80 + (row - 1) * 10
+			local seatX = side * (a + 4)
+			for k = 0, 5 do
+				deco(block(folder, "Asientos", Vector3.new(2, 0.35, 10.6), Vector3.new(seatX, 3 * row + 0.25, 336 + k * 11 + 5.5), (k + row) % 2 == 0 and C.terracota or C.cobalto, Enum.Material.SmoothPlastic))
+			end
+			deco(block(folder, "AsientosRespaldo", Vector3.new(0.5, 1, 64), Vector3.new(side * (a + 5.4), 3 * row + 0.7, 367), C.concreto, Enum.Material.Concrete))
+		end
+		-- Baranda en lo alto de cada lado y escaleras de pasillo
+		deco(block(folder, "Baranda", Vector3.new(0.3, 0.3, 64), Vector3.new(side * 119, 14.2, 366), C.concreto, Enum.Material.Metal))
+		for z = 338, 396, 12 do
+			deco(block(folder, "BarandaPoste", Vector3.new(0.3, 1.8, 0.3), Vector3.new(side * 119, 13.2, z), C.concreto, Enum.Material.Metal))
+		end
+		for _, z in { 346, 368, 390 } do
+			for row = 1, 4 do
+				deco(block(folder, "EscalonPasillo", Vector3.new(9.4, 0.15, 1.6), Vector3.new(side * (80 + (row - 1) * 10 + 5), 3 * row + 0.2, z), white, Enum.Material.Concrete))
+			end
+		end
+	end
+
+	-- Estandartes colgando de los muros norte y sur, y pilastras
+	for i, x in { -90, -66, -42, 42, 66, 90 } do
+		for _, wall in { { 331.4, 1 }, { 398.6, -1 } } do
+			local z, dir = wall[1], wall[2]
+			local colors = { C.rojo, C.cobalto, C.mostaza, C.terracota, C.turquesa, C.lima }
+			deco(block(folder, "Estandarte", Vector3.new(3, 10, 0.15), Vector3.new(x, 13, z), colors[(i % #colors) + 1], Enum.Material.Fabric))
+			deco(block(folder, "EstandarteFranja", Vector3.new(3.1, 1.2, 0.2), Vector3.new(x, 11, z - dir * 0.05), C.blanco, Enum.Material.Fabric))
+			deco(block(folder, "EstandarteFranja", Vector3.new(3.1, 1.2, 0.2), Vector3.new(x, 8.5, z - dir * 0.05), C.oscuro, Enum.Material.Fabric))
+		end
+	end
+	for x = -108, 108, 18 do
+		for _, wall in { { 331.2, 1 }, { 398.8, -1 } } do
+			if math.abs(x) > 14 then
+				deco(block(folder, "PilastraEstadio", Vector3.new(2, 20, 1), Vector3.new(x, 10, wall[1]), C.concreto, Enum.Material.Concrete))
+			end
+		end
+	end
+
+	-- Portones: pilares con franjas y rótulo (el sur da a la terminal; el norte es la entrada de la furgoneta)
+	for _, gate in { { pillarZ = 329.4, signZ = 329.1, text = "ESTADIO EL COLOSO", y = 15, half = 10 }, { pillarZ = 397.4, signZ = 397.1, text = "REFUGIO REMO · RESCATE", y = 20, half = 12 } } do
+		for _, x in { -gate.half - 0.9, gate.half + 0.9 } do
+			deco(block(folder, "PortonPilar", Vector3.new(1.6, 18, 1.6), Vector3.new(x, 9, gate.pillarZ), C.concreto, Enum.Material.Concrete))
+			deco(block(folder, "PortonFranja", Vector3.new(1.65, 1, 1.65), Vector3.new(x, 5, gate.pillarZ), C.rojo, Enum.Material.Concrete))
+			deco(block(folder, "PortonFranja", Vector3.new(1.65, 1, 1.65), Vector3.new(x, 8, gate.pillarZ), C.blanco, Enum.Material.Concrete))
+		end
+		local _, gui = blankBoard(folder, "RotuloPorton", Vector3.new(20, 3.6, 0.3), CFrame.new(0, gate.y, gate.signZ), RHO_BLACK, 50)
+		boardRect(gui, 0.02, 0.08, 0.96, 0.84, RHO_YELLOW)
+		boardText(gui, gate.text, 0.04, 0.1, 0.92, 0.8, RHO_BLACK, Enum.TextXAlignment.Center)
+	end
+
+	-- Marcador sobre la grada este, mirando al campo
+	do
+		local _, gui = blankBoard(folder, "Marcador", Vector3.new(26, 9, 0.6), CFrame.new(119.2, 17, 366) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(14, 14, 16), 40)
+		boardText(gui, "LOCAL    0 : 0    VISITA", 0.05, 0.12, 0.9, 0.34, RHO_RED, Enum.TextXAlignment.Center)
+		boardText(gui, "ESTADIO EL COLOSO", 0.2, 0.55, 0.6, 0.22, Color3.fromRGB(235, 214, 160), Enum.TextXAlignment.Center)
+		for _, x in { -11, 11 } do
+			deco(block(folder, "MarcadorPata", Vector3.new(0.6, 8, 0.6), CFrame.new(119.2, 12, 366 + x), C.concreto, Enum.Material.Metal))
+		end
+	end
+
+	-- Torres de reflectores: cabeza con paneles y dos focos con luz real hacia el campo; luz cálida bajo las gradas
+	for _, corner in { { -76, 336 }, { 76, 336 }, { -76, 396 }, { 76, 396 } } do
+		local head = Vector3.new(corner[1], 24, corner[2])
+		deco(block(folder, "TorreCabeza", Vector3.new(7, 4, 0.8), CFrame.lookAt(head, Vector3.new(0, 1, 368)), MARKET_DARK, Enum.Material.Metal))
+		for r = 0, 1 do
+			for c = -1, 1 do
+				local lamp = CFrame.lookAt(head, Vector3.new(0, 1, 368)) * CFrame.new(c * 2.2, (r - 0.5) * 1.6, -0.6)
+				deco(block(folder, "TorrePanel", Vector3.new(1.8, 1.2, 0.3), lamp, Color3.fromRGB(255, 250, 235), Enum.Material.Neon))
+			end
+		end
+		floodLight(folder, head + Vector3.new(0, -0.5, 0), Vector3.new(corner[1] * 0.2, 1, 368), 110, 2.2)
+	end
+	-- Luz de relleno sobre el campo (para que se vea la cancha entera de noche)
+	for _, spot in { { -40, 350 }, { 40, 350 }, { -40, 386 }, { 40, 386 } } do
+		local fill = deco(block(folder, "LuzCampo", Vector3.new(0.5, 0.5, 0.5), Vector3.new(spot[1], 20, spot[2]), Color3.fromRGB(255, 244, 225), Enum.Material.SmoothPlastic))
+		fill.Transparency = 1
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 240, 215)
+		light.Range = 50
+		light.Brightness = 0.55
+		light.Parent = fill
+	end
+	for _, spot in { { -102, 350 }, { -102, 386 }, { 102, 350 }, { 102, 386 } } do
+		local lamp = deco(block(folder, "LuzGrada", Vector3.new(1.6, 0.5, 1.6), Vector3.new(spot[1], 15.5, spot[2]), Color3.fromRGB(255, 214, 160), Enum.Material.Neon))
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 205, 150)
+		light.Range = 36
+		light.Brightness = 1.2
+		light.Parent = lamp
+	end
+end
+
 local function buildTerminal(map, refs, rng, spawns)
 	local walkable = { { "Apron", -30, 30, 200, 232 }, { "Terminal", -60, 60, 232, 330 } }
 	for _, side in { -1, 1 } do
@@ -3029,6 +3313,7 @@ local function buildTerminal(map, refs, rng, spawns)
 		end
 	end
 	fillHouses(map, rng, { x1 = -120, x2 = 120, z1 = 214, z2 = 330 }, walkable, isOpen)
+	skinTerminalHouses(map)
 
 	-- Entrada: cartel rojo sobre la salida de la iglesia, flechas rojas y postes de luz
 	sign(map, "CartelCalle3", "→ CALLE", Vector3.new(14, 4, 0.4), CFrame.new(0, 17.5, 200.4) * CFrame.Angles(0, math.pi, 0), C.rojo)
@@ -3084,6 +3369,8 @@ local function buildTerminal(map, refs, rng, spawns)
 	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
 	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
 	refs.boxSpots.Zone3 = { { Vector3.new(0, 0, 298), Vector3.new(-8, 0, 308), Vector3.new(4, 0, 312) } }
+
+	terminalDetails(map, Random.new(58))
 
 	-- 5 puntos de aparición entre buses y detrás de las casetas
 	for _, point in { Vector3.new(-56, 0, 256), Vector3.new(56, 0, 270), Vector3.new(55, 0, 314), Vector3.new(-52, 0, 326), Vector3.new(52, 0, 326) } do
@@ -3206,7 +3493,7 @@ local function buildStadium(map, refs, rng, spawns, config)
 	-- Cancha de tierra y pasto seco (160 × 60), apenas más alta que el piso
 	block(map, "Cancha", Vector3.new(160, 1, 60), Vector3.new(0, FLOOR_TOP + 0.06 - 0.5, 368), C.tierra, Enum.Material.Ground)
 	for i = 1, 8 do
-		deco(block(map, "Pasto", Vector3.new(14, 0.05, 54), Vector3.new(-70 + (i - 1) * 20, FLOOR_TOP + 0.09, 368), Color3.fromRGB(110, 127, 58), Enum.Material.Grass))
+		deco(block(map, "Pasto", Vector3.new(14, 0.05, 54), Vector3.new(-70 + (i - 1) * 20, FLOOR_TOP + 0.09, 368), i % 2 == 0 and Color3.fromRGB(96, 120, 50) or Color3.fromRGB(122, 140, 64), Enum.Material.Grass))
 	end
 	for _, line in { { Vector3.new(0.5, 0.05, 60), Vector3.new(0, FLOOR_TOP + 0.12, 368) }, { Vector3.new(160, 0.05, 0.5), Vector3.new(0, FLOOR_TOP + 0.12, 338.2) }, { Vector3.new(160, 0.05, 0.5), Vector3.new(0, FLOOR_TOP + 0.12, 397.8) } } do
 		deco(block(map, "LineaCal", line[1], line[2], C.blanco, Enum.Material.SmoothPlastic))
@@ -3306,6 +3593,7 @@ local function buildStadium(map, refs, rng, spawns, config)
 	end
 
 	buildStadiumCamp(map, Random.new(config.Seed + 303))
+	stadiumDetails(map, Random.new(config.Seed + 404))
 end
 
 -- Pase de arte: detalles pequeños repartidos por los caminos (todo decoración sin colisión ni sombra, una pieza por
