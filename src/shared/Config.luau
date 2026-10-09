@@ -274,6 +274,7 @@ return {
 		CarrySpeed = 9,
 		BleedTime = 30, -- segundos caído antes de morir
 		ReviveHealth = 30,
+		SpawnStreamWait = 1.5, -- segundos quieto al aparecer, tras pedir que cargue el suelo (evita caer al vacío)
 		SelfReviveTime = 3, -- segundos manteniendo H para levantarse solo (1 jugador)
 		SelfRevivesPerZone = 1,
 	},

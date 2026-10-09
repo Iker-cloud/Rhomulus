@@ -173,6 +173,7 @@ local function onCharacter(player, character)
 		pcall(function()
 			player:RequestStreamAroundAsync(target.Position, 8)
 		end)
+		task.wait(Config.Player.SpawnStreamWait) -- margen: que el cliente termine de colocar lo recibido antes de soltarlo
 		if character.Parent and root.Parent then
 			root.Anchored = false
 		end
@@ -180,7 +181,50 @@ local function onCharacter(player, character)
 
 end
 
+-- Red de seguridad: si alguien cae al vacío (suelo sin cargar, hueco del mapa...) se le devuelve al último punto seguro
+local VOID_HEIGHT = -40
+local rescuing = {}
+local function rescue(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or rescuing[player] then
+		return
+	end
+	rescuing[player] = true
+	local target = safePoint and safePoint * CFrame.new(math.random(-6, 6), 2, math.random(-6, 6)) or CFrame.new(0, 10, -375)
+	-- Mejor junto a un compañero que siga de pie
+	for _, other in Players:GetPlayers() do
+		local otherRoot = other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart")
+		if otherRoot and otherRoot.Position.Y > VOID_HEIGHT and PlayerState.get(other) == "Normal" then
+			target = otherRoot.CFrame * CFrame.new(0, 3, 0)
+			break
+		end
+	end
+	root.Anchored = true
+	character:PivotTo(target)
+	pcall(function()
+		player:RequestStreamAroundAsync(target.Position, 8)
+	end)
+	task.wait(Config.Player.SpawnStreamWait)
+	if root.Parent then
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.Anchored = false
+	end
+	rescuing[player] = nil
+end
+
 function PlayerState.start()
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if root and not root.Anchored and root.Position.Y < VOID_HEIGHT and root.Position.Y > -300 then
+					task.spawn(rescue, player)
+				end
+			end
+		end
+	end)
 	local function setup(player)
 		player:SetAttribute("SelfRevives", Config.Player.SelfRevivesPerZone)
 		-- Sin personaje hasta que la partida los haga aparecer
