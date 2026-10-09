@@ -392,12 +392,14 @@ return {
 	-- plazoleta salen unos pocos zombies de los callejones laterales.
 	Ambush = {
 		Size = 8, -- zombies al 100% (4 jugadores); se escala con Director.ByPlayers.HordeScale (con 1 jugador: 2)
+		FieldSize = 12, -- emboscada grande de la cancha (ruta Escalera); con 1 jugador: 3
 		MinDistance = 22, -- nunca aparecen más cerca que esto de un jugador
 	},
 
 	-- Mapa nuevo: montones de latas sueltas (server/CanPiles). Se recogen con E, una vez por partida.
 	CanPiles = {
 		Amount = 50,
+		BigAmount = 75, -- montones de la ruta Escalera (la más expuesta)
 		HoldTime = 0.5,
 	},
 

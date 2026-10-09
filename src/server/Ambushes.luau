@@ -1,6 +1,6 @@
 -- Emboscadas del mapa nuevo: la primera vez que un jugador entra en una zona marcada (las plazoletas del callejón)
 -- salen unos pocos zombies desde sus puntos (Director.spawnAmbush). MapBuilderBarrio las define en refs.ambushes:
--- { { volume = Part, points = { Vector3, ... } }, ... }. El mapa de siempre no tiene emboscadas.
+-- { { volume = Part, points = { Vector3, ... }, size = número opcional }, ... }. El mapa de siempre no tiene emboscadas.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -37,7 +37,7 @@ function Ambushes.arm(list)
 					if root and PlayerState.get(player) == "Normal" and inside(ambush.volume, root.Position) then
 						table.remove(pending, i)
 						Atmosphere.blackout(ambush.volume.Position) -- los faroles cercanos chispean y se apagan
-						task.spawn(Director.spawnAmbush, Config.Ambush.Size, ambush.points)
+						task.spawn(Director.spawnAmbush, ambush.size or Config.Ambush.Size, ambush.points)
 						break
 					end
 				end
