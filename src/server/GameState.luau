@@ -243,6 +243,33 @@ local function loadMap(id)
 	Dummies.setLayout(id)
 end
 
+-- Partida privada creada desde el menú: el anfitrión ya eligió el mapa (viaja en los datos de teletransporte),
+-- así que no hay votación. Solo aplica en servidores reservados; en los públicos devuelve nil.
+local privateChoice
+local function privateMap()
+	if privateChoice then
+		return privateChoice
+	end
+	if game.PrivateServerId == "" or game.PrivateServerOwnerId ~= 0 then
+		return nil
+	end
+	local deadline = os.clock() + 30
+	repeat
+		for _, player in Players:GetPlayers() do
+			local ok, joinData = pcall(function()
+				return player:GetJoinData()
+			end)
+			local id = ok and joinData.TeleportData and joinData.TeleportData.map
+			if id and BUILDERS[id] then
+				privateChoice = id
+				return id
+			end
+		end
+		task.wait(0.5)
+	until os.clock() > deadline
+	return nil
+end
+
 -- Votación del mapa en la sala aparte; al terminar se construye el ganador
 local function vote()
 	Director.setZone(nil)
@@ -253,6 +280,12 @@ local function vote()
 	workspace:SetAttribute("ObjectivePos", nil)
 	workspace:SetAttribute("ObjectiveName", nil)
 	workspace:SetAttribute("ExtractionEnd", nil)
+
+	local fixed = privateMap()
+	if fixed then
+		loadMap(fixed)
+		return
+	end
 
 	PlayerState.setSafePoint(VoteRoom.build().spawn)
 	setStage("Vote", "Voten el mapa en los podios con E", "Vote")
