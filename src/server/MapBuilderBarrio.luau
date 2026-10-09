@@ -790,6 +790,35 @@ local function buildAlley(map, refs, rng, spawns)
 	table.insert(refs.boxSpots.Zone1, { Vector3.new(-78, 0, -290), Vector3.new(-92, 0, -230), Vector3.new(-83, 0, -164) })
 end
 
+-- Altura (segunda pasada, solo ruta Escalera): azoteas de 10 de alto junto a los pasillos azules, a las que se sube por
+-- rampas de cuña de unos 22° (no se tocan los pasillos de abajo: son un desvío opcional con ventaja de tiro y recompensa).
+local ROOF_HEIGHT = 10
+
+-- Rampa de cuña azul de x1..x2, z1..z2; `upAtZ2` = lo alto queda en z2 (si no, en z1)
+local function ramp(map, x1, x2, z1, z2, upAtZ2)
+	local wedge = Instance.new("WedgePart")
+	wedge.Name = "Rampa"
+	wedge.Anchored = true
+	wedge.Size = Vector3.new(x2 - x1, ROOF_HEIGHT, z2 - z1)
+	local center = Vector3.new((x1 + x2) / 2, ROOF_HEIGHT / 2, (z1 + z2) / 2)
+	wedge.CFrame = upAtZ2 and CFrame.new(center) or CFrame.new(center) * CFrame.Angles(0, math.pi, 0)
+	wedge.Color = C.azul
+	wedge.Material = Enum.Material.SmoothPlastic
+	wedge.TopSurface = Enum.SurfaceType.Smooth
+	wedge.BottomSurface = Enum.SurfaceType.Smooth
+	wedge.Parent = map
+	return wedge
+end
+
+-- Azotea: bloque macizo de ROOF_HEIGHT con parapeto de 3 en el borde este, un farol y un tanque de agua
+local function azotea(map, x1, x2, z1, z2)
+	slab(map, "Azotea", x1, x2, z1, z2, ROOF_HEIGHT, C.concreto)
+	block(map, "Parapeto", Vector3.new(0.6, 3, z2 - z1), Vector3.new(x2 - 0.3, ROOF_HEIGHT + 1.5, (z1 + z2) / 2), C.concreto)
+	deco(pole(map, "FarolAzotea", Vector3.new(x2 - 2, ROOF_HEIGHT, z1 + 2), 9, 0.5, C.oscuro))
+	Atmosphere.bulb(map, Vector3.new(x2 - 2, ROOF_HEIGHT + 9.3, z1 + 2))
+	deco(pole(map, "TanqueAgua", Vector3.new(x2 - 3, ROOF_HEIGHT, z2 - 3), 4, 3.5, C.cobalto, Enum.Material.Plastic))
+end
+
 -- Parte 5: tramo 1, ruta Escalera (azul). Franja de x 60 a 120, entre las casas de la calle y el borde del mapa.
 -- Pasajes con tramos de escalones bajos y una cancha de barrio abierta en el centro (emboscada grande al pisarla).
 -- Recorrido: puerta este del lobby -> patio -> pasaje B1 -> B2 -> B3 -> cancha -> B4 -> rellano -> B5 -> embudo de la tienda.
@@ -797,6 +826,9 @@ end
 local STAIRS = {
 	{ "Patio", 60, 86, -382, -366 },
 	{ "B1", 68, 78, -366, -300 },
+	{ "RampaT1a", 78, 86, -364, -340 }, -- azotea: rampa de subida, terraza y rampa de bajada
+	{ "AzoteaT1", 78, 100, -340, -322 },
+	{ "RampaT1b", 78, 86, -322, -300 },
 	{ "C1", 60, 68, -314, -306 }, -- cruce 1 hacia la calle
 	{ "B2", 68, 104, -300, -290 },
 	{ "T3", 86, 94, -322, -300 }, -- callejón lateral (sin salida)
@@ -850,6 +882,16 @@ local function buildStairs(map, refs, rng, spawns)
 	end
 
 	fillHouses(map, rng, STAIRS_BAND, STAIRS, isOpen)
+
+	-- Azotea de 10 de alto junto a B1: se sube por una rampa, se baja por otra; arriba hay latas y cobertura
+	ramp(map, 78, 86, -364, -340, true)
+	azotea(map, 78, 100, -340, -322)
+	ramp(map, 78, 86, -322, -300, false)
+	do
+		local roofPile, roofPrompt = canPile(map, Vector3.new(96, ROOF_HEIGHT, -331))
+		table.insert(refs.canPiles, { model = roofPile, prompt = roofPrompt, amount = Config.CanPiles.BigAmount })
+		block(map, "CoberturaAzotea", Vector3.new(4, 2, 2), Vector3.new(88, ROOF_HEIGHT + 1, -331), C.tierra, Enum.Material.Fabric)
+	end
 
 	-- Escalones bajos de verdad, pintados de azul y blanco
 	stairs(map, 68, 78, -352)
@@ -1444,6 +1486,9 @@ local ESC2_ROUTE = {
 	{ "Cementerio", 96, 116, 70, 90 },
 	{ "Atrio3", 62, 102, 118, 158 }, -- atrio lateral 40 × 40
 	{ "C3e", 60, 66, 116, 124 }, -- cruce hacia el atrio de la calle
+	{ "RampaT2a", 96, 104, -18, 6 }, -- azotea: rampa de subida, terraza y rampa de bajada
+	{ "AzoteaT2", 96, 118, 6, 26 },
+	{ "RampaT2b", 96, 104, 26, 50 },
 }
 local ESC2_BAND = { x1 = 60, x2 = 120, z1 = -130, z2 = 214 }
 
@@ -1474,6 +1519,16 @@ local function buildEscalera2(map, refs, rng, spawns)
 		floor(map, "Piso" .. r[1], r[2], r[3], r[4], r[5], color, grave and Enum.Material.Grass or plaza and Enum.Material.Slate or Enum.Material.Concrete)
 	end
 	fillHouses(map, rng, ESC2_BAND, ESC2_ROUTE, isOpen)
+
+	-- Azotea de 10 de alto junto a F2, con el botiquín y latas arriba
+	ramp(map, 96, 104, -18, 6, true)
+	azotea(map, 96, 118, 6, 26)
+	ramp(map, 96, 104, 26, 50, false)
+	do
+		local roofPile, roofPrompt = canPile(map, Vector3.new(112, ROOF_HEIGHT, 12))
+		table.insert(refs.canPiles, { model = roofPile, prompt = roofPrompt, amount = Config.CanPiles.BigAmount })
+		block(map, "CoberturaAzotea", Vector3.new(4, 2, 2), Vector3.new(106, ROOF_HEIGHT + 1, 20), C.tierra, Enum.Material.Fabric)
+	end
 
 	-- Escalones bajos en los pasajes
 	stairs(map, 68, 78, -100)
@@ -1569,8 +1624,7 @@ local function buildEscalera2(map, refs, rng, spawns)
 	model.Parent = map
 	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
 	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
-	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(94.5, 1.5, 32), C.madera, Enum.Material.Wood)
-	local kit, kitPrompt = medkitPickup(map, Vector3.new(94.5, 3, 32))
+	local kit, kitPrompt = medkitPickup(map, Vector3.new(106, ROOF_HEIGHT, 14)) -- el botiquín está en la azotea
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
 	table.insert(refs.boxSpots.Zone2, { Vector3.new(84, 0, 130), Vector3.new(94, 0, 142), Vector3.new(76, 0, 134) })
 
@@ -1607,6 +1661,8 @@ local ANDEN_WALK = {
 	{ "AndenLink", 84, 100, 214, 222 }, -- unen A y B al norte
 	{ "AndenOp1", 84, 100, 246, 254 }, -- salidas laterales entre los dos pasillos
 	{ "AndenOp2", 84, 100, 286, 294 },
+	{ "RampaT3", 84, 92, 296, 320 }, -- azotea: rampa de subida y terraza (sin salida)
+	{ "AzoteaT3", 84, 100, 320, 330 },
 }
 
 -- Valla publicitaria (20 × 6) sobre dos postes; `face` = +1 mira al este, -1 al oeste
@@ -1709,6 +1765,14 @@ local function buildAndenes(map, refs, rng, spawns)
 		end
 	end
 
+	-- Azotea de 10 de alto junto al estadio, con el botiquín y latas arriba (se baja por la misma rampa)
+	ramp(map, 84, 92, 296, 320, true)
+	azotea(map, 84, 100, 320, 330)
+	do
+		local roofPile, roofPrompt = canPile(map, Vector3.new(96, ROOF_HEIGHT, 325))
+		table.insert(refs.canPiles, { model = roofPile, prompt = roofPrompt, amount = Config.CanPiles.BigAmount })
+	end
+
 	-- Torniquetes rotos (con colisión), bancas, maletas y escalones azules y blancos
 	for _, z in { 247.2, 292.8 } do
 		block(map, "Torniquete", Vector3.new(3, 4, 1.5), Vector3.new(90, 2, z), C.oscuro, Enum.Material.Metal)
@@ -1734,8 +1798,7 @@ local function buildAndenes(map, refs, rng, spawns)
 	deco(block(map, "FranjaAzul", Vector3.new(0.3, 1, 116), Vector3.new(72.15, 6, 272), C.azul, Enum.Material.SmoothPlastic))
 
 	-- Botiquín en una mesa, caja de armas, 3 puntos de aparición y 2 montones de latas de 75
-	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(110, 1.5, 274), C.madera, Enum.Material.Wood)
-	local kit, kitPrompt = medkitPickup(map, Vector3.new(110, 3, 274))
+	local kit, kitPrompt = medkitPickup(map, Vector3.new(90, ROOF_HEIGHT, 327)) -- el botiquín está en la azotea
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
 	table.insert(refs.boxSpots.Zone3, { Vector3.new(106, 0, 236), Vector3.new(78, 0, 290), Vector3.new(106, 0, 326) })
 	for _, point in { Vector3.new(106, 0, 222), Vector3.new(106, 0, 326), Vector3.new(78, 0, 326) } do
