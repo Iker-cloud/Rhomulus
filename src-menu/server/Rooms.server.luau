@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
 
 local Places = require(ReplicatedStorage.Shared.Places)
 
@@ -164,10 +165,15 @@ function actions.create(player, map)
 	if not MAPS[map] then
 		map = "Morro"
 	end
-	local ok, access = pcall(function()
-		return TeleportService:ReserveServer(Places.Game)
-	end)
+	-- En Studio no se puede reservar servidor ni teletransportar: se usa un código falso para probar las salas
+	local ok, access = true, "studio"
+	if not RunService:IsStudio() then
+		ok, access = pcall(function()
+			return TeleportService:ReserveServer(Places.Game)
+		end)
+	end
 	if not ok then
+		warn("[Rooms] ReserveServer falló:", access)
 		return { error = "No se pudo crear la partida. Intenta de nuevo" }
 	end
 	for _ = 1, 8 do
@@ -274,6 +280,9 @@ function actions.play(player)
 	if roomOf[player] then
 		leave(player)
 	end
+	if RunService:IsStudio() then
+		return { error = "El teletransporte solo funciona publicado" }
+	end
 	local ok, err = pcall(function()
 		local options = Instance.new("TeleportOptions")
 		options:SetTeleportData({ private = false })
@@ -315,6 +324,10 @@ local function launch(code, room)
 		return
 	end
 	teleporting[code] = true
+	if RunService:IsStudio() then
+		print("[Rooms] (Studio) Aquí se teletransportaría a la sala", code, "con el mapa", room.map)
+		return
+	end
 	local list = localMembers(code)
 	local ok, err = pcall(function()
 		local options = Instance.new("TeleportOptions")

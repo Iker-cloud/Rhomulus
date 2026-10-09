@@ -16,8 +16,9 @@ local RED = Color3.fromRGB(198, 21, 26)
 local DARK = Color3.fromRGB(110, 0, 0)
 local LIGHT = Color3.fromRGB(222, 70, 74)
 local BLACK = Color3.new(0, 0, 0)
-local ANTON = Font.new("rbxasset://fonts/families/Anton.json")
 local OSW_BOLD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
+-- Anton no existe en Roblox: el titular usa Oswald en negrita, lo más parecido
+local ANTON = OSW_BOLD
 local OSW = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
 local OSW_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Light)
 
@@ -71,6 +72,22 @@ bg.BackgroundColor3 = RED
 bg.BorderSizePixel = 0
 bg.Parent = gui
 
+-- Velo rojo que deja ver la escena 3D a la derecha (solo en el menú principal)
+local side = Instance.new("Frame")
+side.Size = UDim2.fromScale(1, 1)
+side.BackgroundColor3 = RED
+side.BackgroundTransparency = 1
+side.BorderSizePixel = 0
+side.Parent = bg
+local sideGradient = Instance.new("UIGradient")
+sideGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0),
+	NumberSequenceKeypoint.new(0.4, 0.05),
+	NumberSequenceKeypoint.new(0.75, 0.8),
+	NumberSequenceKeypoint.new(1, 0.95),
+})
+sideGradient.Parent = side
+
 local root = Instance.new("Frame") -- lienzo de 1920x1080 centrado
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.5)
@@ -102,11 +119,12 @@ local function text(parent, str, font, size, pos, props)
 		BackgroundTransparency = 1,
 		Text = str,
 		FontFace = font,
-		TextSize = size,
+		TextSize = math.min(size, 100), -- Roblox limita TextSize a 100: lo grande se escala a la caja
+		TextScaled = size > 100,
 		TextColor3 = props.color or BLACK,
 		AnchorPoint = props.anchor or Vector2.new(0, 0.5),
 		Position = UDim2.fromOffset(pos.X, pos.Y),
-		Size = UDim2.fromOffset(props.width or 900, size + 20),
+		Size = UDim2.fromOffset(props.width or 900, size > 100 and size * 1.1 or size + 20),
 		TextXAlignment = props.align or Enum.TextXAlignment.Left,
 		TextTransparency = props.transparency or 0,
 	}, parent)
@@ -167,7 +185,7 @@ local layers = {}
 for _, l in { { DARK, -10, "shadow" }, { LIGHT, 10, "shadow" }, { BLACK, 0, "main" } } do
 	local t = make("TextLabel", {
 		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(l[2], 0),
-		Text = "RHOMULUS", TextColor3 = l[1], FontFace = ANTON, TextSize = 470,
+		Text = "RHOMULUS", TextColor3 = l[1], FontFace = ANTON, TextScaled = true,
 		TextXAlignment = Enum.TextXAlignment.Left, TextTransparency = 1,
 	}, logo)
 	table.insert(layers, { label = t, kind = l[3], target = l[3] == "shadow" and 0.15 or 0 })
@@ -206,7 +224,10 @@ local function show(name)
 
 	-- logo, versión y línea del pie solo en el menú principal
 	local isMain = name == "main"
-	fade(version, 0.3, { TextTransparency = isMain and 0 or 1 })
+	fade(bg, 0.5, { BackgroundTransparency = isMain and 1 or 0 })
+	fade(side, 0.5, { BackgroundTransparency = isMain and 0 or 1 })
+	fade(version, 0.3, { TextTransparency = isMain and 0 or 1, TextColor3 = isMain and LIGHT or BLACK })
+	fade(cornerR, 0.3, { TextColor3 = isMain and LIGHT or BLACK })
 	for _, l in layers do
 		if l.kind == "main" then
 			fade(l.label, 0.3, { TextTransparency = isMain and 0 or 1 })
@@ -294,7 +315,7 @@ local items = {
 }
 for i, item in items do
 	local y = 448 + 130 * (i - 1)
-	text(main, spaced(item[1], 1), ANTON, 108, Vector2.new(120, y + 66), { width = 900 })
+	text(main, spaced(item[1], 0), ANTON, 108, Vector2.new(120, y + 66), { width = 1000 })
 	rule(main, 120, y + 130, 900)
 	local b = button(main, 40, y, 980, 130, item[2])
 	b.MouseEnter:Connect(function()
@@ -309,7 +330,7 @@ end
 -- Código y lista de jugadores (comunes a crear / sala) --------------------
 local function codeText(s, code, caption)
 	text(s, spaced("CÓDIGO", 3), OSW_BOLD, 36, Vector2.new(120, 342), { width = 500 })
-	text(s, spaced(code, 2), ANTON, 350, Vector2.new(120, 515), { width = 760 })
+	text(s, spaced(code, 2), ANTON, 350, Vector2.new(120, 515), { width = 900 })
 	text(s, spaced(caption, 1), OSW_LIGHT, 30, Vector2.new(120, 681), { width = 700 })
 end
 
