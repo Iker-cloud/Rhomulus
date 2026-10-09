@@ -113,21 +113,26 @@ local function make(class, props, parent)
 	return o
 end
 
+-- Roblox limita TextSize y TextScaled a 100: el texto más grande se hace a 100 y se amplía con un UIScale
 local function text(parent, str, font, size, pos, props)
 	props = props or {}
-	return make("TextLabel", {
+	local factor = math.max(1, size / 100)
+	local label = make("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = str,
 		FontFace = font,
-		TextSize = math.min(size, 100), -- Roblox limita TextSize a 100: lo grande se escala a la caja
-		TextScaled = size > 100,
+		TextSize = math.min(size, 100),
 		TextColor3 = props.color or BLACK,
 		AnchorPoint = props.anchor or Vector2.new(0, 0.5),
 		Position = UDim2.fromOffset(pos.X, pos.Y),
-		Size = UDim2.fromOffset(props.width or 900, size > 100 and size * 1.1 or size + 20),
+		Size = UDim2.fromOffset((props.width or 900) / factor, (factor > 1 and 100 or size) + 20),
 		TextXAlignment = props.align or Enum.TextXAlignment.Left,
 		TextTransparency = props.transparency or 0,
 	}, parent)
+	if factor > 1 then
+		make("UIScale", { Scale = factor }, label)
+	end
+	return label
 end
 
 local function rule(parent, x, y, w, dashed, h)
@@ -184,10 +189,12 @@ local logoScale = make("UIScale", { Scale = 1.05 }, logo)
 local layers = {}
 for _, l in { { DARK, -10, "shadow" }, { LIGHT, 10, "shadow" }, { BLACK, 0, "main" } } do
 	local t = make("TextLabel", {
-		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(l[2], 0),
-		Text = "RHOMULUS", TextColor3 = l[1], FontFace = ANTON, TextScaled = true,
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(1700 / 4.4, 100),
+		Position = UDim2.new(0, l[2], 0.5, 0), TextSize = 100, TextYAlignment = Enum.TextYAlignment.Center,
+		Text = "RHOMULUS", TextColor3 = l[1], FontFace = ANTON,
 		TextXAlignment = Enum.TextXAlignment.Left, TextTransparency = 1,
 	}, logo)
+	make("UIScale", { Scale = 4.4 }, t)
 	table.insert(layers, { label = t, kind = l[3], target = l[3] == "shadow" and 0.15 or 0 })
 end
 
@@ -340,8 +347,8 @@ end
 -- Código y lista de jugadores (comunes a crear / sala) --------------------
 local function codeText(s, code, caption)
 	text(s, spaced("CÓDIGO", 3), OSW_BOLD, 36, Vector2.new(120, 342), { width = 500 })
-	text(s, spaced(code, 2), ANTON, 350, Vector2.new(120, 515), { width = 900 })
-	text(s, spaced(caption, 1), OSW_LIGHT, 30, Vector2.new(120, 681), { width = 700 })
+	text(s, spaced(code, 0), ANTON, 350, Vector2.new(120, 515), { width = 1100 })
+	text(s, spaced(caption, 1), OSW_LIGHT, 34, Vector2.new(120, 681), { width = 700 })
 end
 
 local function playerList(s, names, hostIdx, youIdx)
@@ -417,7 +424,7 @@ builders.create = function()
 	smallVersion(s, 1340, 932)
 	make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0,
 		Position = UDim2.fromOffset(1385, 880), Size = UDim2.fromOffset(415, 100) }, s)
-	text(s, spaced(st.started and "EMPEZANDO…" or "EMPEZAR", 2), ANTON, 84, Vector2.new(1592, 932),
+	text(s, spaced(st.started and "EMPEZANDO…" or "EMPEZAR", 0), ANTON, 84, Vector2.new(1592, 932),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 415, color = RED })
 	button(s, 1385, 880, 415, 100, function()
 		if not st.started then
@@ -449,7 +456,7 @@ builders.join = function()
 	backButton(s, "main")
 	smallVersion(s, 1400, 932)
 	outline(s, 1445, 882, 355, 98, 2)
-	local enterLabel = text(s, spaced("ENTRAR", 2), ANTON, 84, Vector2.new(1622, 932),
+	local enterLabel = text(s, spaced("ENTRAR", 0), ANTON, 84, Vector2.new(1622, 932),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 355, transparency = 0.5 })
 
 	-- La TextBox invisible recibe lo que se escribe (sirve también en celular)
