@@ -149,9 +149,19 @@ local function onCharacter(player, character)
 	PlayerState.refreshSpeed(player)
 
 	if safePoint then
-		character:WaitForChild("HumanoidRootPart")
+		local root = character:WaitForChild("HumanoidRootPart")
 		-- Dispersos para que no reaparezcan encimados
-		character:PivotTo(safePoint * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6)))
+		local target = safePoint * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6))
+		-- Con StreamingEnabled el suelo del mapa recién construido tarda en llegar al cliente: se espera quieto a que cargue
+		-- (si no, el personaje cae al vacío). RequestStreamAroundAsync devuelve cuando ya llegó o al pasar el tiempo.
+		root.Anchored = true
+		character:PivotTo(target)
+		pcall(function()
+			player:RequestStreamAroundAsync(target.Position, 8)
+		end)
+		if character.Parent and root.Parent then
+			root.Anchored = false
+		end
 	end
 
 	humanoid.Died:Once(function()
