@@ -432,6 +432,18 @@ return {
 		KeyLabel = "4", -- lo que se muestra en pantalla
 	},
 
+	-- Inventario (server/Items, client/Inventory, client/Shop): barra de ranuras 1 a 7. Las armas ocupan 1 y 2; los objetos van
+	-- en el orden de Order (teclas 3 a 7). Se compran en las estaciones de munición con las latas del equipo y se pierden al morir.
+	Items = {
+		Order = { "Grenade", "Medkit", "Molotov", "Bandage", "Flare" },
+		Cooldown = 0.8, -- segundos entre usos
+		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Damage = 130, Radius = 14, Fuse = 2, ThrowSpeed = 62, Color = Color3.fromRGB(86, 104, 52) },
+		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit)
+		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowSpeed = 55, Color = Color3.fromRGB(150, 96, 40) },
+		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2 },
+		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Duration = 15, LureRange = 75, ThrowSpeed = 58, Color = Color3.fromRGB(235, 70, 55) },
+	},
+
 	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas
 	-- desde el mercado. Se cargan como a un compañero (lento y solo pistola) y se sueltan con G.
 	Gas = {

@@ -10,6 +10,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local PropModel = require(script.Parent.PropModel)
 local Weapons = require(script.Parent.Weapons)
+local Items = require(script.Parent.Items)
 local CajaMisteriosa = require(script.Parent.ZombieData.CajaMisteriosa)
 local WeaponModel = require(script.Parent.WeaponModel)
 local RifleAsalto = require(script.Parent.ZombieData.RifleAsalto)
@@ -271,28 +272,62 @@ function WeaponBox.place(zoneName)
 	end
 end
 
+local stations = {}
+local buyConnected = false
+
+-- Compra en una estación ("Ammo" o un objeto de Config.Items): se valida que el jugador esté cerca de alguna
+local function onBuy(player, id)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not root or typeof(id) ~= "string" then
+		return
+	end
+	local station
+	for _, s in stations do
+		if s.part.Parent and (s.part.Position - root.Position).Magnitude <= 18 then
+			station = s
+			break
+		end
+	end
+	if not station then
+		return
+	end
+	if id == "Ammo" then
+		local denied = Weapons.ammoDenied(player)
+		if denied then
+			Remotes.Feed:FireClient(player, denied)
+		elseif Points.spend(Config.WeaponBox.AmmoCost) then
+			Weapons.refillReserve(player)
+			station.model:SetAttribute("Open", true)
+			task.delay(1.6, function()
+				station.model:SetAttribute("Open", false)
+			end)
+			Points.feed(`{player.DisplayName} compró munición`)
+		else
+			Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Config.WeaponBox.AmmoCost}`)
+		end
+		return
+	end
+	local ok, message = Items.tryBuy(player, id)
+	if not ok then
+		Remotes.Feed:FireClient(player, message)
+	end
+end
+
 -- refs viene de MapBuilder (candidatos de la caja y estaciones de munición)
 function WeaponBox.init(refs)
 	boxSpots = refs.boxSpots
 
+	stations = refs.ammoStations
+	if not buyConnected then
+		buyConnected = true
+		Remotes.Buy.OnServerEvent:Connect(onBuy)
+	end
 	for _, station in refs.ammoStations do
-		station.prompt.ActionText = "Comprar munición"
-		station.prompt.ObjectText = `{Config.WeaponBox.AmmoCost} latas`
+		station.prompt.ActionText = "Suministros"
+		station.prompt.ObjectText = "Munición y objetos"
 		station.prompt.Enabled = true
 		station.prompt.Triggered:Connect(function(player)
-			local denied = Weapons.ammoDenied(player)
-			if denied then
-				Remotes.Feed:FireClient(player, denied)
-			elseif Points.spend(Config.WeaponBox.AmmoCost) then
-				Weapons.refillReserve(player)
-				station.model:SetAttribute("Open", true)
-				task.delay(1.6, function()
-					station.model:SetAttribute("Open", false)
-				end)
-				Points.feed(`{player.DisplayName} compró munición`)
-			else
-				Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Config.WeaponBox.AmmoCost}`)
-			end
+			Remotes.OpenShop:FireClient(player, station.part.Position)
 		end)
 	end
 end

@@ -18,6 +18,9 @@ local NAMES = {
 	"Crit", -- servidor -> cliente: (killed) el disparo le dio a la cabeza de un zombie
 	"Aim", -- cliente -> servidor: (pitch, aiming) hacia dónde mira, para que los demás vean el arma
 	"UseMedkit", -- cliente -> servidor: (jugador o nil) usar el botiquín en un compañero o en uno mismo
+	"UseItem", -- cliente -> servidor: (id, dirección) usar un objeto del inventario (granada, molotov, vendas, bengala)
+	"Buy", -- cliente -> servidor: (id) comprar en una estación ("Ammo" o un objeto de Config.Items)
+	"OpenShop", -- servidor -> cliente: (posición de la estación) abre la tienda
 	"SkillCheck", -- servidor -> cliente: ("start", id, horaInicio, periodo, zonaInicio, zonaTamaño) | ("result", acertó) | ("cancel")
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba
 }

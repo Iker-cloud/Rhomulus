@@ -37,6 +37,22 @@ local function nearestTarget(fromPosition)
 	return best, bestDistance
 end
 
+-- La bengala más cercana dentro de su alcance (las pone server/Items en workspace.Flares)
+local function findLure(position)
+	local flares = workspace:FindFirstChild("Flares")
+	if not flares then
+		return nil
+	end
+	local best, bestDistance = nil, Config.Items.Flare.LureRange
+	for _, flare in flares:GetChildren() do
+		local distance = (flare.Position - position).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = flare, distance
+		end
+	end
+	return best
+end
+
 local function think(humanoid, root, stats)
 	local path = PathfindingService:CreatePath({
 		AgentRadius = stats.AgentRadius or 1.5,
@@ -52,6 +68,13 @@ local function think(humanoid, root, stats)
 
 	while humanoid.Health > 0 and root.Parent do
 		local target, distance = nearestTarget(root.Position)
+		-- Una bengala encendida atrae a los zombies que no tienen a nadie al alcance de un golpe
+		local lure = findLure(root.Position)
+		if lure and not (target and distance <= stats.AttackRange) then
+			humanoid:MoveTo(lure.Position)
+			task.wait(Config.Zombie.ThinkInterval)
+			continue
+		end
 		if target then
 			local now = os.clock()
 

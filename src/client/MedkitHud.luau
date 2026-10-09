@@ -115,7 +115,7 @@ function MedkitHud.start()
 	fill.Parent = back
 
 	RunService.RenderStepped:Connect(function()
-		badge.Visible = player:GetAttribute("HasMedkit") == true
+		badge.Visible = false -- el botiquín ahora se ve en la barra del inventario (client/Inventory)
 		local endTime = player:GetAttribute("HealingEnd")
 		if endTime then
 			local left = math.max(0, endTime - workspace:GetServerTimeNow())
@@ -129,7 +129,7 @@ function MedkitHud.start()
 	end)
 
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or input.KeyCode ~= M.Key or not player:GetAttribute("HasMedkit") then
+		if processed or input.KeyCode ~= M.Key or (player:GetAttribute("Item_Medkit") or 0) <= 0 then
 			return
 		end
 		Remotes.UseMedkit:FireServer(pickTarget())

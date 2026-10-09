@@ -212,6 +212,7 @@ end
 function WeaponRig.set(player, active, primary)
 	local state = stateOf(player)
 	player:SetAttribute("WeaponKey", active)
+	player:SetAttribute("PrimaryKey", primary)
 	if state.active ~= active or state.primary ~= primary then
 		state.active = active
 		state.primary = primary

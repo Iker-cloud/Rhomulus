@@ -44,6 +44,11 @@ local function faceCamera()
 		return
 	end
 
+	if player:GetAttribute("UiOpen") then -- tienda abierta: ratón libre y el cuerpo no gira
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	UserInputService.MouseIconEnabled = false
 	humanoid.AutoRotate = false

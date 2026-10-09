@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
+local Items = require(script.Parent.Items)
 local Points = require(script.Parent.Points)
 
 local Medkits = {}
@@ -51,7 +52,7 @@ local function denied(player, target)
 end
 
 local function useMedkit(player, target)
-	if healing[player] or not player:GetAttribute("HasMedkit") or PlayerState.get(player) ~= "Normal" then
+	if healing[player] or Items.count(player, "Medkit") <= 0 or PlayerState.get(player) ~= "Normal" then
 		return
 	end
 	if typeof(target) ~= "Instance" or not target:IsA("Player") or target.Parent ~= Players then
@@ -86,7 +87,7 @@ local function useMedkit(player, target)
 		if humanoid then
 			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + M.Heal)
 		end
-		player:SetAttribute("HasMedkit", false)
+		Items.add(player, "Medkit", -1)
 		Points.feed(target == player and `{player.DisplayName} se curó` or `{player.DisplayName} curó a {target.DisplayName}`)
 	end)
 end
@@ -102,13 +103,13 @@ function Medkits.init(list)
 			if not pickup.model.Parent or PlayerState.get(player) ~= "Normal" then
 				return
 			end
-			if player:GetAttribute("HasMedkit") then
-				Remotes.Feed:FireClient(player, "Ya llevas un botiquín")
+			if not Items.canAdd(player, "Medkit") then
+				Remotes.Feed:FireClient(player, "Ya llevas el máximo de botiquines")
 				return
 			end
 			pickup.prompt.Enabled = false
 			pickup.model.Parent = nil
-			player:SetAttribute("HasMedkit", true)
+			Items.add(player, "Medkit", 1)
 			Remotes.Feed:FireClient(player, `Botiquín: pulsa {M.KeyLabel} para curarte o curar al compañero que miras`)
 		end)
 	end
@@ -130,7 +131,6 @@ function Medkits.reset()
 	end
 	for _, player in Players:GetPlayers() do
 		stopHealing(player)
-		player:SetAttribute("HasMedkit", false)
 	end
 end
 
