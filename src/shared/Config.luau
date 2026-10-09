@@ -186,6 +186,13 @@ return {
 			Heartbeat = "rbxassetid://9043365842", -- latido a 96 pulsaciones (bucle)
 			Spark = "rbxassetid://9116275998", -- chispazo del farol que se apaga
 			Dogs = "rbxassetid://8678449977", -- perros que ladran lejos
+			-- Sonido por zona del mapa nuevo (client/NightSounds): suena en bucle dentro de la caja, o con campanas cada cierto tiempo
+			Zones = {
+				{ name = "Iglesia", box = { -60, 60, 140, 214 }, bell = "rbxassetid://9113803790", bellInterval = { 14, 26 }, bellVolume = 0.7 },
+				{ name = "Mercado", box = { -114, -66, -32, 52 }, loop = "rbxassetid://9112852458", volume = 0.3 }, -- llovizna sobre lámina
+				{ name = "Terminal", box = { -62, 62, 200, 330 }, loop = "rbxassetid://9112792684", volume = 0.22 }, -- motores y grillos lejos
+				{ name = "Estadio", box = { -122, 122, 330, 440 }, loop = "rbxassetid://9125602882", volume = 0.28 }, -- tonos huecos
+			},
 			-- Ruidos sueltos cerca del jugador (además de los gruñidos de ZombieGrowls)
 			Noises = {
 				"rbxassetid://9116521880", -- golpe de metal (tubo)

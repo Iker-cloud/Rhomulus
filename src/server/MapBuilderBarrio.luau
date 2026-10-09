@@ -807,6 +807,14 @@ local function ramp(map, x1, x2, z1, z2, upAtZ2)
 	wedge.TopSurface = Enum.SurfaceType.Smooth
 	wedge.BottomSurface = Enum.SurfaceType.Smooth
 	wedge.Parent = map
+	-- Franjas blancas pintadas sobre la pendiente, como las escalinatas del barrio
+	local length = z2 - z1
+	local angle = math.atan(ROOF_HEIGHT / length)
+	for t = 1, length - 2, 3 do
+		local along = upAtZ2 and z1 + t + 0.6 or z2 - t - 0.6
+		local height = ROOF_HEIGHT * (t + 0.6) / length
+		deco(block(map, "RampaFranja", Vector3.new(x2 - x1 - 0.4, 0.1, 1.3 / math.cos(angle)), CFrame.new((x1 + x2) / 2, height + 0.06, along) * CFrame.Angles(upAtZ2 and -angle or angle, 0, 0), C.blanco, Enum.Material.SmoothPlastic))
+	end
 	return wedge
 end
 
@@ -2024,6 +2032,176 @@ local function buildStadium(map, refs, rng, spawns, config)
 	end
 end
 
+-- Pase de arte: detalles pequeños repartidos por los caminos (todo decoración sin colisión ni sombra, una pieza por
+-- objeto, unas 500 en total): ropa y basura tiradas, llantas, cajas, maleza, cables entre casas, charcos y salpicaduras
+-- de sangre estilizada, bolsas negras, vidrios rotos, grafitis y carteles pintados a mano sobre las paredes reales.
+local BLOOD = Color3.fromRGB(105, 16, 16)
+local PAINTS = { C.grafiti, C.turquesa, C.mostaza, C.cobalto, C.blanco, C.lima }
+local HAND_SIGNS = {
+	"SE VENDE",
+	"NO HAY AGUA",
+	"BUSCO A MI MADRE — CASA 14",
+	"ABIERTO 24 HORAS (YA NO)",
+	"NO PASEN",
+	"CUIDADO: INFECTADOS",
+	"CANAL 7: SIGAN AL REFUGIO REMO",
+	"AQUÍ NO HAY NADIE. SIGAN",
+	"DIOS NOS CUIDE",
+	"SE RECIBEN DONACIONES",
+	"EL BARRIO NO SE RINDE",
+	"PERDIDO: PERRO CHICO",
+	"VENDO MOTO (NO ARRANCA)",
+	"LA ALCALDÍA SABÍA",
+}
+
+-- Todas las zonas transitables del mapa nuevo (sin rampas, azoteas ni nichos)
+local function artAreas()
+	local list = {}
+	local function add(rects)
+		for _, r in rects do
+			if not (r[1]:find("^Rampa") or r[1]:find("^Azotea") or r[1]:find("^Nicho")) then
+				table.insert(list, { r[2], r[3], r[4], r[5] })
+			end
+		end
+	end
+	add(ALLEY)
+	add(STAIRS)
+	add(MARKET_ROUTE)
+	add(ESC2_ROUTE)
+	add(AVENUE_WALK)
+	add(ANDEN_WALK)
+	for _, r in { { -30, 30, -350, -150 }, { -30, 30, -90, -10 }, { -50, 50, -10, 110 }, { -30, 30, 110, 160 }, { -30, 30, 200, 232 }, { -60, 60, 232, 330 } } do
+		table.insert(list, r)
+	end
+	local total = 0
+	for _, a in list do
+		a.weight = (a[2] - a[1]) * (a[4] - a[3])
+		total += a.weight
+	end
+	return list, total
+end
+
+local function randomPoint(areas, total, rng)
+	local roll = rng:NextNumber() * total
+	for _, a in areas do
+		roll -= a.weight
+		if roll <= 0 then
+			return rng:NextNumber(a[1] + 0.8, a[2] - 0.8), rng:NextNumber(a[3] + 0.8, a[4] - 0.8), a
+		end
+	end
+	local a = areas[1]
+	return (a[1] + a[2]) / 2, (a[3] + a[4]) / 2, a
+end
+
+-- Busca la pared más cercana desde un punto en una de las 4 direcciones; devuelve posición y normal horizontal
+local function wallHit(x, z, rng)
+	local dirs = { Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis }
+	local dir = dirs[rng:NextInteger(1, 4)]
+	local origin = Vector3.new(x, rng:NextNumber(3.5, 6), z)
+	local result = workspace:Raycast(origin, dir * 14)
+	if result and result.Instance.CanCollide and math.abs(result.Normal.Y) < 0.1 and result.Distance > 1.5 then
+		local name = result.Instance.Name
+		if name == "Casa" or name:find("Muro") or name:find("Fachada") or name:find("Grada") then
+			return result.Position, result.Normal
+		end
+	end
+	return nil
+end
+
+local function buildArt(map, rng)
+	local areas, total = artAreas()
+	local folder = Instance.new("Folder")
+	folder.Name = "Arte"
+	folder.Parent = map
+	local y = FLOOR_TOP + 0.03
+
+	-- Basura y ropa tirada, llantas, cajas y bolsas
+	for i = 1, 230 do
+		local x, z = randomPoint(areas, total, rng)
+		local yaw = rng:NextNumber() * math.pi * 2
+		local kind = i % 5
+		if kind == 0 then
+			deco(block(folder, "RopaSuelo", Vector3.new(1.6, 0.05, 1.2), CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0), ({ C.lonaAzul, C.grafiti, C.mostaza, C.blanco, C.lima })[rng:NextInteger(1, 5)], Enum.Material.Fabric))
+		elseif kind == 1 then
+			deco(block(folder, "Bolsa", Vector3.new(1.1, 0.9, 1.1), CFrame.new(x, 0.45, z) * CFrame.Angles(0, yaw, 0), C.oscuro, Enum.Material.Fabric))
+		elseif kind == 2 then
+			deco(pole(folder, "Llanta", Vector3.new(x, 0, z), 0.7, 2.4, C.oscuro, Enum.Material.Rubber))
+		elseif kind == 3 then
+			deco(block(folder, "CajaCarton", Vector3.new(1.4, 1, 1.4), CFrame.new(x, 0.5, z) * CFrame.Angles(0, yaw, 0), C.madera, Enum.Material.Cardboard))
+		else
+			deco(block(folder, "Papeles", Vector3.new(1.2, 0.04, 0.9), CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0), C.blanco, Enum.Material.SmoothPlastic))
+		end
+	end
+
+	-- Maleza y arbustos que invaden
+	for i = 1, 70 do
+		local x, z = randomPoint(areas, total, rng)
+		local bush = i % 4 == 0
+		deco(block(folder, bush and "Arbusto" or "Maleza", bush and Vector3.new(3, 2, 3) or Vector3.new(1.4, 0.9, 1.4), CFrame.new(x, bush and 1 or 0.45, z) * CFrame.Angles(0, rng:NextNumber() * 3, 0), bush and Color3.fromRGB(70, 96, 48) or C.pastoSeco, Enum.Material.Grass))
+	end
+
+	-- Cables que cuelgan de pared a pared en los pasajes estrechos
+	local cables = 0
+	for _ = 1, 400 do
+		if cables >= 45 then
+			break
+		end
+		local x, z, a = randomPoint(areas, total, rng)
+		local width = a[2] - a[1]
+		if width >= 6 and width <= 14 and a[4] - a[3] > width then
+			local p1 = Vector3.new(a[1], rng:NextNumber(12, 15), z)
+			local p2 = Vector3.new(a[2], rng:NextNumber(11, 14), z + rng:NextNumber(-3, 3))
+			deco(block(folder, "CableColgante", Vector3.new(0.12, 0.12, (p2 - p1).Magnitude), CFrame.lookAt((p1 + p2) / 2, p2), C.oscuro, Enum.Material.SmoothPlastic))
+			cables += 1
+		end
+	end
+
+	-- Sangre estilizada: charcos en el suelo y bolsas negras (nada gráfico)
+	for _ = 1, 35 do
+		local x, z = randomPoint(areas, total, rng)
+		deco(pole(folder, "Charco", Vector3.new(x, y - 0.01, z), 0.04, rng:NextNumber(1, 3), BLOOD, Enum.Material.SmoothPlastic))
+	end
+	for _ = 1, 8 do
+		local x, z = randomPoint(areas, total, rng)
+		local yaw = rng:NextNumber() * math.pi * 2
+		deco(block(folder, "BolsaCuerpo", Vector3.new(1.4, 0.7, 3.2), CFrame.new(x, 0.35, z) * CFrame.Angles(0, yaw, 0), C.oscuro, Enum.Material.Fabric))
+		deco(block(folder, "CintaPolicia", Vector3.new(0.3, 0.05, 1.2), CFrame.new(x, 0.72, z) * CFrame.Angles(0, yaw + 0.8, 0), C.mostaza, Enum.Material.SmoothPlastic))
+	end
+	for _ = 1, 6 do -- vidrios rotos (cuatro por montón)
+		local x, z = randomPoint(areas, total, rng)
+		for k = 1, 4 do
+			local shard = deco(block(folder, "Vidrio", Vector3.new(0.8, 0.05, 0.6), CFrame.new(x + rng:NextNumber(-1.5, 1.5), y, z + rng:NextNumber(-1.5, 1.5)) * CFrame.Angles(0, rng:NextNumber() * 6, 0), Color3.fromRGB(170, 215, 225), Enum.Material.Glass))
+			shard.Transparency = 0.35
+			if k == 1 then
+				shard.Name = "VidrioGrande"
+			end
+		end
+	end
+
+	-- Paredes reales: salpicaduras, grafitis y carteles pintados a mano (se buscan con rayos para que no floten)
+	local splats, paints, signs = 0, 0, 0
+	for _ = 1, 900 do
+		if splats >= 15 and paints >= 40 and signs >= #HAND_SIGNS then
+			break
+		end
+		local x, z = randomPoint(areas, total, rng)
+		local position, normal = wallHit(x, z, rng)
+		if position then
+			local facing = CFrame.lookAt(position + normal * 0.1, position + normal * 1.1)
+			if splats < 15 then
+				splats += 1
+				deco(block(folder, "Salpicadura", Vector3.new(rng:NextNumber(1, 3), rng:NextNumber(1, 2.5), 0.1), facing * CFrame.new(0, -1.2, 0), BLOOD, Enum.Material.SmoothPlastic))
+			elseif signs < #HAND_SIGNS and rng:NextNumber() < 0.3 then
+				signs += 1
+				sign(folder, "CartelPintado", HAND_SIGNS[signs], Vector3.new(7, 2.4, 0.2), facing * CFrame.new(0, 0, 0.05), ({ C.blanco, C.mostaza, C.terracota })[signs % 3 + 1], C.oscuro)
+			elseif paints < 40 then
+				paints += 1
+				deco(block(folder, "Grafiti", Vector3.new(rng:NextNumber(2, 6), rng:NextNumber(1.5, 4), 0.1), facing, PAINTS[rng:NextInteger(1, #PAINTS)], Enum.Material.SmoothPlastic))
+			end
+		end
+	end
+end
+
 function MapBuilderBarrio.build(config)
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
@@ -2068,6 +2246,7 @@ function MapBuilderBarrio.build(config)
 	buildAvenue(map, refs, rng, zone3Spawns)
 	buildAndenes(map, refs, rng, zone3Spawns)
 	buildStadium(map, refs, rng, extractionSpawns, config)
+	buildArt(map, Random.new(config.Seed + 101))
 
 	-- Las garrafas se entregan junto al generador; con cada entrega llegan zombies de la zona 2
 	local generatorPosition = refs.generator.Position
