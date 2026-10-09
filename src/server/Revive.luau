@@ -234,6 +234,11 @@ local function onCharacter(player, character)
 					if sessions[helper] ~= session or session.failed or not canHelp(helper, player) then
 						return
 					end
+					if session.check and not session.check.done then
+						session.check.done = true
+						session.fail() -- no pulsó la anterior
+						return
+					end
 					local check = SkillCheck.new(Config.SkillCheck, workspace:GetServerTimeNow(), index)
 					session.check = check
 					Remotes.SkillCheck:FireClient(helper, "start", check.id, check.start, check.period, check.zoneStart, check.zoneSize)

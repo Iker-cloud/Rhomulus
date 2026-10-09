@@ -154,6 +154,12 @@ local function onCharacter(player, character)
 	setState(player, "Normal")
 	PlayerState.refreshSpeed(player)
 
+	humanoid.Died:Once(function()
+		bleedTokens[player] = (bleedTokens[player] or 0) + 1
+		player:SetAttribute("BleedEnd", nil)
+		setState(player, "Dead")
+	end)
+
 	local base = spawnOverride[player] or safePoint
 	spawnOverride[player] = nil
 	if base then
@@ -172,11 +178,6 @@ local function onCharacter(player, character)
 		end
 	end
 
-	humanoid.Died:Once(function()
-		bleedTokens[player] = (bleedTokens[player] or 0) + 1
-		player:SetAttribute("BleedEnd", nil)
-		setState(player, "Dead")
-	end)
 end
 
 function PlayerState.start()

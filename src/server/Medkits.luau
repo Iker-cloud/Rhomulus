@@ -1,4 +1,4 @@
--- Botiquines: se recogen con E (cada jugador lleva uno como máximo, atributo HasMedkit) y se usan con la tecla de
+-- Botiquines: se recogen con E (cada jugador lleva hasta Config.Items.Medkit.Max, atributo Item_Medkit) y se usan con la tecla de
 -- Config.Medkit.Key: curan Config.Medkit.Heal de vida en Config.Medkit.Time segundos, a uno mismo o a un compañero
 -- herido cercano. Mientras dura, el jugador tiene los atributos HealingEnd (hora del servidor) y HealingTarget (nombre
 -- del curado, vacío si se cura a sí mismo) para el HUD (client/MedkitHud). Se interrumpe si alguien cae o se alejan.

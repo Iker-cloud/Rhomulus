@@ -1,6 +1,6 @@
 -- Botiquín (cliente): la tecla de Config.Medkit.Key cura al compañero herido al que se mira (a menos de Range) o, si no
 -- hay ninguno, a uno mismo. Muestra el botiquín que se lleva (encima de la jeringa) y la barra de la curación en curso.
--- El servidor (server/Medkits) valida todo y pone los atributos HasMedkit, HealingEnd y HealingTarget.
+-- El servidor (server/Medkits) valida todo y pone los atributos Item_Medkit, HealingEnd y HealingTarget.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

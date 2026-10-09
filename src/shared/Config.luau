@@ -302,13 +302,13 @@ return {
 	-- Si se falla, el revivir se reinicia. Es fácil a propósito: zona grande y aguja lenta.
 	SkillCheck = {
 		Enabled = true,
-		Times = { 0.25, 0.55 }, -- en qué parte de Revive.HoldTime sale cada prueba (una por valor)
-		Period = 1.4, -- segundos que tarda la aguja en dar la vuelta completa
-		ZoneSize = 80, -- grados de la zona buena (de 360)
-		ZoneMin = 100, -- la zona empieza al azar entre estos dos ángulos (grados desde arriba, hacia la derecha)
-		ZoneMax = 280,
+		Times = { 0.1, 0.5 }, -- en qué parte de Revive.HoldTime sale cada prueba (una por valor). Cada una dura como mucho Delay + Period + Tolerance + 0.3; la última debe acabar antes de HoldTime
+		Period = 1.1, -- segundos que tarda la aguja en dar la vuelta completa
+		ZoneSize = 100, -- grados de la zona buena (de 360): unos 0.3 s de ventana
+		ZoneMin = 90, -- la zona empieza al azar entre estos dos ángulos (grados desde arriba, hacia la derecha); ZoneMax + ZoneSize <= 360
+		ZoneMax = 260,
 		Tolerance = 0.12, -- segundos de margen por latencia
-		Delay = 0.35, -- la aguja arranca esto después de aparecer el aro
+		Delay = 0.3, -- la aguja arranca esto después de aparecer el aro
 		RetryDelay = 0.8, -- tras fallar, segundos antes de poder volver a intentar
 		FailPhrases = { "¡Se me resbaló!", "Otra vez, aguanta", "Casi..." },
 	},
