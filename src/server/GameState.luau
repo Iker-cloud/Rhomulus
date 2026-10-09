@@ -11,6 +11,7 @@ local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
+local GasCans = require(script.Parent.GasCans)
 local Medkits = require(script.Parent.Medkits)
 local MapBuilder = require(script.Parent.MapBuilder)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
@@ -33,6 +34,12 @@ local OBJECTIVES = {
 		return map.safeVolume.Position, "PUNTO SEGURO"
 	end,
 	Generator = function()
+		return map.generator.Position, "GENERADOR"
+	end,
+	Gas = function()
+		return map.gas.marketPos, "MERCADO"
+	end,
+	GasCarry = function()
 		return map.generator.Position, "GENERADOR"
 	end,
 	Warning = function()
@@ -198,6 +205,9 @@ local function resetMap()
 	setLobbyDoors(false)
 	setDoor(map.safeEntryDoor, true)
 	setDoor(map.safeExitDoor, false)
+	for _, extra in map.safeExtraExits or {} do
+		setDoor(extra, false)
+	end
 	setDoor(map.gate, false)
 	if map.church then
 		setDoor(map.church.exitDoor, false)
@@ -221,6 +231,7 @@ local function lobby()
 	Points.reset()
 	CanPiles.reset()
 	Medkits.reset()
+	GasCans.reset()
 	WeaponBox.clear()
 	Weapons.resetAll()
 	resetMap()
@@ -265,7 +276,7 @@ local function zone1()
 	return ok
 end
 
--- `room` = { entryDoor, exitDoor, spawn }: el punto seguro 1 de cada mapa o la iglesia del mapa nuevo
+-- `room` = { entryDoor, exitDoor, extraExits?, spawn }: el punto seguro 1 de cada mapa o la iglesia del mapa nuevo
 local function safeRoom(room)
 	setDoor(room.entryDoor, false) -- cierra la puerta detrás del equipo
 	Director.setZone(nil)
@@ -280,14 +291,39 @@ local function safeRoom(room)
 	task.wait(Config.Game.SafeRoomTime)
 
 	setDoor(room.exitDoor, true)
+	for _, extra in room.extraExits or {} do
+		setDoor(extra, true)
+	end
 	return true
 end
 
+-- Mapa nuevo: el generador está sin gas; hay que llevarle las garrafas del mercado. Devuelve false si el equipo cae.
+local function fuelGenerator()
+	GasCans.activate()
+	local lastKey
+	return waitUntil(function()
+		local count, carried = GasCans.delivered(), GasCans.anyCarried()
+		local key = `{count}{carried}`
+		if key ~= lastKey then
+			lastKey = key
+			if carried then
+				setStage("Zone2", `Lleven la garrafa al generador ({count}/{Config.Gas.Count})`, "GasCarry")
+			else
+				setStage("Zone2", `El generador no tiene gas: busquen garrafas en el mercado ({count}/{Config.Gas.Count})`, "Gas")
+			end
+		end
+		return count >= Config.Gas.Count
+	end, true)
+end
+
 local function zone2()
-	setStage("Zone2", `Enciendan el generador para {map.gateText.open}`, "Generator")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
+	if map.gas and not fuelGenerator() then
+		return false
+	end
+	setStage("Zone2", `Enciendan el generador para {map.gateText.open}`, "Generator")
 	if not waitForPrompt(map.generatorPrompt) then
 		return false
 	end
@@ -406,6 +442,7 @@ function GameState.start()
 	WeaponBox.init(map)
 	CanPiles.init(map.canPiles)
 	Medkits.init(map.medkits)
+	GasCans.init(map.gas)
 	-- El mapa de siempre llama "portón" a lo que abre el generador; el nuevo lo define (la iglesia)
 	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
 
@@ -425,7 +462,7 @@ function GameState.start()
 	task.spawn(function()
 		while true do
 			lobby()
-			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, spawn = map.safeSpawn })
+			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, extraExits = map.safeExtraExits, spawn = map.safeSpawn })
 			if won then
 				if map.church then
 					-- Mapa nuevo (hasta la iglesia): generador -> horda -> iglesia -> descanso -> salida de prueba

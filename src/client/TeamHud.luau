@@ -216,7 +216,8 @@ function TeamHud.start()
 			notice.Text = ""
 		elseif carrying then
 			downedCard.hide()
-			notice.Text = `Cargando a {carrying} — G para soltar`
+			local item = player:GetAttribute("CarryingItem") -- una garrafa (server/GasCans) en vez de un compañero
+			notice.Text = item and `Cargando {item} — G para soltar` or `Cargando a {carrying} — G para soltar`
 		else
 			downedCard.hide()
 			notice.Text = ""

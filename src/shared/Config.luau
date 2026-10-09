@@ -406,6 +406,17 @@ return {
 		KeyLabel = "4", -- lo que se muestra en pantalla
 	},
 
+	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas
+	-- desde el mercado. Se cargan como a un compañero (lento y solo pistola) y se sueltan con G.
+	Gas = {
+		Count = 3,
+		HoldTime = 0.8, -- segundos manteniendo E para cargarla
+		DeliverRadius = 9, -- a esta distancia del generador se entrega sola
+		DeliveryHorde = 6, -- zombies que llegan con cada entrega (al 100%; con 1 jugador: 2)
+		DeliverPoints = 50, -- latas para quien la entrega
+		MinSeparation = 25, -- distancia mínima entre las garrafas al repartirlas
+	},
+
 	-- Mapa nuevo: montones de latas sueltas (server/CanPiles). Se recogen con E, una vez por partida.
 	CanPiles = {
 		Amount = 50,

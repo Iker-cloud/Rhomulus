@@ -144,7 +144,7 @@ local function carry(carrier, target)
 end
 
 local function canHelp(helper, target)
-	if helper == target or PlayerState.get(helper) ~= "Normal" or carrying[helper] then
+	if helper == target or PlayerState.get(helper) ~= "Normal" or carrying[helper] or helper:GetAttribute("Carrying") then
 		return false
 	end
 	if PlayerState.get(target) ~= "Downed" or carriedBy[target] then

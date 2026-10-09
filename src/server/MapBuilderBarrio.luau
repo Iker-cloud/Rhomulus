@@ -963,17 +963,25 @@ local function buildSafePoint(map, refs)
 	slab(map, "TiendaFondoW", -30, -12, -92, -90, 16, wall)
 	slab(map, "TiendaFondoE", 12, 30, -92, -90, 16, wall)
 	block(map, "TiendaFondoDintel", Vector3.new(24, 2, 2), Vector3.new(0, 15, -91), wall)
-	slab(map, "TiendaLadoW", -30, -28, -128, -92, 16, wall)
+	slab(map, "TiendaLadoW", -30, -28, -128, -122, 16, wall)
+	slab(map, "TiendaLadoW", -30, -28, -110, -92, 16, wall)
+	block(map, "TiendaDintelW", Vector3.new(2, 2, 12), Vector3.new(-29, 15, -116), wall)
 	slab(map, "TiendaLadoE", 28, 30, -128, -92, 16, wall)
 	block(map, "TiendaTecho", Vector3.new(60, 1, 40), Vector3.new(0, 16.5, -110), C.concreto, Enum.Material.CorrodedMetal)
 	floor(map, "TiendaPiso", -28, 28, -128, -92, Color3.fromRGB(170, 160, 140), Enum.Material.Slate)
 
 	-- Bloques a los lados de la tienda (por aquí llegarán luego el callejón y la escalera)
-	slab(map, "TiendaBloqueW", -60, -30, -130, -90, 20, C.mostaza)
+	slab(map, "TiendaBloqueW", -60, -30, -130, -122, 20, C.mostaza)
+	slab(map, "TiendaBloqueW", -60, -30, -110, -90, 20, C.mostaza)
+	floor(map, "TiendaSalidaW", -60, -28, -122, -110, C.acera)
 	slab(map, "TiendaBloqueE", 30, 60, -130, -90, 20, C.lima)
 
 	refs.safeEntryDoor = door(map, "SafeEntryDoor", -129, 24, 14)
 	refs.safeExitDoor = door(map, "SafeExitDoor", -91, 24, 14)
+	-- Salida oeste al Callejón del tramo 2 (se abre a la vez que la del norte)
+	refs.safeExtraExits = { block(map, "SafeExitDoorW", Vector3.new(2, 14, 12), Vector3.new(-29, 7, -116), Color3.fromRGB(150, 110, 60), Enum.Material.DiamondPlate) }
+	sign(map, "CartelCallejon2", "← CALLEJÓN", Vector3.new(8, 3, 0.4), Vector3.new(-20, 11, -92.3), C.amarillo, C.oscuro)
+	sign(map, "CartelCalle2", "CALLE ↑", Vector3.new(8, 3, 0.4), Vector3.new(20, 11, -92.3), C.rojo)
 	refs.safeVolume = volume(map, "SafeVolume", -28, 28, -128, -92, 12)
 	refs.safeSpawn = CFrame.lookAt(Vector3.new(0, 3, -112), Vector3.new(0, 3, -90))
 
@@ -1023,6 +1031,13 @@ local function buildSafePoint(map, refs)
 	beaconLight.Range = 40
 	beaconLight.Brightness = 3
 	beaconLight.Parent = beacon
+end
+
+-- Cruce abierto hacia el Callejón desde la calle, la plaza o el atrio (fachada en faceX, hasta x = -60)
+local function openCrossing(map, faceX, z)
+	floor(map, "CrucePiso", -60, faceX, z - 4, z + 4, C.acera)
+	floorArrow(map, Vector3.new(faceX - 5, 0, z), C.amarillo, -math.pi / 2)
+	sign(map, "CartelCallejon", "← CALLEJÓN", Vector3.new(8, 3, 0.4), CFrame.new(faceX + 0.5, 9, z + 9) * CFrame.Angles(0, -math.pi / 2, 0), C.amarillo, C.oscuro)
 end
 
 -- Parte 7: tramo 2, ruta Calle (roja). La calle sigue tras la tienda (z -90..-10), se abre en la plaza del generador
@@ -1080,7 +1095,11 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		local x1, x2 = math.min(35 * side, 60 * side), math.max(35 * side, 60 * side)
 		sideRow(map, rng, x1, x2, -90, -44, 35 * side, -side)
 		sideRow(map, rng, x1, x2, -36, -10, 35 * side, -side)
-		closedNiche(map, spawns, 35 * side, 60 * side, -40, 12)
+		if side == -1 then
+			openCrossing(map, -35, -40)
+		else
+			closedNiche(map, spawns, 35 * side, 60 * side, -40, 12)
+		end
 		for _, z in { -70, -22 } do
 			local top = Vector3.new(33 * side, 17, z)
 			deco(pole(map, "Poste", Vector3.new(33 * side, 0, z), 18, 0.8, C.concreto, Enum.Material.Concrete))
@@ -1099,7 +1118,11 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		local x1, x2 = math.min(50 * side, 60 * side), math.max(50 * side, 60 * side)
 		sideRow(map, rng, x1, x2, -10, 36, 50 * side, -side)
 		sideRow(map, rng, x1, x2, 44, 110, 50 * side, -side)
-		closedNiche(map, spawns, 50 * side, 60 * side, 40, 8)
+		if side == -1 then
+			openCrossing(map, -50, 40)
+		else
+			closedNiche(map, spawns, 50 * side, 60 * side, 40, 8)
+		end
 	end
 	-- Fuente rota en el centro
 	pole(map, "Fuente", Vector3.new(0, 0, 50), 2, 12, C.concreto, Enum.Material.Concrete)
@@ -1155,7 +1178,11 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 	for _, side in { -1, 1 } do
 		local x1, x2 = math.min(30 * side, 60 * side), math.max(30 * side, 60 * side)
 		sideRow(map, rng, x1, x2, 110, 116, 30 * side, -side)
-		closedNiche(map, spawns, 30 * side, 60 * side, 120, 12)
+		if side == -1 then
+			openCrossing(map, -30, 120)
+		else
+			closedNiche(map, spawns, 30 * side, 60 * side, 120, 12)
+		end
 		sideRow(map, rng, x1, x2, 124, 160, 30 * side, -side)
 		plazaLamp(map, 25 * side, 132)
 	end
@@ -1256,6 +1283,150 @@ local function buildChurch(map, refs)
 	refs.exitVolume = volume(map, "ExitVolume", -30, 30, 202, 212, 12)
 end
 
+-- Parte 8: tramo 2, ruta Callejón (amarilla): la feria. Franja de x -120 a -60 entre la tienda y la iglesia.
+-- Recorrido: salida oeste de la tienda -> patio -> callejón D1 -> mercado cubierto (las garrafas) -> D2 -> patio junto
+-- al atrio de la iglesia. Cruces abiertos a la calle en z = -40, 40 (plaza) y 120 (atrio).
+local MARKET_ROUTE = {
+	{ "Patio2", -86, -60, -124, -108 },
+	{ "D1", -86, -77, -108, -30 },
+	{ "C1b", -77, -60, -44, -36 }, -- cruce hacia la calle
+	{ "S4", -112, -86, -70, -62 }, -- callejón lateral (sin salida)
+	{ "Mercado", -112, -68, -30, 50 }, -- el mercado entero (muros, techo y puestos se ponen aparte)
+	{ "C2b", -68, -60, 36, 44 }, -- cruce hacia la plaza
+	{ "D2", -95, -86, 50, 112 },
+	{ "S5", -112, -95, 80, 88 }, -- callejón lateral (sin salida)
+	{ "Atrio2", -104, -60, 112, 128 }, -- patio junto al atrio (cruce en z = 120)
+}
+local MARKET_BAND = { x1 = -120, x2 = -60, z1 = -130, z2 = 214 }
+
+-- Garrafa de gas naranja (1.5 × 3.5) con asa; se carga con E (server/GasCans)
+local function gasCan(parent, position)
+	local model = Instance.new("Model")
+	model.Name = "Garrafa"
+	local body = pole(model, "Cuerpo", position, 3.5, 1.5, C.lonaNaranja, Enum.Material.Metal)
+	body.CanCollide = false
+	body.CanTouch = false
+	block(model, "Asa", Vector3.new(0.9, 0.4, 0.2), position + Vector3.new(0, 3.7, 0), C.oscuro, Enum.Material.Metal).CanCollide = false
+	block(model, "Valvula", Vector3.new(0.4, 0.4, 0.4), position + Vector3.new(0, 3.6, 0.35), C.concreto, Enum.Material.Metal).CanCollide = false
+	model.PrimaryPart = body
+	label(body, "GARRAFA", C.lonaNaranja, 18)
+	model.Parent = parent
+	return model, body, prompt(body, "Cargar garrafa", 0.8)
+end
+
+-- Puesto del mercado: mostrador de largo `length` en Z (6 de ancho, 3 de alto) con toldo y fruta
+local function marketStall(map, x, z1, z2, canvas)
+	local length = z2 - z1
+	block(map, "Mostrador", Vector3.new(6, 3, length), Vector3.new(x, 1.5, (z1 + z2) / 2), C.madera, Enum.Material.Wood)
+	deco(block(map, "Toldo", Vector3.new(7, 0.3, length), CFrame.new(x, 8.5, (z1 + z2) / 2) * CFrame.Angles(0, 0, math.rad(8)), canvas, Enum.Material.Fabric))
+	for z = z1 + 1.5, z2 - 1.5, 3 do
+		deco(block(map, "Fruta", Vector3.new(1.6, 0.8, 1.2), Vector3.new(x + (math.random() < 0.5 and -1.5 or 1.5), 3.4, z), ({ C.lima, C.lonaNaranja, C.rojo, C.mostaza })[math.random(4)], Enum.Material.SmoothPlastic))
+	end
+end
+
+local function buildMarket(map, refs, rng, spawns)
+	local rects = {}
+	for _, r in MARKET_ROUTE do
+		rects[r[1]] = r
+	end
+	local neighbors = { { "Tienda", -60, -30, -122, -110 }, { "Cruce", -60, -35, -44, -36 }, { "Cruce", -60, -50, 36, 44 }, { "Cruce", -60, -30, 116, 124 } }
+	local function isOpen(x, z)
+		return inRects(MARKET_ROUTE, x, z) or inRects(neighbors, x, z)
+	end
+
+	for _, r in MARKET_ROUTE do
+		local inside = r[1] == "Mercado"
+		floor(map, "Piso" .. r[1], r[2], r[3], r[4], r[5], inside and Color3.fromRGB(95, 92, 88) or C.acera, inside and Enum.Material.Slate or Enum.Material.Concrete)
+	end
+	fillHouses(map, rng, MARKET_BAND, MARKET_ROUTE, isOpen)
+
+	-- Mercado cubierto: muros de 14 con tres puertas (sur, norte y este) y techo de lámina
+	local wall = C.concreto
+	slab(map, "MercadoMuro", -112, -86, -30, -28, 14, wall)
+	slab(map, "MercadoMuro", -77, -68, -30, -28, 14, wall)
+	block(map, "MercadoDintel", Vector3.new(9, 4, 2), Vector3.new(-81.5, 12, -29), wall)
+	slab(map, "MercadoMuro", -112, -95, 48, 50, 14, wall)
+	slab(map, "MercadoMuro", -86, -68, 48, 50, 14, wall)
+	block(map, "MercadoDintel", Vector3.new(9, 4, 2), Vector3.new(-90.5, 12, 49), wall)
+	slab(map, "MercadoMuro", -112, -110, -28, 48, 14, wall)
+	slab(map, "MercadoMuro", -70, -68, -28, 36, 14, wall)
+	slab(map, "MercadoMuro", -70, -68, 44, 48, 14, wall)
+	block(map, "MercadoDintel", Vector3.new(2, 4, 8), Vector3.new(-69, 12, 40), wall)
+	block(map, "MercadoTecho", Vector3.new(44, 0.6, 80), Vector3.new(-90, 14.3, 10), C.oxido, Enum.Material.CorrodedMetal)
+	sign(map, "CartelFeria", "FERIA DEL BARRIO — HOY SE VENDE DE TODO", Vector3.new(22, 4, 0.4), Vector3.new(-99, 9, -30.3), C.mostaza, C.oscuro)
+
+	-- Dentro: estanterías en los muros, dos filas de puestos y pasillos de 8 (cruzados al sur, en medio y al norte)
+	block(map, "Estanteria", Vector3.new(2, 6, 74), Vector3.new(-109, 3, 10), C.madera, Enum.Material.WoodPlanks)
+	block(map, "Estanteria", Vector3.new(2, 6, 60), Vector3.new(-71, 3, 4), C.madera, Enum.Material.WoodPlanks)
+	local canvases = { C.lonaAzul, C.lonaNaranja, C.lonaVerde }
+	for i, segment in { { -20, -9 }, { -5, 6 }, { 12, 23 }, { 27, 40 } } do
+		marketStall(map, -97, segment[1], segment[2], canvases[i % 3 + 1])
+		marketStall(map, -83, segment[1], segment[2], canvases[(i + 1) % 3 + 1])
+	end
+	-- Jaulas y carros de mano (adorno, no tapan los pasillos)
+	for _, cage in { { -104, -26 }, { -76, 46 }, { -106, 46 } } do
+		deco(block(map, "Jaula", Vector3.new(2, 2, 2), Vector3.new(cage[1], 1, cage[2]), C.concreto, Enum.Material.DiamondPlate)).Transparency = 0.4
+	end
+	-- Lámparas colgadas (de noche son lo único que alumbra dentro)
+	for _, lamp in { { -104, -10 }, { -76, -10 }, { -104, 30 }, { -76, 30 }, { -90, 9 } } do
+		Atmosphere.bulb(map, Vector3.new(lamp[1], 12.5, lamp[2]))
+	end
+
+	-- Fuera: franjas amarillas, lámparas de pared, tendederos y un mural
+	for _, stripe in {
+		{ Vector3.new(0.3, 1, 64), Vector3.new(-77.15, 6, -76) }, -- D1, pared este (hasta el cruce)
+		{ Vector3.new(0.3, 1, 60), Vector3.new(-86.15, 6, 82) }, -- D2, pared este
+	} do
+		deco(block(map, "FranjaAmarilla", stripe[1], stripe[2], C.amarillo, Enum.Material.SmoothPlastic))
+	end
+	for _, lamp in { { -77.4, 11, -95 }, { -77.4, 11, -60 }, { -86.4, 11, 70 }, { -86.4, 11, 100 }, { -80, 11, 127.6 } } do
+		Atmosphere.bulb(map, Vector3.new(lamp[1], lamp[2], lamp[3]))
+	end
+	for _, line in { { -81.5, -85, 9 }, { -90.5, 95, 9 } } do
+		local x, z, length = line[1], line[2], line[3]
+		deco(block(map, "Tendedero", Vector3.new(length, 0.1, 0.1), Vector3.new(x, 9, z), C.blanco))
+		for i, cloth in { C.grafiti, C.lima, C.lonaAzul, C.mostaza } do
+			deco(block(map, "Ropa", Vector3.new(1.6, 2, 0.1), Vector3.new(x - length / 2 + i * length / 5, 8, z), cloth, Enum.Material.Fabric))
+		end
+	end
+	sign(map, "Mural", "EL GAS SE COMPARTE", Vector3.new(12, 6, 0.4), CFrame.new(-85.7, 8, -77) * CFrame.Angles(0, -math.pi / 2, 0), C.lonaNaranja, C.blanco)
+
+	-- Flechas amarillas del recorrido
+	for _, arrow in {
+		{ -66, -116, -math.pi / 2 },
+		{ -81.5, -100, 0 },
+		{ -81.5, -55, 0 },
+		{ -90, 9, 0 },
+		{ -90.5, 60, 0 },
+		{ -90.5, 104, 0 },
+		{ -80, 120, math.pi / 2 },
+	} do
+		floorArrow(map, Vector3.new(arrow[1], 0, arrow[2]), C.amarillo, arrow[3])
+	end
+
+	-- Puntos de aparición: dos en el mercado y dos al fondo de los callejones laterales
+	for _, point in { Vector3.new(-108, 0, -66), Vector3.new(-108, 0, 84), Vector3.new(-104, 0, 44), Vector3.new(-76, 0, -24) } do
+		marker(spawns, point)
+	end
+
+	-- Botiquín en un puesto del medio, caja de armas en un pasillo cruzado
+	local kit, kitPrompt = medkitPickup(map, Vector3.new(-97, 3, 0))
+	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	table.insert(refs.boxSpots.Zone2, { Vector3.new(-90, 0, -24), Vector3.new(-90, 0, 44) })
+
+	-- Garrafas: 3 en 6 lugares posibles de los pasillos (GasCans las reparte al azar en cada partida)
+	local spots = {
+		Vector3.new(-104, 0, -14), Vector3.new(-104, 0, 30),
+		Vector3.new(-90, 0, -2), Vector3.new(-90, 0, 30),
+		Vector3.new(-76, 0, -12), Vector3.new(-76, 0, 20),
+	}
+	refs.gas = { cans = {}, spots = spots, marketPos = Vector3.new(-90, 6, 10), hordePoints = {} }
+	for i = 1, Config.Gas.Count do
+		local model, body, canPrompt = gasCan(map, spots[i])
+		table.insert(refs.gas.cans, { model = model, body = body, prompt = canPrompt })
+	end
+end
+
 function MapBuilderBarrio.build(config)
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
@@ -1288,6 +1459,19 @@ function MapBuilderBarrio.build(config)
 	buildSafePoint(map, refs)
 	buildTramo2Calle(map, refs, rng, zone2Spawns, config)
 	buildChurch(map, refs)
+	buildMarket(map, refs, rng, zone2Spawns)
+
+	-- Las garrafas se entregan junto al generador; con cada entrega llegan zombies de la zona 2
+	local generatorPosition = refs.generator.Position
+	refs.gas.deliverPos = generatorPosition
+	refs.gas.depositSpots = {
+		generatorPosition + Vector3.new(-4.5, 0, -2),
+		generatorPosition + Vector3.new(-4.5, 0, 0.5),
+		generatorPosition + Vector3.new(-4.5, 0, 3),
+	}
+	for _, point in zone2Spawns:GetChildren() do
+		table.insert(refs.gas.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
+	end
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
 	local params = OverlapParams.new()
