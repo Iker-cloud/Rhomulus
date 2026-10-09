@@ -3766,6 +3766,55 @@ local function buildArt(map, rng)
 	end
 end
 
+-- Límites invisibles: tapas sobre los edificios (no se puede subir a sus azoteas para saltarse una zona) y paredes en el
+-- borde del mapa y a los lados de la salida de la furgoneta. Sin colisión con balas (CanQuery = false): solo frenan al jugador.
+local CAP_NAMES = { "^Casa$", "^TiendaBloque", "^IglesiaBloque", "^EstadioMuro", "^MercadoMuro", "^LobbyLado", "^LobbyFondo", "^LobbyFrente", "^Iglesia[FL]", "^Tienda[FL]" }
+local CAP_TOP = 60 -- las tapas llegan hasta esta altura: con saltos de 7 desde una azotea de 10 no se alcanza
+
+local function buildLimits(map)
+	local folder = Instance.new("Folder")
+	folder.Name = "Limites"
+	folder.Parent = map
+	local function invisible(size, cframe)
+		local part = Instance.new("Part")
+		part.Name = "Limite"
+		part.Anchored = true
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Transparency = 1
+		part.Size = size
+		part.CFrame = cframe
+		part.Parent = folder
+	end
+
+	local caps = 0
+	for _, part in map:GetChildren() do
+		if part:IsA("BasePart") and part.CanCollide and part.Size.Y < CAP_TOP - 2 then
+			for _, pattern in CAP_NAMES do
+				if part.Name:find(pattern) then
+					local top = part.Position.Y + part.Size.Y / 2
+					local height = CAP_TOP - top
+					invisible(Vector3.new(part.Size.X, height, part.Size.Z), CFrame.new(part.Position.X, top + height / 2, part.Position.Z))
+					caps += 1
+					break
+				end
+			end
+		end
+	end
+
+	-- Borde del mapa (alto de sobra) y salida de la furgoneta
+	local H = 90
+	invisible(Vector3.new(2, H, 860), CFrame.new(-125, H / 2, 20)) -- oeste
+	invisible(Vector3.new(2, H, 860), CFrame.new(125, H / 2, 20)) -- este
+	invisible(Vector3.new(256, H, 2), CFrame.new(0, H / 2, -403)) -- detrás del lobby
+	invisible(Vector3.new(26, H, 2), CFrame.new(0, H / 2, 446)) -- fin de la carretera norte
+	for _, side in { -1, 1 } do
+		invisible(Vector3.new(2, H, 50), CFrame.new(side * 13.2, H / 2, 421)) -- a los lados de la carretera (z 396..446)
+	end
+	return caps
+end
+
 function MapBuilderBarrio.build(config)
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
@@ -3813,6 +3862,7 @@ function MapBuilderBarrio.build(config)
 	buildAndenes(map, refs, rng, zone3Spawns)
 	buildStadium(map, refs, rng, extractionSpawns, config)
 	buildArt(map, Random.new(config.Seed + 101))
+	buildLimits(map)
 
 	-- Las garrafas se entregan junto al generador; con cada entrega llegan zombies de la zona 2
 	local generatorPosition = refs.generator.Position
