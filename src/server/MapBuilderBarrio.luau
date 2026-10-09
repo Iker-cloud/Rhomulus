@@ -9,6 +9,7 @@
 -- Ejes: X lateral, Y altura (suelo en 0), Z avance. Devuelve las mismas referencias que MapBuilder.build.
 local CollectionService = game:GetService("CollectionService")
 
+local Atmosphere = require(script.Parent.Atmosphere)
 local PropModel = require(script.Parent.PropModel)
 local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
 
@@ -316,6 +317,8 @@ local function buildLobby(map, refs)
 	light.Brightness = 2
 	light.Shadows = true
 	light.Parent = bulb
+	CollectionService:AddTag(bulb, "NightLamp") -- de noche parpadea (client/NightLights)
+	bulb:SetAttribute("Flicker", true)
 
 	-- Mapa del barrio en la pared del fondo (detrás de los maniquíes)
 	local _, gui = sign(map, "MapaBarrio", "", Vector3.new(12, 8, 0.4), CFrame.new(0, 12, -394.7) * CFrame.Angles(0, math.pi, 0), C.blanco)
@@ -435,6 +438,7 @@ local function buildStreet(map, refs, rng, spawns)
 			local top = Vector3.new(33 * side, 17, z)
 			deco(pole(map, "Poste", Vector3.new(33 * side, 0, z), 18, 0.8, C.concreto, Enum.Material.Concrete))
 			deco(block(map, "PosteBrazo", Vector3.new(3, 0.3, 0.3), top + Vector3.new(-side * 1.5, 0, 0), C.concreto))
+			Atmosphere.bulb(map, top + Vector3.new(-side * 3, -0.4, 0))
 			if previous then
 				local mid = (previous + top) / 2 - Vector3.new(0, 1, 0)
 				deco(block(map, "Cable", Vector3.new(0.12, 0.12, (top - previous).Magnitude), CFrame.lookAt(mid, top), C.oscuro))
@@ -706,6 +710,11 @@ local function buildAlley(map, refs, rng, spawns)
 		for i, cloth in { C.lonaAzul, C.grafiti, C.mostaza, C.lima } do
 			deco(block(map, "Ropa", Vector3.new(1.6, 2, 0.1), Vector3.new(x - length / 2 + i * length / 5, 8, z), cloth, Enum.Material.Fabric))
 		end
+	end
+
+	-- Lámparas de pared (de noche son las únicas luces del callejón; algunas parpadean o están rotas)
+	for _, lamp in { { -76.4, -345 }, { -68.4, -296 }, { -105.6, -280 }, { -86.4, -230 }, { -76.4, -215 }, { -87.6, -163 }, { -68.4, -152 } } do
+		Atmosphere.bulb(map, Vector3.new(lamp[1], 11, lamp[2]))
 	end
 
 	-- Cobertura baja y detalles (el paso nunca queda en menos de 6)

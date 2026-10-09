@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Atmosphere = require(script.Parent.Atmosphere)
 local Director = require(script.Parent.Director)
 local PlayerState = require(script.Parent.PlayerState)
 
@@ -35,6 +36,7 @@ function Ambushes.arm(list)
 					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 					if root and PlayerState.get(player) == "Normal" and inside(ambush.volume, root.Position) then
 						table.remove(pending, i)
+						Atmosphere.blackout(ambush.volume.Position) -- los faroles cercanos chispean y se apagan
 						task.spawn(Director.spawnAmbush, Config.Ambush.Size, ambush.points)
 						break
 					end

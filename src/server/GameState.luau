@@ -8,6 +8,7 @@ local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Ambushes = require(script.Parent.Ambushes)
+local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
 local MapBuilder = require(script.Parent.MapBuilder)
@@ -294,6 +295,7 @@ local function zone2()
 	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
 	task.wait(Config.Game.HordeWarning)
 	setStage("Zone2", "¡HORDA! Corran al portón", "Horde")
+	Atmosphere.blackout(map.generator.Position) -- el generador sobrecarga la red: los faroles cercanos revientan
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
 	local ok = waitUntil(function()
@@ -394,6 +396,7 @@ function GameState.start()
 	Players.CharacterAutoLoads = false
 	local builder = Config.Game.UseNewMap and MapBuilderBarrio or MapBuilder
 	map = builder.build(Config.Game)
+	Atmosphere.decorate(map)
 	WeaponBox.init(map)
 	CanPiles.init(map.canPiles)
 

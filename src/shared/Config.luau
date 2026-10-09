@@ -178,6 +178,22 @@ return {
 		HordeNearCount = 6, -- zombies cerca para que suene la música de horda
 		HordeNearDistance = 45,
 		HordeMusicHold = 10, -- segundos que se mantiene tras la última horda
+		-- Ambiente de noche (client/NightSounds y client/NightLights). Casi todo es de Pro Sound Effects y APM.
+		Night = {
+			Wind = "rbxassetid://9113286969", -- viento con aullido bajo (bucle)
+			Sirens = "rbxassetid://9112871933", -- sirenas de policía lejanas (bucle)
+			Drone = "rbxassetid://9114244977", -- zumbido fantasmal de fondo (bucle)
+			Heartbeat = "rbxassetid://9043365842", -- latido a 96 pulsaciones (bucle)
+			Spark = "rbxassetid://9116275998", -- chispazo del farol que se apaga
+			Dogs = "rbxassetid://8678449977", -- perros que ladran lejos
+			-- Ruidos sueltos cerca del jugador (además de los gruñidos de ZombieGrowls)
+			Noises = {
+				"rbxassetid://9116521880", -- golpe de metal (tubo)
+				"rbxassetid://9126090979", -- mesa que cae
+				"rbxassetid://9113472225", -- tropiezo y caída
+				"rbxassetid://139826391278483", -- cristal roto
+			},
+		},
 	},
 
 	-- Animaciones oficiales de Roblox (paquetes R15). Cambia cualquier id aquí para sustituirlo.
@@ -336,6 +352,40 @@ return {
 			[3] = { MaxAlive = 22, HordeScale = 0.8, MaxTanks = 2 },
 			[4] = { MaxAlive = 25, HordeScale = 1.0, MaxTanks = 2 },
 		},
+	},
+
+	-- Ambiente de terror (los dos mapas): noche con luna y niebla, linterna en cada jugador, faroles que parpadean,
+	-- apagones con chispazo en las emboscadas y la horda del generador, sonidos de fondo, ruidos sueltos y latido.
+	-- Enabled = false deja el juego de día, como antes.
+	Atmosphere = {
+		Enabled = true,
+		Lighting = {
+			ClockTime = 0.3, -- medianoche
+			Brightness = 2.5, -- luz de la luna
+			Ambient = Color3.fromRGB(32, 35, 48), -- interiores
+			OutdoorAmbient = Color3.fromRGB(78, 88, 122), -- exteriores (azulado); más bajo = más oscuro
+			ExposureCompensation = 0.3,
+		},
+		Fog = { -- Lighting.Atmosphere
+			Density = 0.36,
+			Haze = 2,
+			Glare = 0,
+			Color = Color3.fromRGB(70, 80, 110),
+			Decay = Color3.fromRGB(25, 28, 40),
+		},
+		ColorGrade = { Brightness = -0.02, Contrast = 0.15, Saturation = -0.15, Tint = Color3.fromRGB(210, 220, 255) },
+		Flashlight = { Brightness = 3, Range = 50, Angle = 45, Color = Color3.fromRGB(255, 240, 215), Shadows = true },
+		Lamps = {
+			Color = Color3.fromRGB(255, 165, 85),
+			Brightness = 5,
+			Range = 40,
+			FlickerChance = 0.25, -- fracción de faroles que parpadean
+			BrokenChance = 0.1, -- fracción de faroles apagados
+		},
+		Blackout = { Radius = 70, Duration = 7 }, -- faroles que se apagan alrededor de una emboscada u horda
+		Volume = { Wind = 0.35, Sirens = 0.08, Drone = 0.18, Noise = 0.7, Dogs = 0.25, Spark = 0.8, Heartbeat = 0.7 },
+		Noises = { MinInterval = 7, MaxInterval = 16, MinDistance = 18, MaxDistance = 40 }, -- ruidos sueltos cerca
+		Heartbeat = { ZombieDistance = 22, LowHealth = 40 }, -- empieza a sonar con un zombie a menos de esto o con poca vida
 	},
 
 	-- Mapa nuevo: emboscadas de las plazoletas del callejón (server/Ambushes). La primera vez que alguien entra a una
