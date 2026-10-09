@@ -21,6 +21,27 @@ for _, c in Lighting:GetChildren() do
 		c:Destroy()
 	end
 end
+for _, c in Lighting:GetChildren() do
+	if c:IsA("PostEffect") then
+		c:Destroy()
+	end
+end
+local grade = Instance.new("ColorCorrectionEffect")
+grade.Contrast = 0.14
+grade.Saturation = -0.12
+grade.TintColor = Color3.fromRGB(255, 232, 232)
+grade.Parent = Lighting
+local bloom = Instance.new("BloomEffect")
+bloom.Intensity = 0.55
+bloom.Size = 28
+bloom.Threshold = 0.95
+bloom.Parent = Lighting
+local dof = Instance.new("DepthOfFieldEffect")
+dof.FarIntensity = 0.3
+dof.FocusDistance = 28
+dof.InFocusRadius = 45
+dof.NearIntensity = 0
+dof.Parent = Lighting
 local atmosphere = Instance.new("Atmosphere")
 atmosphere.Density = 0.3
 atmosphere.Offset = 0
@@ -146,6 +167,135 @@ zombie(10, -126, 1.1)
 zombie(-11, -140, 1)
 zombie(3, -165, 1.1)
 
+-- Más detalle ---------------------------------------------------------------
+-- Aceras elevadas
+for _, side in { -1, 1 } do
+	part(Vector3.new(14, 0.8, 400), Vector3.new(side * 22.5, 0.4, -150), Color3.fromRGB(40, 40, 44), Enum.Material.Concrete)
+	part(Vector3.new(1, 1, 400), Vector3.new(side * 15.5, 0.5, -150), Color3.fromRGB(58, 58, 62), Enum.Material.Concrete)
+end
+-- Charcos que reflejan las luces
+for _, c in { { -8, -20, 7 }, { 6, -38, 9 }, { -3, -64, 11 }, { 9, -92, 8 }, { -9, -120, 12 } } do
+	local puddle = part(Vector3.new(0.05, c[3] * 0.6, c[3]), Vector3.new(c[1], 0.38, c[2]), Color3.fromRGB(10, 14, 22), Enum.Material.Glass)
+	puddle.Reflectance = 0.55
+	puddle.Shape = Enum.PartType.Cylinder
+	puddle.Orientation = Vector3.new(0, 0, 90)
+end
+
+-- Carteles de tienda, en español, con neón que parpadea
+local function sign(side, z, y, word, color)
+	local board = part(Vector3.new(0.5, 3.2, 11), Vector3.new(side * 29.4, y, z), Color3.fromRGB(14, 14, 16), Enum.Material.Metal)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = side > 0 and Enum.NormalId.Left or Enum.NormalId.Right
+	gui.LightInfluence = 0
+	gui.Brightness = 3
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.Parent = board
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = word
+	label.TextScaled = true
+	label.Font = Enum.Font.GothamBlack
+	label.TextColor3 = color
+	label.Parent = gui
+	local glow = Instance.new("PointLight")
+	glow.Color = color
+	glow.Range = 14
+	glow.Brightness = 1.4
+	glow.Parent = board
+	table.insert(flickers, { sign = gui, glow = glow, phase = rng:NextNumber(0, 10), dead = rng:NextNumber() < 0.4 })
+end
+sign(1, -30, 8, "FARMACIA", Color3.fromRGB(80, 255, 140))
+sign(-1, -52, 9, "TALLER", Color3.fromRGB(255, 70, 60))
+sign(1, -78, 7, "BAR", Color3.fromRGB(255, 120, 60))
+sign(-1, -102, 8, "TIENDA", Color3.fromRGB(255, 200, 90))
+sign(1, -130, 9, "REFUGIO", Color3.fromRGB(110, 190, 255))
+
+-- Tanques de agua en las azoteas
+for i = 0, 11 do
+	local z = 10 - i * 30
+	for _, side in { -1, 1 } do
+		if rng:NextNumber() < 0.6 then
+			local tank = part(Vector3.new(5, 6, 6), Vector3.new(side * 44, 55 + rng:NextInteger(0, 4), z + rng:NextInteger(-6, 6)), Color3.fromRGB(22, 22, 26), Enum.Material.Metal)
+			tank.Shape = Enum.PartType.Cylinder
+			tank.Orientation = Vector3.new(0, 0, 90)
+		end
+	end
+end
+
+-- Barril encendido: fuego, humo, brasas y luz naranja que tiembla
+local barrel = part(Vector3.new(3.4, 2.6, 2.6), Vector3.new(12, 1.7, -16), Color3.fromRGB(30, 22, 18), Enum.Material.Metal)
+barrel.Shape = Enum.PartType.Cylinder
+barrel.Orientation = Vector3.new(0, 0, 90)
+local fire = Instance.new("Fire")
+fire.Size = 6
+fire.Heat = 9
+fire.Color = Color3.fromRGB(255, 140, 40)
+fire.SecondaryColor = Color3.fromRGB(255, 60, 20)
+fire.Parent = barrel
+local smoke = Instance.new("Smoke")
+smoke.Size = 6
+smoke.Opacity = 0.35
+smoke.RiseVelocity = 4
+smoke.Color = Color3.fromRGB(60, 60, 60)
+smoke.Parent = barrel
+local fireLight = Instance.new("PointLight")
+fireLight.Color = Color3.fromRGB(255, 140, 60)
+fireLight.Range = 36
+fireLight.Brightness = 3.2
+fireLight.Shadows = false
+fireLight.Parent = barrel
+table.insert(flickers, { fireLight = fireLight, base = 3.2, phase = 3 })
+local embers = Instance.new("ParticleEmitter")
+embers.Rate = 14
+embers.Lifetime = NumberRange.new(2, 3.5)
+embers.Speed = NumberRange.new(5, 9)
+embers.SpreadAngle = Vector2.new(25, 25)
+embers.EmissionDirection = Enum.NormalId.Right
+embers.Size = NumberSequence.new(0.14, 0)
+embers.Color = ColorSequence.new(Color3.fromRGB(255, 170, 70))
+embers.LightEmission = 1
+embers.Acceleration = Vector3.new(0, 1.5, 0)
+embers.Parent = barrel
+
+-- Faros encendidos de un auto y balizas de otro
+local headlights = part(Vector3.new(4.4, 0.8, 0.4), Vector3.new(11, 1.9, -84), Color3.fromRGB(255, 250, 215), Enum.Material.Neon)
+headlights.Orientation = Vector3.new(0, -20, 0)
+local beam = Instance.new("PointLight")
+beam.Color = Color3.fromRGB(255, 245, 210)
+beam.Range = 30
+beam.Brightness = 2.2
+beam.Shadows = false
+beam.Parent = headlights
+local hazard = part(Vector3.new(0.6, 0.6, 0.6), Vector3.new(-14, 2.6, -48), Color3.fromRGB(255, 130, 20), Enum.Material.Neon)
+local hazardLight = Instance.new("PointLight")
+hazardLight.Color = Color3.fromRGB(255, 130, 20)
+hazardLight.Range = 16
+hazardLight.Brightness = 2
+hazardLight.Parent = hazard
+table.insert(flickers, { hazard = hazard, hazardLight = hazardLight, phase = 0 })
+
+-- Polvo y ceniza flotando por toda la calle
+local dustBox = part(Vector3.new(70, 24, 130), Vector3.new(0, 12, -35), Color3.new(), Enum.Material.SmoothPlastic, { Transparency = 1 })
+local dust = Instance.new("ParticleEmitter")
+dust.Rate = 40
+dust.Lifetime = NumberRange.new(8, 12)
+dust.Speed = NumberRange.new(0.3, 1.2)
+dust.Shape = Enum.ParticleEmitterShape.Box
+dust.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+dust.SpreadAngle = Vector2.new(180, 180)
+dust.Size = NumberSequence.new(0.18)
+dust.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.55), NumberSequenceKeypoint.new(0.8, 0.55), NumberSequenceKeypoint.new(1, 1) })
+dust.Color = ColorSequence.new(Color3.fromRGB(190, 170, 165))
+dust.LightEmission = 0.2
+dust.Acceleration = Vector3.new(0.4, 0.1, 0)
+dust.Parent = dustBox
+
+-- Dos zombies más cerca, bajo la luz
+zombie(-9, -30, 1.05)
+zombie(6, -44, 1)
+
 -- Cámara ----------------------------------------------------------------------
 local camera = Workspace.CurrentCamera
 camera.CameraType = Enum.CameraType.Scriptable
@@ -161,7 +311,22 @@ RunService:BindToRenderStep("MenuScene", Enum.RenderPriority.Camera.Value + 1, f
 	camera.CFrame = CFrame.lookAt(pos, look)
 
 	for _, f in flickers do
-		if f.window then
+		if f.sign then
+			local on
+			if f.dead then
+				on = (math.sin(t * 9 + f.phase) > 0.6) or (math.sin(t * 1.3 + f.phase) > 0.5)
+			else
+				on = math.noise(t * 2, f.phase) > -0.45
+			end
+			f.sign.Enabled = on
+			f.glow.Enabled = on
+		elseif f.fireLight then
+			f.fireLight.Brightness = f.base * (0.75 + 0.35 * math.noise(t * 5, f.phase))
+		elseif f.hazard then
+			local on = (t % 1.2) < 0.45
+			f.hazard.Material = on and Enum.Material.Neon or Enum.Material.Metal
+			f.hazardLight.Enabled = on
+		elseif f.window then
 			f.head.Material = (math.sin(t * 6 + f.phase) > 0.2) and Enum.Material.Neon or Enum.Material.Glass
 		elseif f.light then
 			local on = true

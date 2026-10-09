@@ -97,11 +97,13 @@ root.Parent = bg
 local uiScale = Instance.new("UIScale")
 uiScale.Parent = root
 local function fit()
-	local v = Workspace.CurrentCamera.ViewportSize
-	uiScale.Scale = math.min(v.X / 1920, v.Y / 1080)
+	local v = bg.AbsoluteSize
+	if v.X > 0 and v.Y > 0 then
+		uiScale.Scale = math.min(v.X / 1920, v.Y / 1080)
+	end
 end
 fit()
-Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+bg:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 
 -- Utilidades ------------------------------------------------------------
 local function make(class, props, parent)
