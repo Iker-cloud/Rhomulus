@@ -73,22 +73,6 @@ bg.BackgroundColor3 = RED
 bg.BorderSizePixel = 0
 bg.Parent = gui
 
--- Velo rojo que deja ver la escena 3D a la derecha (solo en el menú principal)
-local side = Instance.new("Frame")
-side.Size = UDim2.fromScale(1, 1)
-side.BackgroundColor3 = RED
-side.BackgroundTransparency = 1
-side.BorderSizePixel = 0
-side.Parent = bg
-local sideGradient = Instance.new("UIGradient")
-sideGradient.Transparency = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 0),
-	NumberSequenceKeypoint.new(0.4, 0.05),
-	NumberSequenceKeypoint.new(0.75, 0.8),
-	NumberSequenceKeypoint.new(1, 0.95),
-})
-sideGradient.Parent = side
-
 local root = Instance.new("Frame") -- lienzo de 1920x1080 centrado
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.5)
@@ -234,8 +218,6 @@ local function show(name)
 
 	-- logo, versión y línea del pie solo en el menú principal
 	local isMain = name == "main"
-	fade(bg, 0.5, { BackgroundTransparency = isMain and 1 or 0 })
-	fade(side, 0.5, { BackgroundTransparency = isMain and 0 or 1 })
 	fade(version, 0.3, { TextTransparency = isMain and 0 or 1, TextColor3 = isMain and LIGHT or BLACK })
 	fade(cornerR, 0.3, { TextColor3 = isMain and LIGHT or BLACK })
 	for _, l in layers do
