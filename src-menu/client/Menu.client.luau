@@ -67,6 +67,31 @@ gui.ResetOnSpawn = false
 gui.DisplayOrder = 100
 gui.Parent = playerGui
 
+-- Música del menú (Places.MenuMusic): en bucle, entra con un fundido y la tecla M la silencia
+do
+	local Places = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Places"))
+	local id = Places.MenuMusic
+	if type(id) == "number" and id > 0 then
+		local music = Instance.new("Sound")
+		music.Name = "MenuMusic"
+		music.SoundId = "rbxassetid://" .. id
+		music.Looped = true
+		music.Volume = 0
+		music.Parent = gui
+		music:Play()
+		local TARGET_VOLUME = 0.45
+		local muted = false
+		TweenService:Create(music, TweenInfo.new(2.5), { Volume = TARGET_VOLUME }):Play()
+		UserInputService.InputBegan:Connect(function(input, processed)
+			if processed or input.KeyCode ~= Enum.KeyCode.M then
+				return
+			end
+			muted = not muted
+			TweenService:Create(music, TweenInfo.new(0.3), { Volume = muted and 0 or TARGET_VOLUME }):Play()
+		end)
+	end
+end
+
 local bg = Instance.new("Frame")
 bg.Size = UDim2.fromScale(1, 1)
 bg.BackgroundColor3 = RED
