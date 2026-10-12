@@ -1632,7 +1632,7 @@ local function shopDetails(map, rng)
 		deco(block(folder, "VigaTienda", Vector3.new(56, 0.9, 0.9), Vector3.new(0, 15.6, z), SAFE_WOOD, Enum.Material.Wood))
 	end
 	for _, x in { -14, 14 } do
-		local tube = deco(block(folder, "TuboLuz", Vector3.new(5, 0.25, 0.6), Vector3.new(x, 15.3, -110), Color3.fromRGB(255, 244, 220), Enum.Material.Neon))
+		local tube = deco(block(folder, "TuboLuz", Vector3.new(5, 0.25, 0.6), Vector3.new(x, 15.3, -110), Color3.fromRGB(150, 120, 90), Enum.Material.SmoothPlastic))
 		local fan = folder
 		deco(pole(fan, "VentiladorVarilla", Vector3.new(x, 13.4, -118), 2.2, 0.25, C.concreto, Enum.Material.Metal))
 		deco(pole(fan, "VentiladorCentro", Vector3.new(x, 13.1, -118), 0.5, 1, C.oscuro, Enum.Material.Metal))
@@ -1641,8 +1641,8 @@ local function shopDetails(map, rng)
 		end
 		local lampLight = Instance.new("PointLight") -- luz cálida y estable (aquí se respira)
 		lampLight.Color = Color3.fromRGB(255, 214, 160)
-		lampLight.Range = 20
-		lampLight.Brightness = 0.35 -- tenue: la luz buena la dan las antorchas y la estufa
+		lampLight.Range = 14
+		lampLight.Brightness = 0.15 -- tenue: la luz buena la dan las antorchas y la estufa
 		lampLight.Parent = tube
 	end
 
@@ -1919,6 +1919,61 @@ local function churchDetails(map, rng)
 end
 
 -- Parte 6: punto seguro 1, la tienda de barrio (60 × 40 × 16) con reja de entrada y de salida de 24 × 14.
+-- Antorcha de pared: soporte, palo inclinado hacia el cuarto, trapo, llama con fuego y luz cálida. `normal` apunta de la pared al interior.
+local function flameOn(parent, flame, range, brightness)
+	local fire = Instance.new("ParticleEmitter")
+	fire.Texture = "rbxasset://textures/particles/fire_main.dds"
+	fire.Rate = 16
+	fire.Lifetime = NumberRange.new(0.4, 0.8)
+	fire.Speed = NumberRange.new(1, 2.5)
+	fire.SpreadAngle = Vector2.new(12, 12)
+	fire.Color = ColorSequence.new(Color3.fromRGB(255, 190, 80), Color3.fromRGB(230, 70, 20))
+	fire.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
+	fire.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	fire.LightEmission = 0.8
+	fire.Parent = flame
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 150, 70)
+	glow.Range = range
+	glow.Brightness = brightness
+	glow.Parent = flame
+end
+
+local function wallTorch(parent, position, normal)
+	local cf = CFrame.lookAt(position, position + normal)
+	deco(block(parent, "AntorchaSoporte", Vector3.new(0.6, 0.35, 0.5), cf * CFrame.new(0, 0, -0.2), C.oscuro, Enum.Material.Metal))
+	deco(block(parent, "AntorchaPalo", Vector3.new(0.35, 2.2, 0.35), cf * CFrame.new(0, 0.9, -0.4) * CFrame.Angles(math.rad(-20), 0, 0), SAFE_WOOD, Enum.Material.Wood))
+	deco(block(parent, "AntorchaTrapo", Vector3.new(0.62, 0.7, 0.62), cf * CFrame.new(0, 2.05, -0.85) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(58, 40, 28), Enum.Material.Fabric))
+	local flame = deco(block(parent, "AntorchaLlama", Vector3.one * 0.85, cf * CFrame.new(0, 2.75, -0.95), C.lonaNaranja, Enum.Material.Neon))
+	flame.Shape = Enum.PartType.Ball
+	local core = deco(block(parent, "AntorchaNucleo", Vector3.one * 0.5, cf * CFrame.new(0, 2.7, -0.95), RHO_YELLOW, Enum.Material.Neon))
+	core.Shape = Enum.PartType.Ball
+	flameOn(parent, flame, 20, 1.1)
+end
+
+-- Antorcha de poste clavada en el suelo (exteriores): luz más amplia
+local function postTorch(parent, x, z, y)
+	deco(pole(parent, "PosteAntorcha", Vector3.new(x, y, z), 4.4, 0.45, SAFE_WOOD, Enum.Material.Wood))
+	deco(block(parent, "PosteTrapo", Vector3.new(0.9, 0.9, 0.9), Vector3.new(x, y + 4.7, z), Color3.fromRGB(58, 40, 28), Enum.Material.Fabric))
+	local flame = deco(block(parent, "PosteLlama", Vector3.one * 1.1, Vector3.new(x, y + 5.5, z), C.lonaNaranja, Enum.Material.Neon))
+	flame.Shape = Enum.PartType.Ball
+	local core = deco(block(parent, "PosteNucleo", Vector3.one * 0.65, Vector3.new(x, y + 5.4, z), RHO_YELLOW, Enum.Material.Neon))
+	core.Shape = Enum.PartType.Ball
+	flameOn(parent, flame, 28, 1.3)
+end
+
+-- Vela: cuerpo de cera, llama pequeña y luz tenue
+local function candle(parent, x, y, z)
+	deco(pole(parent, "Vela", Vector3.new(x, y, z), 0.7, 0.3, Color3.fromRGB(240, 226, 196), Enum.Material.SmoothPlastic))
+	local flame = deco(block(parent, "VelaLlama", Vector3.one * 0.2, Vector3.new(x, y + 0.82, z), RHO_YELLOW, Enum.Material.Neon))
+	flame.Shape = Enum.PartType.Ball
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 190, 110)
+	glow.Range = 9
+	glow.Brightness = 0.7
+	glow.Parent = flame
+end
+
 local function buildSafePoint(map, refs)
 	local wall = SAFE_WALL
 	-- Fachada sur (más alta para el rótulo), lados y fondo
@@ -1934,7 +1989,7 @@ local function buildSafePoint(map, refs)
 	slab(map, "TiendaLadoE", 28, 30, -128, -122, 16, wall)
 	slab(map, "TiendaLadoE", 28, 30, -110, -92, 16, wall)
 	block(map, "TiendaDintelE", Vector3.new(2, 2, 12), Vector3.new(29, 15, -116), wall)
-	block(map, "TiendaTecho", Vector3.new(60, 1, 40), Vector3.new(0, 16.5, -110), C.concreto, Enum.Material.CorrodedMetal)
+	block(map, "TiendaTecho", Vector3.new(60, 1, 38), Vector3.new(0, 16.5, -109), C.concreto, Enum.Material.CorrodedMetal) -- de z -128 a -90: sin tocar el plano de la fachada (z -130)
 	floor(map, "TiendaPiso", -28, 28, -128, -92, Color3.fromRGB(214, 198, 166), Enum.Material.Slate)
 
 	-- Bloques a los lados de la tienda (por aquí llegarán luego el callejón y la escalera)
@@ -1987,46 +2042,19 @@ local function buildSafePoint(map, refs)
 	sign(map, "Pista1", "El comandante dijo que el Refugio Remo todavía resiste", Vector3.new(9, 4, 0.4), CFrame.new(-27.7, 8, -102) * CFrame.Angles(0, -math.pi / 2, 0), C.blanco, C.oscuro)
 
 	-- Luz interior: tenue (la lámpara y los tubos del techo dan poca luz) y antorchas en las paredes
-	local lamp = deco(block(map, "Lampara", Vector3.new(4, 0.4, 1), Vector3.new(0, 15.7, -110), Color3.fromRGB(240, 245, 255), Enum.Material.Neon))
+	local lamp = deco(block(map, "Lampara", Vector3.new(4, 0.4, 1), Vector3.new(0, 15.7, -110), Color3.fromRGB(150, 120, 90), Enum.Material.SmoothPlastic))
 	local light = Instance.new("PointLight")
-	light.Range = 24
-	light.Brightness = 0.5
-	light.Color = Color3.fromRGB(255, 232, 200)
+	light.Range = 18
+	light.Brightness = 0.25
+	light.Color = Color3.fromRGB(255, 220, 180)
 	light.Parent = lamp
 
-	-- Antorchas: soporte, palo inclinado hacia el cuarto, trapo, llama con fuego y una luz cálida. `normal` apunta de la pared al interior.
-	local function torch(position, normal)
-		local cf = CFrame.lookAt(position, position + normal)
-		deco(block(map, "AntorchaSoporte", Vector3.new(0.6, 0.35, 0.5), cf * CFrame.new(0, 0, -0.2), C.oscuro, Enum.Material.Metal))
-		deco(block(map, "AntorchaPalo", Vector3.new(0.35, 2.2, 0.35), cf * CFrame.new(0, 0.9, -0.4) * CFrame.Angles(math.rad(-20), 0, 0), SAFE_WOOD, Enum.Material.Wood))
-		deco(block(map, "AntorchaTrapo", Vector3.new(0.62, 0.7, 0.62), cf * CFrame.new(0, 2.05, -0.85) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(58, 40, 28), Enum.Material.Fabric))
-		local flame = deco(block(map, "AntorchaLlama", Vector3.one * 0.85, cf * CFrame.new(0, 2.75, -0.95), C.lonaNaranja, Enum.Material.Neon))
-		flame.Shape = Enum.PartType.Ball
-		local core = deco(block(map, "AntorchaNucleo", Vector3.one * 0.5, cf * CFrame.new(0, 2.7, -0.95), RHO_YELLOW, Enum.Material.Neon))
-		core.Shape = Enum.PartType.Ball
-		local fire = Instance.new("ParticleEmitter")
-		fire.Texture = "rbxasset://textures/particles/fire_main.dds"
-		fire.Rate = 16
-		fire.Lifetime = NumberRange.new(0.4, 0.8)
-		fire.Speed = NumberRange.new(1, 2.5)
-		fire.SpreadAngle = Vector2.new(12, 12)
-		fire.Color = ColorSequence.new(Color3.fromRGB(255, 190, 80), Color3.fromRGB(230, 70, 20))
-		fire.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
-		fire.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
-		fire.LightEmission = 0.8
-		fire.Parent = flame
-		local glow = Instance.new("PointLight")
-		glow.Color = Color3.fromRGB(255, 150, 70)
-		glow.Range = 20
-		glow.Brightness = 1.1
-		glow.Parent = flame
-	end
 	for _, x in { -16, 16 } do
-		torch(Vector3.new(x, 9.5, -127.4), Vector3.new(0, 0, 1)) -- pared norte (entrada), a los lados de la puerta
-		torch(Vector3.new(x, 9.5, -92.6), Vector3.new(0, 0, -1)) -- pared sur (salida)
+		wallTorch(map, Vector3.new(x, 9.5, -127.4), Vector3.new(0, 0, 1)) -- pared norte (entrada), a los lados de la puerta
+		wallTorch(map, Vector3.new(x, 9.5, -92.6), Vector3.new(0, 0, -1)) -- pared sur (salida)
 	end
-	torch(Vector3.new(-27.4, 9.5, -125), Vector3.new(1, 0, 0)) -- paredes laterales, junto a las salidas
-	torch(Vector3.new(27.4, 9.5, -125), Vector3.new(-1, 0, 0))
+	wallTorch(map, Vector3.new(-27.4, 9.5, -125), Vector3.new(1, 0, 0)) -- paredes laterales, junto a las salidas
+	wallTorch(map, Vector3.new(27.4, 9.5, -125), Vector3.new(-1, 0, 0))
 
 	shopDetails(map, Random.new(31))
 
@@ -2212,7 +2240,7 @@ local function buildChurch(map, refs)
 	slab(map, "IglesiaFondoW", -30, -12, 198, 200, 20, wall)
 	slab(map, "IglesiaFondoE", 12, 30, 198, 200, 20, wall)
 	block(map, "IglesiaFondoDintel", Vector3.new(24, 6, 2), Vector3.new(0, 17, 199), wall)
-	block(map, "IglesiaTecho", Vector3.new(60, 1, 40), Vector3.new(0, 20.5, 180), C.oxido, Enum.Material.CorrodedMetal)
+	block(map, "IglesiaTecho", Vector3.new(60, 1, 38), Vector3.new(0, 20.5, 181), C.oxido, Enum.Material.CorrodedMetal) -- de z 162 a 200: sin tocar el plano de la fachada (z 160), que parpadeaba
 	floor(map, "IglesiaPiso", -28, 28, 162, 198, Color3.fromRGB(120, 90, 60), Enum.Material.WoodPlanks)
 	slab(map, "IglesiaBloqueW", -60, -30, 160, 214, 20, C.salmon)
 	slab(map, "IglesiaBloqueE", 30, 60, 160, 214, 20, C.turquesa)
@@ -3301,7 +3329,7 @@ local function stadiumDetails(map, rng)
 				deco(block(folder, "TorrePanel", Vector3.new(1.8, 1.2, 0.3), lamp, Color3.fromRGB(255, 250, 235), Enum.Material.Neon))
 			end
 		end
-		floodLight(folder, head + Vector3.new(0, -0.5, 0), Vector3.new(corner[1] * 0.2, 1, 368), 110, 2.2)
+		floodLight(folder, head + Vector3.new(0, -0.5, 0), Vector3.new(corner[1] * 0.2, 1, 368), 90, 0.8)
 	end
 	-- Luz de relleno sobre el campo (para que se vea la cancha entera de noche)
 	for _, spot in { { -40, 350 }, { 40, 350 }, { -40, 386 }, { 40, 386 } } do
@@ -3309,17 +3337,26 @@ local function stadiumDetails(map, rng)
 		fill.Transparency = 1
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 240, 215)
-		light.Range = 50
-		light.Brightness = 0.55
+		light.Range = 40
+		light.Brightness = 0.12
 		light.Parent = fill
 	end
 	for _, spot in { { -102, 350 }, { -102, 386 }, { 102, 350 }, { 102, 386 } } do
 		local lamp = deco(block(folder, "LuzGrada", Vector3.new(1.6, 0.5, 1.6), Vector3.new(spot[1], 15.5, spot[2]), Color3.fromRGB(255, 214, 160), Enum.Material.Neon))
 		local light = Instance.new("PointLight")
 		light.Color = Color3.fromRGB(255, 205, 150)
-		light.Range = 36
-		light.Brightness = 1.2
+		light.Range = 30
+		light.Brightness = 0.5
 		light.Parent = lamp
+	end
+
+	-- Antorchas de poste en el borde del campo y alrededor de la hoguera, y velas en la puerta de cada carpa
+	local pitchY = FLOOR_TOP + 0.1
+	for _, spot in { { -48, 344 }, { 48, 344 }, { -48, 392 }, { 48, 392 }, { -20, 343 }, { 20, 343 }, { -20, 393 }, { 20, 393 }, { -86, 368 }, { 86, 368 } } do
+		postTorch(folder, spot[1], spot[2], pitchY)
+	end
+	for _, tent in { { -28, 394 }, { 28, 394 }, { -62, 394 }, { 62, 394 }, { -66, 338 }, { 66, 338 } } do
+		candle(folder, tent[1] + 1.4, pitchY, tent[2] - 3.4)
 	end
 end
 
@@ -3844,6 +3881,7 @@ local function buildLimits(map)
 	invisible(Vector3.new(2, H, 860), CFrame.new(125, H / 2, 20)) -- este
 	invisible(Vector3.new(256, H, 2), CFrame.new(0, H / 2, -403)) -- detrás del lobby
 	invisible(Vector3.new(30, H, 2), CFrame.new(0, H / 2, 451)) -- fin de la carretera norte (el suelo llega a z 450)
+	invisible(Vector3.new(26, H, 2), CFrame.new(0, H / 2, 399)) -- cierra el portón norte del estadio (la furgoneta entra animada, no choca)
 	for _, side in { -1, 1 } do
 		invisible(Vector3.new(3, H, 58), CFrame.new(side * 13.5, H / 2, 423)) -- a los lados de la carretera (z 394..452)
 	end
