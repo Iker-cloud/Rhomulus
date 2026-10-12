@@ -4,9 +4,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
 
 local Icons = require(script.Parent.Icons)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Places = require(ReplicatedStorage.Shared.Places)
 
 local player = Players.LocalPlayer
 
@@ -275,6 +277,36 @@ function ResultHud.start()
 			row.BackgroundTransparency = 1
 			table.insert(rows, row)
 		end
+
+		-- Botón para volver al menú (teletransporta al lugar del Menú)
+		local back = Instance.new("TextButton")
+		back.LayoutOrder = 5
+		back.Size = UDim2.new(1, 0, 0, 46)
+		back.BackgroundColor3 = palette.accent
+		back.AutoButtonColor = true
+		back.BorderSizePixel = 0
+		back.Font = Enum.Font.GothamBlack
+		back.TextSize = 18
+		back.TextColor3 = Color3.fromRGB(14, 13, 13)
+		back.Text = "VOLVER AL MENÚ"
+		back.Parent = content
+		Instance.new("UICorner", back).CornerRadius = UDim.new(0, 6)
+		local leaving = false
+		back.Activated:Connect(function()
+			if leaving then
+				return
+			end
+			leaving = true
+			back.Text = "VOLVIENDO…"
+			local ok, err = pcall(function()
+				TeleportService:Teleport(Places.Menu, player)
+			end)
+			if not ok then
+				warn("[ResultHud] No se pudo volver al menú (en Studio no funciona):", err)
+				back.Text = "VOLVER AL MENÚ"
+				leaving = false
+			end
+		end)
 
 		-- Animación de entrada: aparece creciendo, las filas se encienden una a una y las gotas bajan
 		TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 0 }):Play()

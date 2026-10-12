@@ -33,6 +33,12 @@ local function apply()
 end
 
 local function faceCamera()
+	-- En la pantalla de resultados el cursor queda libre para poder pulsar "Volver al menú"
+	if workspace:GetAttribute("Stage") == "Result" then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")

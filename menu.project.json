@@ -1,0 +1,39 @@
+{
+  "name": "JuegoZombies-Menu",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$className": "Folder",
+        "Places": {
+          "$path": "src/shared/Places.luau"
+        }
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "EnableMouseLockOption": false
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src-menu/client"
+        }
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Ambient": [
+          0,
+          0,
+          0
+        ],
+        "Brightness": 0
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src-menu/server"
+      }
+    }
+  }
+}
