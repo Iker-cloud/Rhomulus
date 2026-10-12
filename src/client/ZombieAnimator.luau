@@ -122,6 +122,30 @@ local function animate(model, rig, dt)
 	if m.antebrazo_der then m.antebrazo_der.Transform = rot(-pr.elbowR * (0.5 + 0.5 * math.sin(p + 1 + math.pi)) * moving) end
 	if m.mano_izq then m.mano_izq.Transform = rot(math.sin(t * 3) * 0.06) end
 	if m.mano_der then m.mano_der.Transform = rot(math.sin(t * 2) * 0.05) end
+
+	-- Trepando a un autobús (el servidor publica ClimbStart / ClimbEnd): brazos arriba que se alternan, piernas pisando la
+	-- pared y el cuerpo inclinado hacia ella; al final se impulsa sobre el borde
+	local climbStart, climbEnd = model:GetAttribute("ClimbStart"), model:GetAttribute("ClimbEnd")
+	if climbStart and climbEnd then
+		local now = workspace:GetServerTimeNow()
+		if now >= climbStart and now <= climbEnd then
+			local u = (now - climbStart) / (climbEnd - climbStart)
+			local c = (now - climbStart) * 5.2 -- ritmo de la trepada
+			local pull = u > 0.8 and math.sin((u - 0.8) / 0.2 * math.pi) or 0 -- el impulso final sobre el borde
+			local step = math.sin(c)
+			if m.torso then m.torso.Transform = rot(0.22 + 0.06 * step + pull * 0.25, step * 0.08, 0) end
+			if m.cabeza then m.cabeza.Transform = rot(-0.3 + math.sin(c * 2) * 0.04, 0, 0) end
+			if m.brazo_izq then m.brazo_izq.Transform = rot(-2.45 + step * 0.55 - pull * 0.4) end
+			if m.brazo_der then m.brazo_der.Transform = rot(-2.45 - step * 0.55 - pull * 0.4) end
+			if m.antebrazo_izq then m.antebrazo_izq.Transform = rot(-0.5 - math.max(0, step) * 0.6) end
+			if m.antebrazo_der then m.antebrazo_der.Transform = rot(-0.5 - math.max(0, -step) * 0.6) end
+			if m.pierna_izq then m.pierna_izq.Transform = rot(-1.0 * math.max(0, step)) end
+			if m.pierna_der then m.pierna_der.Transform = rot(-1.0 * math.max(0, -step)) end
+			if m.rodilla_izq then m.rodilla_izq.Transform = rot(1.0 * math.max(0, step)) end
+			if m.rodilla_der then m.rodilla_der.Transform = rot(1.0 * math.max(0, -step)) end
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.25) end
+		end
+	end
 end
 
 -- Muerte: el servidor ancla al zombie y marca "DeadAt". Aquí cae de espaldas girando sobre los pies, rebota, tiene un

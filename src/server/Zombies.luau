@@ -1,4 +1,5 @@
 -- Zombies: modelo con articulaciones (ZombieModel) + IA que persigue al jugador más cercano con PathfindingService y lo golpea.
+local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -54,6 +55,121 @@ local function findLure(position)
 	return best
 end
 
+-- El autobús sobre cuyo techo está `position` (nil si no está sobre ninguno)
+local function busUnder(position)
+	for _, bus in CollectionService:GetTagged("ClimbableBus") do
+		local rel = bus.CFrame:PointToObjectSpace(position)
+		local half = bus.Size / 2
+		if math.abs(rel.X) <= half.X + 0.5 and math.abs(rel.Z) <= half.Z + 0.5 and rel.Y >= half.Y - 0.5 and rel.Y <= half.Y + 8 then
+			return bus
+		end
+	end
+	return nil
+end
+
+-- Distancia en el plano entre un punto y el rectángulo del autobús
+local function distanceToBus(bus, position)
+	local rel = bus.CFrame:PointToObjectSpace(position)
+	local half = bus.Size / 2
+	local dx = math.max(math.abs(rel.X) - half.X, 0)
+	local dz = math.max(math.abs(rel.Z) - half.Z, 0)
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+local function smoothstep(x)
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
+
+-- Trepa al techo de un autobús: se acerca al costado más cercano, se ancla y sube pegado a la pared (4 a 5 s), pasa el borde y
+-- sigue a pie por el techo. El cliente anima la trepada con los atributos ClimbStart / ClimbEnd (client/ZombieAnimator).
+-- Devuelve true si llegó arriba. `stillWanted()` dice si sigue habiendo alguien sobre el autobús.
+local function climbBus(model, humanoid, root, bus, stillWanted)
+	local half = bus.Size / 2
+	local rel = bus.CFrame:PointToObjectSpace(root.Position)
+
+	-- Lado por el que sube: el más cercano al zombie (outward = hacia afuera de la pared, en el marco del autobús)
+	local outward
+	if math.abs(rel.X) / half.X >= math.abs(rel.Z) / half.Z then
+		outward = Vector3.new(rel.X >= 0 and 1 or -1, 0, 0)
+	else
+		outward = Vector3.new(0, 0, rel.Z >= 0 and 1 or -1)
+	end
+	local lateral
+	if outward.X ~= 0 then
+		lateral = Vector3.new(0, 0, math.clamp(rel.Z, -half.Z + 1.5, half.Z - 1.5))
+	else
+		lateral = Vector3.new(math.clamp(rel.X, -half.X + 1.5, half.X - 1.5), 0, 0)
+	end
+	local wallDistance = outward.X ~= 0 and half.X or half.Z
+	local function toWorld(distanceOut, y)
+		return bus.CFrame:PointToWorldSpace(outward * (wallDistance + distanceOut) + lateral + Vector3.new(0, y, 0))
+	end
+
+	-- 1) acercarse al pie de la pared (hasta 3 s)
+	local standPoint = toWorld(1.3, 0)
+	standPoint = Vector3.new(standPoint.X, root.Position.Y, standPoint.Z)
+	local approachEnd = os.clock() + 3
+	while humanoid.Health > 0 and os.clock() < approachEnd and stillWanted() do
+		if (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(standPoint.X, 0, standPoint.Z)).Magnitude <= 1.6 then
+			break
+		end
+		humanoid:MoveTo(standPoint)
+		task.wait(0.1)
+	end
+	if humanoid.Health <= 0 or not stillWanted() then
+		return false
+	end
+
+	-- 2) trepar: anclado, mirando a la pared, subiendo por ella y pasando el borde
+	local climb = Config.Zombie.Climb
+	local duration = climb.MinTime + math.random() * (climb.MaxTime - climb.MinTime)
+	local rootHeight = humanoid.HipHeight + root.Size.Y / 2
+	local startPosition = root.Position
+	local wallTop = toWorld(0.9, half.Y)
+	wallTop = Vector3.new(wallTop.X, wallTop.Y + rootHeight - 1.1, wallTop.Z) -- agarrado al borde, con medio cuerpo por debajo
+	local roofPoint = toWorld(-1.8, half.Y)
+	roofPoint = Vector3.new(roofPoint.X, roofPoint.Y + rootHeight, roofPoint.Z)
+	local facing = -bus.CFrame:VectorToWorldSpace(outward)
+	local sideways = bus.CFrame:VectorToWorldSpace(lateral.Magnitude > 0 and Vector3.new(outward.Z ~= 0 and 1 or 0, 0, outward.X ~= 0 and 1 or 0) or Vector3.xAxis)
+
+	local started = workspace:GetServerTimeNow()
+	model:SetAttribute("ClimbStart", started)
+	model:SetAttribute("ClimbEnd", started + duration)
+	root.Anchored = true
+	local t0 = os.clock()
+	local reached = false
+	while true do
+		if humanoid.Health <= 0 or not root.Parent then
+			break
+		end
+		local u = (os.clock() - t0) / duration
+		if u >= 1 then
+			reached = true
+			break
+		end
+		local position
+		if u < 0.8 then
+			-- Sube por la pared con un vaivén de lado a lado (un pie y otro)
+			position = startPosition:Lerp(wallTop, smoothstep(u / 0.8)) + sideways * math.sin(u * 22) * 0.18
+		else
+			-- Pasa el borde: se impulsa hacia arriba y cae sobre el techo
+			local v = (u - 0.8) / 0.2
+			position = wallTop:Lerp(roofPoint, smoothstep(v)) + Vector3.new(0, math.sin(v * math.pi) * 0.9, 0)
+		end
+		root.CFrame = CFrame.lookAt(position, position + facing)
+		task.wait()
+	end
+	model:SetAttribute("ClimbStart", nil)
+	model:SetAttribute("ClimbEnd", nil)
+	if reached and humanoid.Health > 0 then
+		root.CFrame = CFrame.lookAt(roofPoint, roofPoint + facing)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.Anchored = false
+	end
+	return reached
+end
+
 local function think(humanoid, root, stats)
 	local path = PathfindingService:CreatePath({
 		AgentRadius = stats.AgentRadius or 1.5,
@@ -75,6 +191,16 @@ local function think(humanoid, root, stats)
 			humanoid:MoveTo(lure.Position)
 			task.wait(Config.Zombie.ThinkInterval)
 			continue
+		end
+		-- Si el jugador está sobre un autobús, los zombies cercanos que no estén ya en el techo trepan a él
+		if target and Config.Zombie.Climb.Kinds[root.Parent:GetAttribute("Kind")] then
+			local bus = busUnder(target.root.Position)
+			if bus and not busUnder(root.Position) and distanceToBus(bus, root.Position) <= Config.Zombie.Climb.Range then
+				climbBus(root.Parent, humanoid, root, bus, function()
+					return target.root.Parent ~= nil and busUnder(target.root.Position) == bus
+				end)
+				continue
+			end
 		end
 		if target then
 			local now = os.clock()

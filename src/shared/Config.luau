@@ -320,6 +320,14 @@ return {
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
 		CorpseTime = 3.6, -- segundos que el cadáver queda antes de borrarse (caída, espasmo y desvanecimiento; ver ZombieAnimator)
 		DeathFade = 0.9, -- los últimos segundos del cadáver se desvanece y se hunde
+		-- Trepar a los autobuses: si un jugador está sobre el techo de un autobús, los zombies cercanos suben por el costado con
+		-- una animación (server/Zombies.climbBus, client/ZombieAnimator). El Tanque no sube.
+		Climb = {
+			MinTime = 4, -- segundos que tarda en subir (al azar entre MinTime y MaxTime)
+			MaxTime = 5,
+			Range = 14, -- a qué distancia del autobús empiezan a trepar
+			Kinds = { Common = true, Fast = true },
+		},
 
 		-- Modelos: el común = zombie-el-brotado.glb, el rápido = zombie-el-desbocado.glb (ver tools/glb_to_lua.py).
 		-- ModelDetail: "full" = todas las piezas; "light" quita dientes, dedos, vértebras y otros detalles pequeños.

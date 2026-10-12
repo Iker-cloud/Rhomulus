@@ -216,7 +216,8 @@ end
 -- Autobús escolar volcado sobre un costado (8 × 11 × 30 de pie; tumbado queda de 11 de ancho y 8 de alto)
 local function busOnSide(parent, x1, z)
 	local cx = x1 + 15
-	block(parent, "Autobus", Vector3.new(30, 8, 11), Vector3.new(cx, 4, z), C.mostaza, Enum.Material.Metal)
+	local body = block(parent, "Autobus", Vector3.new(30, 8, 11), Vector3.new(cx, 4, z), C.mostaza, Enum.Material.Metal)
+	CollectionService:AddTag(body, "ClimbableBus") -- los zombies pueden trepar a su techo (server/Zombies)
 	deco(block(parent, "AutobusVentanas", Vector3.new(24, 0.2, 2.4), Vector3.new(cx + 1.5, 8.1, z - 1.5), C.oscuro, Enum.Material.Glass))
 	deco(block(parent, "AutobusFranja", Vector3.new(30.1, 0.6, 11.1), Vector3.new(cx, 4, z), C.oscuro))
 	deco(block(parent, "AutobusRueda", Vector3.new(2, 2.4, 1.2), Vector3.new(cx - 9, 4, z + 6), C.oscuro))
