@@ -243,13 +243,21 @@ end
 
 -- Cómo se agarra cada objeto en la mano derecha. Mismo marco que Config.WeaponHold.HandGrip, con la pistola de bengalas
 -- girada para que el cañón (+X) apunte hacia donde apunta el antebrazo.
-local GRIP = CFrame.new(0, -0.25, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, -1, 0), Vector3.new(0, 0, -1), Vector3.new(1, 0, 0))
-local UPRIGHT = CFrame.new(0, -0.3, 0) * CFrame.Angles(0, 0, math.rad(-90)) -- objetos de pie: la parte de arriba hacia el antebrazo
+local PALM = Vector3.new(0, -0.16, 0) -- la palma en el marco de RightHand (igual que Config.WeaponHold.HandGrip)
+local FORWARD = CFrame.fromMatrix(Vector3.zero, Vector3.new(0, -1, 0), Vector3.new(0, 0, -1)) -- cañón (+X) hacia los dedos, arriba hacia arriba
+local UPRIGHT = CFrame.Angles(math.rad(-90), 0, 0) -- objetos de pie: la parte de arriba hacia arriba y el frente hacia delante
+-- rot = orientación del objeto respecto a la mano; point = el punto del objeto (en su marco) que queda en la palma
+local GRIPS = {
+	Grenade = { rot = UPRIGHT, point = Vector3.zero },
+	Molotov = { rot = UPRIGHT, point = Vector3.new(0, -0.25, 0) }, -- agarrada por la botella, la llama arriba
+	FlareGun = { rot = FORWARD, point = Vector3.new(-0.48, -0.18, 0) }, -- por la empuñadura
+	Bandage = { rot = UPRIGHT, point = Vector3.zero },
+}
 
 local HELD = { Grenade = "Grenade", Molotov = "Molotov", Flare = "FlareGun", Bandage = "Bandage" }
 
 -- Muestra el objeto de `itemId` ("Grenade", "Molotov", "Flare", "Bandage") en la mano del jugador y esconde el arma activa.
--- Devuelve una función que lo quita y restaura el arma. Nil si el personaje no está listo.
+-- Devuelve (una función que lo quita y restaura el arma, el modelo). Nil si el personaje no está listo.
 function ItemModel.hold(player, itemId)
 	local character = player.Character
 	local hand = character and character:FindFirstChild("RightHand")
@@ -262,12 +270,14 @@ function ItemModel.hold(player, itemId)
 	local root = model.PrimaryPart
 	root.CanCollide = false
 	root.Massless = true
-	model:PivotTo(hand.CFrame * (kind == "FlareGun" and GRIP or UPRIGHT))
+	local grip = GRIPS[kind]
+	local c0 = CFrame.new(PALM) * grip.rot * CFrame.new(-grip.point)
+	model:PivotTo(hand.CFrame * c0)
 	local motor = Instance.new("Motor6D")
 	motor.Name = "ItemGrip"
 	motor.Part0 = hand
 	motor.Part1 = root
-	motor.C0 = kind == "FlareGun" and GRIP or UPRIGHT
+	motor.C0 = c0
 	motor.Parent = root
 	model.Parent = character
 
@@ -290,7 +300,7 @@ function ItemModel.hold(player, itemId)
 				p.Transparency = transparency
 			end
 		end
-	end
+	end, model
 end
 
 return ItemModel

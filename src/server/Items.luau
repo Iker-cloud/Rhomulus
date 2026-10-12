@@ -3,6 +3,7 @@
 -- al morir y al empezar cada partida. Valores en Config.Items. El botiquín lo usa server/Medkits; el resto, Items.use.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -16,7 +17,7 @@ local Stats = require(script.Parent.Stats)
 local Items = {}
 
 local I = Config.Items
-local lastUse = {} -- [Player] = os.clock() del último uso
+local busyUntil = {} -- [Player] = os.clock() hasta que termina el gesto del objeto que está usando
 local projectiles = Instance.new("Folder")
 projectiles.Name = "Projectiles"
 projectiles.Parent = workspace
@@ -236,10 +237,112 @@ local function placeFlare(position)
 	Debris:AddItem(flare, cfg.Duration)
 end
 
--- Segundos con el objeto en la mano antes de lanzarlo (el gesto de sacarlo); las vendas duran Config.Items.Bandage.Time
-local WINDUP = { Grenade = 0.4, Molotov = 0.4, Flare = 0.5 }
+-- Efectos del gesto (todos visibles para el resto del equipo) ------------------------------------------------------
 
--- Lanza el proyectil ya con el objeto fuera de la mano (se llama tras el gesto)
+-- El pasador y la anilla saltan de la granada cuando la izquierda tira de ellos
+local function popPin(character)
+	local hand = character:FindFirstChild("LeftHand")
+	if not hand then
+		return
+	end
+	local brass = Color3.fromRGB(199, 184, 140)
+	for i = 1, 2 do
+		local piece = Instance.new("Part")
+		piece.Name = "Pasador"
+		piece.Size = i == 1 and Vector3.new(0.34, 0.05, 0.05) or Vector3.new(0.22, 0.22, 0.04)
+		piece.Shape = i == 1 and Enum.PartType.Block or Enum.PartType.Cylinder
+		piece.Color = brass
+		piece.Material = Enum.Material.Metal
+		piece.CanTouch = false
+		piece.CastShadow = false
+		piece.CFrame = hand.CFrame * CFrame.new(0, -0.3, 0)
+		piece.Parent = projectiles
+		piece:SetNetworkOwner(nil)
+		piece.AssemblyLinearVelocity = hand.CFrame.LookVector * 6 + Vector3.new(math.random(-3, 3), math.random(5, 9), math.random(-3, 3))
+		piece.AssemblyAngularVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
+		Debris:AddItem(piece, 2)
+	end
+end
+
+-- Fogonazo en la boca de la pistola de bengalas
+local function flareFlash(gun)
+	local root = gun and gun.PrimaryPart
+	if not root then
+		return
+	end
+	local flash = Instance.new("Part")
+	flash.Name = "Fogonazo"
+	flash.Shape = Enum.PartType.Ball
+	flash.Size = Vector3.one * 0.7
+	flash.Color = Color3.fromRGB(255, 190, 90)
+	flash.Material = Enum.Material.Neon
+	flash.Anchored = true
+	flash.CanCollide = false
+	flash.CanTouch = false
+	flash.CanQuery = false
+	flash.CastShadow = false
+	flash.CFrame = root.CFrame * CFrame.new(0.7, 0.17, 0)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 150, 70)
+	light.Brightness = 4
+	light.Range = 14
+	light.Parent = flash
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Rate = 0
+	smoke.Lifetime = NumberRange.new(0.5, 0.9)
+	smoke.Speed = NumberRange.new(3, 7)
+	smoke.SpreadAngle = Vector2.new(25, 25)
+	smoke.Color = ColorSequence.new(Color3.fromRGB(190, 190, 190))
+	smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1.2) })
+	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Parent = flash
+	flash.Parent = projectiles
+	smoke:Emit(10)
+	TweenService:Create(flash, TweenInfo.new(0.18), { Size = Vector3.one * 0.1, Transparency = 1 }):Play()
+	TweenService:Create(light, TweenInfo.new(0.18), { Brightness = 0 }):Play()
+	Debris:AddItem(flash, 1.2)
+end
+
+-- Destellos verdes al terminar de vendarse
+local function healSparkles(character)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local attachment = Instance.new("Attachment")
+	attachment.Position = Vector3.new(0, 0.5, 0)
+	attachment.Parent = root
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparkles.Rate = 0
+	sparkles.Lifetime = NumberRange.new(0.8, 1.3)
+	sparkles.Speed = NumberRange.new(1, 3)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.Acceleration = Vector3.new(0, 3, 0)
+	sparkles.Color = ColorSequence.new(Color3.fromRGB(150, 255, 170), Color3.fromRGB(255, 255, 255))
+	sparkles.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	sparkles.LightEmission = 1
+	sparkles.Parent = attachment
+	sparkles:Emit(16)
+	Debris:AddItem(attachment, 1.6)
+end
+
+-- Publica el gesto en el personaje (ItemId, ItemStart, ItemEnd: client/ItemPoses lo anima en todos los clientes)
+local function announce(character, id, duration)
+	local start = workspace:GetServerTimeNow()
+	character:SetAttribute("ItemId", id)
+	character:SetAttribute("ItemStart", start)
+	character:SetAttribute("ItemEnd", start + duration)
+	task.delay(duration + 0.1, function()
+		if character:GetAttribute("ItemStart") == start then
+			character:SetAttribute("ItemId", nil)
+			character:SetAttribute("ItemStart", nil)
+			character:SetAttribute("ItemEnd", nil)
+		end
+	end)
+end
+
+-- Lanza el proyectil ya con el objeto fuera de la mano (se llama en el momento de soltarlo)
 local function launch(player, id, direction)
 	local cfg = I[id]
 	local humanoid = getHumanoid(player)
@@ -294,7 +397,8 @@ local function launch(player, id, direction)
 end
 
 -- Usa un objeto lanzable o las vendas. `direction` = hacia dónde mira (lo manda el cliente).
--- Primero se saca el objeto en la mano (ItemModel.hold); luego se lanza o se aplica.
+-- Se saca el objeto en la mano (ItemModel.hold), los brazos hacen el gesto (client/ItemPoses) y en cfg.Anim.Release
+-- sale de la mano: se lanza o se aplica. El gesto termina en cfg.Anim.End.
 function Items.use(player, id, direction)
 	local cfg = I[id]
 	if typeof(id) ~= "string" or not cfg or id == "Medkit" then
@@ -303,45 +407,53 @@ function Items.use(player, id, direction)
 	if PlayerState.get(player) ~= "Normal" or player:GetAttribute("Carrying") or Items.count(player, id) <= 0 then
 		return
 	end
-	if os.clock() - (lastUse[player] or 0) < I.Cooldown then
-		return
+	if os.clock() < (busyUntil[player] or 0) then
+		return -- todavía está haciendo el gesto de otro objeto
 	end
 	local humanoid = getHumanoid(player)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
+	local character = player.Character
 
 	if id == "Bandage" then
 		if humanoid.Health >= humanoid.MaxHealth then
 			Remotes.Feed:FireClient(player, "Tienes la vida llena")
 			return
 		end
-		lastUse[player] = os.clock()
-		Items.add(player, id, -1)
-		local release = ItemModel.hold(player, id) -- el rollo en la mano mientras se venda
-		task.delay(cfg.Time, function()
-			if release then
-				release()
-			end
-			local current = getHumanoid(player)
-			if current and current.Health > 0 and PlayerState.get(player) == "Normal" then
-				current.Health = math.min(current.MaxHealth, current.Health + cfg.Heal * Difficulty.get().MedkitHeal)
-			end
-		end)
-		return
+	else
+		if typeof(direction) ~= "Vector3" or direction.Magnitude < 0.1 or direction.Magnitude ~= direction.Magnitude then
+			return
+		end
+		direction = direction.Unit
 	end
 
-	if typeof(direction) ~= "Vector3" or direction.Magnitude < 0.1 or direction.Magnitude ~= direction.Magnitude then
-		return
+	busyUntil[player] = os.clock() + cfg.Anim.End + I.Cooldown * 0.3
+	local release, held = ItemModel.hold(player, id)
+	announce(character, id, cfg.Anim.End)
+	if id == "Grenade" then
+		task.delay(cfg.Anim.End * 0.3, popPin, character) -- tira del pasador a mitad del gesto
 	end
-	direction = direction.Unit
-	lastUse[player] = os.clock()
-	local release = ItemModel.hold(player, id)
-	task.delay(release and WINDUP[id] or 0, function()
+
+	if id == "Bandage" then
+		Items.add(player, id, -1)
+	end
+	task.delay(cfg.Anim.Release, function()
+		if id == "Flare" then
+			flareFlash(held)
+		end
 		if release then
 			release()
 		end
-		launch(player, id, direction)
+		if id == "Bandage" then
+			local current = getHumanoid(player)
+			if current and current.Health > 0 and PlayerState.get(player) == "Normal" then
+				current.Health = math.min(current.MaxHealth, current.Health + cfg.Heal * Difficulty.get().MedkitHeal)
+				healSparkles(character)
+			end
+		else
+			launch(player, id, direction)
+		end
 	end)
 end
 
@@ -357,7 +469,7 @@ function Items.start()
 		Items.clear(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		lastUse[player] = nil
+		busyUntil[player] = nil
 	end)
 end
 

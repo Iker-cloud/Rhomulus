@@ -439,11 +439,13 @@ return {
 	Items = {
 		Order = { "Grenade", "Medkit", "Molotov", "Bandage", "Flare" },
 		Cooldown = 0.8, -- segundos entre usos
-		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Damage = 130, Radius = 14, Fuse = 2, ThrowSpeed = 62, Color = Color3.fromRGB(86, 104, 52) },
+		-- Anim = { Release, End }: segundos del gesto al usar el objeto (client/ItemPoses). En Release sale de la mano (se lanza o se
+		-- cura) y en End termina el gesto. Si se cambian, ajustar también las fracciones de ItemPoses (Release / End).
+		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Anim = { Release = 0.75, End = 1.05 }, Damage = 130, Radius = 14, Fuse = 2, ThrowSpeed = 62, Color = Color3.fromRGB(86, 104, 52) },
 		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit)
-		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowSpeed = 55, Color = Color3.fromRGB(150, 96, 40) },
-		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2 },
-		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Duration = 15, LureRange = 75, ThrowSpeed = 58, Color = Color3.fromRGB(235, 70, 55) },
+		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Anim = { Release = 0.8, End = 1.1 }, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowSpeed = 55, Color = Color3.fromRGB(150, 96, 40) },
+		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.2, End = 1.5 } },
+		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Anim = { Release = 0.7, End = 1.1 }, Duration = 15, LureRange = 75, ThrowSpeed = 58, Color = Color3.fromRGB(235, 70, 55) },
 	},
 
 	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas

@@ -14,6 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ArmIK = require(script.Parent.ArmIK)
+local ItemPoses = require(script.Parent.ItemPoses)
 
 local Hold = Config.WeaponHold
 local localPlayer = Players.LocalPlayer
@@ -225,7 +226,20 @@ local function update(rig, dt)
 	rig.raise += (raiseTarget - rig.raise) * math.min(1, dt * Hold.RaiseSpeed)
 	local raise = rig.raise
 
-	local leftTarget = (hold.TwoHanded or (hold.Support ~= false and raise > 0.5) or reloadT) and 1 or 0
+	-- Gesto de un objeto (granada, molotov, bengala, vendas): el servidor publica ItemId / ItemStart / ItemEnd en el personaje
+	local itemId = character:GetAttribute("ItemId")
+	local itemT = nil -- progreso del gesto de 0 a 1
+	if itemId and ItemPoses.has(itemId) then
+		local startTime, endTime = character:GetAttribute("ItemStart"), character:GetAttribute("ItemEnd")
+		if startTime and endTime and endTime > startTime then
+			local t = (workspace:GetServerTimeNow() - startTime) / (endTime - startTime)
+			if t >= 0 and t <= 1 then
+				itemT = t
+			end
+		end
+	end
+
+	local leftTarget = (hold.TwoHanded or (hold.Support ~= false and raise > 0.5) or reloadT or itemT) and 1 or 0
 	rig.weight += (1 - rig.weight) * step
 	rig.leftWeight += (leftTarget - rig.leftWeight) * step
 
@@ -258,6 +272,19 @@ local function update(rig, dt)
 		leftPosition = reloadHand(hold, reloadT, foreWorld, magWorld, beltWorld)
 	end
 	local handL = CFrame.new(leftPosition) * gunRot * Hold.HandGrip:Inverse()
+
+	-- Durante el gesto de un objeto cada mano va hacia su fotograma clave (ItemPoses), mezclada con la pose del arma
+	if itemT then
+		local rPos, rWeight, rTilt, lPos, lWeight, lTilt = ItemPoses.sample(itemId, itemT)
+		if rPos then
+			local rot = yaw * CFrame.Angles(rTilt, 0, 0) * GUN_FROM_AIM
+			handR = handR:Lerp(CFrame.new(anchor + yaw * rPos) * rot * Hold.HandGrip:Inverse(), rWeight)
+		end
+		if lPos then
+			local rot = yaw * CFrame.Angles(lTilt, 0, 0) * GUN_FROM_AIM
+			handL = handL:Lerp(CFrame.new(anchor + yaw * lPos) * rot * Hold.HandGrip:Inverse(), lWeight)
+		end
+	end
 
 	local torsoCF = torso.CFrame
 	local shoulderR, elbowR, wristR = ArmIK.solve(rig.armR, torsoCF, handR, yaw * RIGHT_POLE)
