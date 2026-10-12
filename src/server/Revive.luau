@@ -192,6 +192,7 @@ local function onCharacter(player, character)
 		setReviving(helper, false)
 		local session = sessions[helper]
 		if session then
+			session.ended = true
 			Remotes.SkillCheck:FireClient(helper, "cancel")
 			-- Un momento de gracia: al completarse el hold puede soltar antes de que llegue Triggered
 			task.delay(0.3, function()
@@ -231,7 +232,11 @@ local function onCharacter(player, character)
 			end
 			for index, fraction in Config.SkillCheck.Times do
 				task.delay(fraction * Config.Revive.HoldTime, function()
-					if sessions[helper] ~= session or session.failed or not canHelp(helper, player) then
+					if sessions[helper] ~= session or session.failed or session.ended then
+						return
+					end
+					if not canHelp(helper, player) then
+						Remotes.SkillCheck:FireClient(helper, "cancel") -- se alejó o cambió de estado: se quita el aro
 						return
 					end
 					if session.check and not session.check.done then
@@ -322,6 +327,10 @@ function Revive.start()
 	Remotes.SkillCheckPress.OnServerEvent:Connect(function(helper, id, pressTime)
 		local session = sessions[helper]
 		local check = session and session.check
+		if not session then
+			Remotes.SkillCheck:FireClient(helper, "cancel") -- la sesión ya se cerró: que el cliente quite el aro
+			return
+		end
 		if not check or check.done or typeof(id) ~= "number" or typeof(pressTime) ~= "number" or check.id ~= id then
 			return
 		end

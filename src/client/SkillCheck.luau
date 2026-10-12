@@ -139,6 +139,13 @@ function SkillCheck.start()
 		check.pressed = true
 		Remotes.SkillCheckPress:FireServer(check.id, workspace:GetServerTimeNow())
 		keyBox.BackgroundColor3 = Color3.fromRGB(70, 70, 76) -- la aguja se queda donde estaba hasta que llegue el resultado
+		-- Si el servidor no contesta (te alejaste y cerró la sesión), se quita sola
+		local pressedCheck = check
+		task.delay(1.5, function()
+			if check == pressedCheck then
+				hide()
+			end
+		end)
 	end
 	tap.Activated:Connect(press)
 
@@ -167,6 +174,12 @@ function SkillCheck.start()
 
 		connection = RunService.RenderStepped:Connect(function()
 			if not check or check.pressed then
+				return
+			end
+			local character = Players.LocalPlayer.Character
+			if not (character and character:FindFirstChildOfClass("Humanoid") and character:FindFirstChildOfClass("Humanoid").Health > 0)
+				or Players.LocalPlayer:GetAttribute("State") ~= "Normal" then
+				hide()
 				return
 			end
 			local elapsed = workspace:GetServerTimeNow() - check.start

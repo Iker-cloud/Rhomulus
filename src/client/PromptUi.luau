@@ -126,7 +126,13 @@ local function show(prompt)
 		Position = UDim2.new(0.5, prompt.UIOffset.X, 0.5, prompt.UIOffset.Y),
 	}):Play()
 
-	prompt.PromptHidden:Once(function()
+	-- Se quita al ocultarse el prompt, y también si se apaga, se destruye o el jugador se aleja (por si PromptHidden no llega)
+	local closed = false
+	local function close()
+		if closed then
+			return
+		end
+		closed = true
 		for _, connection in connections do
 			connection:Disconnect()
 		end
@@ -134,6 +140,28 @@ local function show(prompt)
 		task.delay(0.16, function()
 			gui:Destroy()
 		end)
+	end
+	prompt.PromptHidden:Once(close)
+	table.insert(connections, prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
+		if not prompt.Enabled then
+			close()
+		end
+	end))
+	table.insert(connections, prompt.AncestryChanged:Connect(function()
+		if not prompt:IsDescendantOf(workspace) then
+			close()
+		end
+	end))
+	task.spawn(function()
+		while not closed do
+			task.wait(0.5)
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local part = prompt.Parent
+			if not (root and part and part:IsA("BasePart")) or (root.Position - part.Position).Magnitude > prompt.MaxActivationDistance + 8 then
+				close()
+			end
+		end
 	end)
 end
 
