@@ -7,6 +7,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local VoteRoom = {}
 
@@ -241,11 +243,38 @@ local function tally(votes)
 	return counts
 end
 
--- Abre la votación y espera. `onTick(texto)` recibe el aviso con la cuenta atrás. Devuelve el id del mapa ganador.
+-- Votos de dificultad: los publica en atributos para que el panel del cliente (client/DifficultyVote) los muestre
+local function publishDifficultyVotes(votes)
+	local counts = {}
+	for _, id in Difficulties.Order do
+		counts[id] = 0
+	end
+	for player, id in votes do
+		if player.Parent == Players and counts[id] then
+			counts[id] += 1
+		end
+	end
+	for _, id in Difficulties.Order do
+		workspace:SetAttribute("DiffVotes_" .. id, counts[id])
+	end
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("DifficultyVote", votes[player])
+	end
+	return counts
+end
+
+-- Abre la votación y espera. `onTick(texto)` recibe el aviso con la cuenta atrás.
+-- Devuelve (id del mapa ganador, id de la dificultad ganadora).
 function VoteRoom.run(onTick)
 	local room = VoteRoom.build()
 	local votes = {}
+	local difficultyVotes = {}
 	local connections = {}
+	table.insert(connections, Remotes.VoteDifficulty.OnServerEvent:Connect(function(player, id)
+		if Difficulties.isValid(id) then
+			difficultyVotes[player] = id
+		end
+	end))
 	for _, option in room.options do
 		option.prompt.Enabled = true
 		table.insert(connections, option.prompt.Triggered:Connect(function(player)
@@ -260,6 +289,7 @@ function VoteRoom.run(onTick)
 		for _, option in room.options do
 			option.countLabel.Text = tostring(counts[option.map.id])
 		end
+		publishDifficultyVotes(difficultyVotes)
 
 		local list = Players:GetPlayers()
 		local voted = 0
@@ -274,7 +304,7 @@ function VoteRoom.run(onTick)
 			timeLabel.Text = tostring(left)
 			timeLabel.TextColor3 = urgent and PALE or RED
 		end
-		onTick(`Voten el mapa en los podios con E ({voted}/{#list})`)
+		onTick(`Voten el mapa en los podios con E y la dificultad con 1 a 4 ({voted}/{#list})`)
 
 		if #list > 0 and voted == #list then
 			allVotedAt = allVotedAt or os.clock()
@@ -297,7 +327,25 @@ function VoteRoom.run(onTick)
 		option.prompt.Enabled = false
 	end
 
-	-- Ganador: el que tiene más votos; empate = al azar; sin votos = Config.Vote.NoVotes
+	-- Dificultad ganadora: la más votada; empate = al azar; sin votos = la de por defecto
+	local diffCounts = publishDifficultyVotes(difficultyVotes)
+	local diffBest, diffLeaders = 0, {}
+	for _, id in Difficulties.Order do
+		if diffCounts[id] > diffBest then
+			diffBest, diffLeaders = diffCounts[id], { id }
+		elseif diffCounts[id] == diffBest and diffBest > 0 then
+			table.insert(diffLeaders, id)
+		end
+	end
+	local difficulty = diffBest > 0 and diffLeaders[math.random(#diffLeaders)] or Difficulties.Default
+	for _, id in Difficulties.Order do
+		workspace:SetAttribute("DiffVotes_" .. id, nil)
+	end
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("DifficultyVote", nil)
+	end
+
+	-- Mapa ganador: el que tiene más votos; empate = al azar; sin votos = Config.Vote.NoVotes
 	local counts = tally(votes)
 	local best, leaders = -1, {}
 	for _, map in Config.Maps do
@@ -308,9 +356,9 @@ function VoteRoom.run(onTick)
 		end
 	end
 	if best == 0 then
-		return Config.Vote.NoVotes
+		return Config.Vote.NoVotes, difficulty
 	end
-	return leaders[math.random(#leaders)]
+	return leaders[math.random(#leaders)], difficulty
 end
 
 return VoteRoom

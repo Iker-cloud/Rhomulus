@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local player = Players.LocalPlayer
@@ -125,7 +126,9 @@ function Shop.start()
 					if owned ~= nil then
 						r.count.Text = `Llevas {owned} de {entry.max}`
 					end
-					local affordable = points >= entry.cost
+					local price = Difficulties.price(entry.cost, workspace:GetAttribute("Difficulty")) -- el precio base sube o baja con la dificultad
+					r.cost.Text = `{price} LATAS`
+					local affordable = points >= price
 					r.button.Text = full and "LLENO" or "COMPRAR"
 					r.button.BackgroundColor3 = (full or not affordable) and Color3.fromRGB(80, 78, 74) or GOLD
 					r.cost.TextColor3 = affordable and GOLD or Color3.fromRGB(200, 90, 80)

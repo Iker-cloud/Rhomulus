@@ -5,6 +5,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
+local Difficulty = require(script.Parent.Difficulty)
 local Zombies = require(script.Parent.Zombies)
 
 local Director = {}
@@ -22,7 +24,7 @@ local nextTankTime = math.huge
 function Director.setBoost(on)
 	boost = on
 	-- En la extracción llega un tanque poco después de llamar a la radio y luego cada cierto tiempo
-	nextTankTime = on and os.clock() + Config.Director.Tank.ExtractionFirst or math.huge
+	nextTankTime = on and os.clock() + Config.Director.Tank.ExtractionFirst * Difficulty.get().TankEvery or math.huge
 end
 
 local function getSpawnPoints()
@@ -39,10 +41,21 @@ local function getSpawnPoints()
 	return points
 end
 
--- Ajuste por número de jugadores (se recalcula en cada ciclo)
+-- Ajuste por número de jugadores y por dificultad (se recalcula en cada ciclo)
 local function getScaling()
 	local count = math.clamp(#Players:GetPlayers(), 1, 4)
-	return Config.Director.ByPlayers[count]
+	local base = Config.Director.ByPlayers[count]
+	local d = Difficulty.get()
+	return {
+		MaxAlive = math.clamp(math.floor(base.MaxAlive * d.MaxAlive + 0.5), 1, Difficulties.MaxAliveCap),
+		HordeScale = base.HordeScale * d.Horde,
+		MaxTanks = base.MaxTanks + d.ExtraTanks,
+	}
+end
+
+-- Un zombie común: rápido con la probabilidad de la dificultad
+local function commonKind()
+	return math.random() < Difficulty.get().FastChance and "Fast" or "Common"
 end
 
 local function getMaxAlive()
@@ -100,7 +113,7 @@ local function spawnOne(forcedKind)
 		return false
 	end
 	failedSpawns = 0
-	local kind = forcedKind or (math.random() < Config.Director.FastChance and "Fast" or "Common")
+	local kind = forcedKind or commonKind()
 	Zombies.spawn(kind, point)
 	return true
 end
@@ -165,7 +178,7 @@ function Director.spawnAmbush(size, points, withTank)
 		if #candidates == 0 then
 			return
 		end
-		Zombies.spawn(math.random() < Config.Director.FastChance and "Fast" or "Common", candidates[math.random(#candidates)])
+		Zombies.spawn(commonKind(), candidates[math.random(#candidates)])
 		task.wait(Config.Director.HordeSpawnDelay)
 	end
 end
@@ -175,13 +188,13 @@ function Director.start()
 		while true do
 			if zone and #Players:GetPlayers() > 0 then
 				if boost and os.clock() >= nextTankTime and spawnTank() then
-					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval
+					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval * Difficulty.get().TankEvery
 				end
 				if Zombies.getAlive() < getMaxAlive() then
 					spawnOne()
 				end
 			end
-			task.wait(boost and Config.Director.ExtractionInterval or Config.Director.SpawnInterval)
+			task.wait((boost and Config.Director.ExtractionInterval or Config.Director.SpawnInterval) * Difficulty.get().SpawnInterval)
 		end
 	end)
 end

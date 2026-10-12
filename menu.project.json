@@ -7,6 +7,9 @@
         "$className": "Folder",
         "Places": {
           "$path": "src/shared/Places.luau"
+        },
+        "Difficulties": {
+          "$path": "src/shared/Difficulties.luau"
         }
       }
     },

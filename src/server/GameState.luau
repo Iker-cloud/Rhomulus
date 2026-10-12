@@ -11,6 +11,8 @@ local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
+local Difficulty = require(script.Parent.Difficulty)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Dummies = require(script.Parent.Dummies)
 local GasCans = require(script.Parent.GasCans)
 local Medkits = require(script.Parent.Medkits)
@@ -247,6 +249,7 @@ end
 -- Partida privada creada desde el menú: el anfitrión ya eligió el mapa (viaja en los datos de teletransporte),
 -- así que no hay votación. Solo aplica en servidores reservados; en los públicos devuelve nil.
 local privateChoice
+local privateDifficulty
 local function privateMap()
 	if privateChoice then
 		return privateChoice
@@ -263,6 +266,7 @@ local function privateMap()
 			local id = ok and joinData.TeleportData and joinData.TeleportData.map
 			if id and BUILDERS[id] then
 				privateChoice = id
+				privateDifficulty = Difficulties.isValid(joinData.TeleportData.difficulty) and joinData.TeleportData.difficulty or nil
 				return id
 			end
 		end
@@ -284,6 +288,7 @@ local function vote()
 
 	local fixed = privateMap()
 	if fixed then
+		Difficulty.set(privateDifficulty) -- la eligió el anfitrión en el menú (nil = la de por defecto)
 		loadMap(fixed)
 		return
 	end
@@ -292,16 +297,17 @@ local function vote()
 	setStage("Vote", "Voten el mapa en los podios con E", "Vote")
 	respawn(false)
 
-	local winner = VoteRoom.run(function(text)
+	local winner, difficulty = VoteRoom.run(function(text)
 		setStage("Vote", text, "Vote")
 	end)
+	Difficulty.set(difficulty)
 	local name = winner
 	for _, option in Config.Maps do
 		if option.id == winner then
 			name = option.name
 		end
 	end
-	setStage("Vote", `Mapa elegido: {name}`, "Vote")
+	setStage("Vote", `Mapa elegido: {name}. Dificultad: {Difficulties.get(difficulty).Name}`, "Vote")
 	task.wait(1.5)
 	loadMap(winner)
 end
@@ -325,7 +331,7 @@ local function lobby()
 	end
 
 	PlayerState.setSafePoint(map.lobbySpawn)
-	setStage("Lobby", "Practiquen en los maniquíes. Presionen Y cuando estén listos", "Lobby")
+	setStage("Lobby", `Dificultad {Difficulties.get(Difficulty.id()).Name}. Practiquen en los maniquíes. Presionen Y cuando estén listos`, "Lobby")
 	respawn(false)
 
 	waitUntil(function()

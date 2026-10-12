@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Difficulty = require(script.Parent.Difficulty)
 
 local Points = {}
 
@@ -23,6 +24,7 @@ end
 
 -- `contributor` (opcional): el jugador al que se le cuenta lo que suma
 function Points.add(amount, contributor)
+	amount = math.floor(amount * Difficulty.get().Reward + 0.5) -- las dificultades altas dan algo más de latas
 	total += amount
 	publish()
 	if contributor and contributor.Parent then

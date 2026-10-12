@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Difficulty = require(script.Parent.Difficulty)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -67,8 +68,9 @@ function Items.tryBuy(player, id)
 	if not Items.canAdd(player, id) then
 		return false, `Ya llevas el máximo de {string.lower(cfg.Name)}`
 	end
-	if not Points.spend(cfg.Cost) then
-		return false, `Faltan latas: {string.lower(cfg.Name)} cuesta {cfg.Cost}`
+	local cost = Difficulty.price(cfg.Cost)
+	if not Points.spend(cost) then
+		return false, `Faltan latas: {string.lower(cfg.Name)} cuesta {cost}`
 	end
 	Items.add(player, id, 1)
 	Points.feed(`{player.DisplayName} compró {string.lower(cfg.Name)}`)
@@ -259,7 +261,7 @@ function Items.use(player, id, direction)
 		task.delay(cfg.Time, function()
 			local current = getHumanoid(player)
 			if current and current.Health > 0 and PlayerState.get(player) == "Normal" then
-				current.Health = math.min(current.MaxHealth, current.Health + cfg.Heal)
+				current.Health = math.min(current.MaxHealth, current.Health + cfg.Heal * Difficulty.get().MedkitHeal)
 			end
 		end)
 		return

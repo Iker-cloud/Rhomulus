@@ -35,6 +35,7 @@ local function mapName(id)
 	return id
 end
 
+local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Difficulties"))
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
 local roomState -- última foto de la sala en la que estamos (nil = ninguna)
@@ -421,6 +422,46 @@ builders.create = function()
 		x += w + 24
 	end
 	paint()
+
+	-- Dificultad (izquierda, bajo el código): cuatro casillas y la descripción de la elegida
+	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 714), { width = 500 })
+	local diffDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 810), { width = 700 })
+	diffDesc.AnchorPoint = Vector2.new(0, 0)
+	diffDesc.Size = UDim2.fromOffset(700, 48)
+	diffDesc.TextWrapped = true
+	diffDesc.TextYAlignment = Enum.TextYAlignment.Top
+	local diffBoxes = {}
+	local function paintDifficulty()
+		for id, m in diffBoxes do
+			local on = id == st.difficulty
+			m.box.BackgroundTransparency = on and 0 or 1
+			m.label.TextColor3 = on and RED or BLACK
+		end
+		diffDesc.Text = Difficulties.get(st.difficulty).Description
+	end
+	local dx = 120
+	for _, id in Difficulties.Order do
+		local w = 166
+		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(dx, 748),
+			Size = UDim2.fromOffset(w, 56), BorderSizePixel = 0 }, s)
+		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+		local label = text(s, string.upper(Difficulties[id].Name), ANTON, 38, Vector2.new(dx + w / 2, 776),
+			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
+		button(s, dx, 748, w, 56, function()
+			st.difficulty = id
+			paintDifficulty()
+			task.spawn(function()
+				local r = request:InvokeServer("setDifficulty", id)
+				if r.room then
+					roomState = r.room
+				end
+			end)
+		end)
+		diffBoxes[id] = { box = box, label = label }
+		dx += w + 12
+	end
+	paintDifficulty()
+
 	rule(s, 120, 857, 1680)
 	backButton(s, "main", true)
 	smallVersion(s, 1340, 932)
@@ -504,6 +545,8 @@ builders.joined = function()
 	codeText(s, st.code, "CONECTADO")
 	playerList(s, st.names, st.hostIndex, st.youIndex)
 	text(s, spaced("MAPA: " .. mapName(st.map), 3), OSW_BOLD, 44, Vector2.new(876, 728), { width = 900 })
+	text(s, spaced("DIFICULTAD: " .. string.upper(Difficulties.get(st.difficulty).Name), 3), OSW_BOLD, 44,
+		Vector2.new(876, 790), { width = 900 })
 	rule(s, 120, 872, 1680)
 	backButton(s, "main", true)
 	text(s, spaced(st.started and "EMPEZANDO…" or "ESPERANDO AL ANFITRIÓN", 2), ANTON, 66, Vector2.new(1800, 940),
@@ -522,7 +565,7 @@ roomUpdate.OnClientEvent:Connect(function(st)
 		end
 		return
 	end
-	local key = table.concat({ st.code, st.map, table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
+	local key = table.concat({ st.code, st.map, st.difficulty or "", table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
 	if key == lastKey then
 		return
 	end

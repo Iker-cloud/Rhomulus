@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulty = require(script.Parent.Difficulty)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -71,10 +72,11 @@ local function down(player, humanoid)
 	local token = (bleedTokens[player] or 0) + 1
 	bleedTokens[player] = token
 	-- Hora del servidor en que muere; el cliente la usa para mostrar la cuenta regresiva
-	player:SetAttribute("BleedEnd", workspace:GetServerTimeNow() + Config.Player.BleedTime)
+	local bleedTime = Config.Player.BleedTime * Difficulty.get().BleedTime
+	player:SetAttribute("BleedEnd", workspace:GetServerTimeNow() + bleedTime)
 	player:SetAttribute("DownedAt", workspace:GetServerTimeNow())
 
-	task.delay(Config.Player.BleedTime, function()
+	task.delay(bleedTime, function()
 		if bleedTokens[player] == token and PlayerState.get(player) == "Downed" then
 			local current = getHumanoid(player)
 			if current then
@@ -142,7 +144,7 @@ end
 -- Se llama al empezar cada zona
 function PlayerState.resetSelfRevives()
 	for _, player in Players:GetPlayers() do
-		player:SetAttribute("SelfRevives", Config.Player.SelfRevivesPerZone)
+		player:SetAttribute("SelfRevives", Difficulty.get().SelfRevives)
 	end
 end
 
@@ -234,7 +236,7 @@ function PlayerState.start()
 		end
 	end)
 	local function setup(player)
-		player:SetAttribute("SelfRevives", Config.Player.SelfRevivesPerZone)
+		player:SetAttribute("SelfRevives", Difficulty.get().SelfRevives)
 		-- Sin personaje hasta que la partida los haga aparecer
 		if not player.Character then
 			player:SetAttribute("State", "Dead")

@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulty = require(script.Parent.Difficulty)
 local PlayerState = require(script.Parent.PlayerState)
 local ZombieModel = require(script.Parent.ZombieModel)
 
@@ -132,7 +133,7 @@ end
 -- Crea un zombie del tipo dado ("Common", "Fast" o "Tank") en la posición (a nivel del suelo). Devuelve el modelo.
 -- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
 function Zombies.spawn(kind, position)
-	local stats = Config.Zombie[kind]
+	local stats = Difficulty.zombieStats(kind) -- vida, velocidad y daño según la dificultad
 	local model, humanoid, root = ZombieModel.build(MODELS[kind], stats, position)
 	model:SetAttribute("Kind", kind)
 	model.Parent = folder

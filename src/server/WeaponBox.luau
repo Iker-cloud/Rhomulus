@@ -11,6 +11,7 @@ local Points = require(script.Parent.Points)
 local PropModel = require(script.Parent.PropModel)
 local Weapons = require(script.Parent.Weapons)
 local Items = require(script.Parent.Items)
+local Difficulty = require(script.Parent.Difficulty)
 local CajaMisteriosa = require(script.Parent.ZombieData.CajaMisteriosa)
 local WeaponModel = require(script.Parent.WeaponModel)
 local RifleAsalto = require(script.Parent.ZombieData.RifleAsalto)
@@ -114,7 +115,7 @@ local function resetToIdle(box)
 	box.model:SetAttribute("Open", false)
 	hideWeapon(box)
 	box.prompt.ActionText = "Comprar caja de armas"
-	box.prompt.ObjectText = `{Config.WeaponBox.Cost} latas`
+	box.prompt.ObjectText = `{Difficulty.price(Config.WeaponBox.Cost)} latas`
 	box.prompt.HoldDuration = 0.5
 	box.prompt.Enabled = true
 	setLabel(box, "Caja de armas")
@@ -169,8 +170,8 @@ local function onTriggered(box, player)
 	end
 
 	if box.state == "idle" then
-		if not Points.spend(Config.WeaponBox.Cost) then
-			Remotes.Feed:FireClient(player, `Faltan latas: la caja cuesta {Config.WeaponBox.Cost}`)
+		if not Points.spend(Difficulty.price(Config.WeaponBox.Cost)) then
+			Remotes.Feed:FireClient(player, `Faltan latas: la caja cuesta {Difficulty.price(Config.WeaponBox.Cost)}`)
 			return
 		end
 
@@ -295,7 +296,7 @@ local function onBuy(player, id)
 		local denied = Weapons.ammoDenied(player)
 		if denied then
 			Remotes.Feed:FireClient(player, denied)
-		elseif Points.spend(Config.WeaponBox.AmmoCost) then
+		elseif Points.spend(Difficulty.price(Config.WeaponBox.AmmoCost)) then
 			Weapons.refillReserve(player)
 			station.model:SetAttribute("Open", true)
 			task.delay(1.6, function()
@@ -303,7 +304,7 @@ local function onBuy(player, id)
 			end)
 			Points.feed(`{player.DisplayName} compró munición`)
 		else
-			Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Config.WeaponBox.AmmoCost}`)
+			Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Difficulty.price(Config.WeaponBox.AmmoCost)}`)
 		end
 		return
 	end

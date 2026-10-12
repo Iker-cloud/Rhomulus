@@ -9,6 +9,7 @@ local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
 local Places = require(ReplicatedStorage.Shared.Places)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 
 local MAX_PLAYERS = 4
 local POLL = 2 -- segundos entre refrescos
@@ -86,6 +87,7 @@ local function view(room, code, userId)
 	return {
 		code = code,
 		map = room.map,
+		difficulty = room.difficulty or Difficulties.Default,
 		names = names,
 		hostIndex = hostIndex,
 		youIndex = youIndex,
@@ -188,7 +190,7 @@ function actions.create(player, map)
 					end
 				end
 				made = true
-				return { host = player.UserId, map = map, access = access, started = false, members = { member(player) } }
+				return { host = player.UserId, map = map, difficulty = Difficulties.Default, access = access, started = false, members = { member(player) } }
 			end, ROOM_TTL)
 		end)
 		if okSet and made then
@@ -249,6 +251,24 @@ function actions.setMap(player, map)
 			return false, "Solo el anfitrión elige el mapa"
 		end
 		r.map = map
+		return true
+	end)
+	if not room then
+		return { error = reason }
+	end
+	return { room = view(room, code, player.UserId) }
+end
+
+function actions.setDifficulty(player, id)
+	local code = roomOf[player]
+	if not code or not Difficulties.isValid(id) then
+		return { error = "Dificultad no válida" }
+	end
+	local room, reason = change(code, function(r)
+		if r.host ~= player.UserId then
+			return false, "Solo el anfitrión elige la dificultad"
+		end
+		r.difficulty = id
 		return true
 	end)
 	if not room then
@@ -332,7 +352,7 @@ local function launch(code, room)
 	local ok, err = pcall(function()
 		local options = Instance.new("TeleportOptions")
 		options.ReservedServerAccessCode = room.access
-		options:SetTeleportData({ private = true, map = room.map, code = code })
+		options:SetTeleportData({ private = true, map = room.map, difficulty = room.difficulty or Difficulties.Default, code = code })
 		TeleportService:TeleportAsync(Places.Game, list, options)
 	end)
 	if not ok then

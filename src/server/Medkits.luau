@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
 local Items = require(script.Parent.Items)
+local Difficulty = require(script.Parent.Difficulty)
 local Points = require(script.Parent.Points)
 
 local Medkits = {}
@@ -85,7 +86,7 @@ local function useMedkit(player, target)
 		stopHealing(player)
 		local humanoid = getHumanoid(target)
 		if humanoid then
-			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + M.Heal)
+			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + M.Heal * Difficulty.get().MedkitHeal)
 		end
 		Items.add(player, "Medkit", -1)
 		Points.feed(target == player and `{player.DisplayName} se curó` or `{player.DisplayName} curó a {target.DisplayName}`)
@@ -97,7 +98,7 @@ function Medkits.init(list)
 	for _, pickup in pickups do
 		pickup.parent = pickup.model.Parent
 		pickup.prompt.ActionText = "Tomar botiquín"
-		pickup.prompt.ObjectText = `Cura {M.Heal}`
+		pickup.prompt.ObjectText = `Cura {math.floor(M.Heal * Difficulty.get().MedkitHeal + 0.5)}`
 		pickup.prompt.HoldDuration = 0.3
 		pickup.prompt.Triggered:Connect(function(player)
 			if not pickup.model.Parent or PlayerState.get(player) ~= "Normal" then
