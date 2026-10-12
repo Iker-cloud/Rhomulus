@@ -3509,7 +3509,7 @@ local function buildStadium(map, refs, rng, spawns, config)
 	block(map, "EstadioDintelN", Vector3.new(24, 6, 2), Vector3.new(0, 21, 399), wall)
 	slab(map, "EstadioMuroW", -122, -120, 330, 400, 20, wall)
 	slab(map, "EstadioMuroE", 120, 122, 330, 400, 20, wall)
-	floor(map, "CarreteraNorte", -12, 12, 400, 440, C.asfalto, Enum.Material.Asphalt)
+	floor(map, "CarreteraNorte", -12, 12, 400, 450, C.asfalto, Enum.Material.Asphalt)
 	sign(map, "CartelEstadio", "ESTADIO EL COLOSO", Vector3.new(18, 4, 0.4), Vector3.new(0, 17, 329.6), C.mostaza, C.oscuro)
 	sign(map, "CartelRescate", "REFUGIO REMO → RESCATE", Vector3.new(20, 4, 0.4), Vector3.new(0, 21, 397.7), C.cobalto, C.blanco)
 
@@ -3808,10 +3808,12 @@ local function buildLimits(map)
 	invisible(Vector3.new(2, H, 860), CFrame.new(-125, H / 2, 20)) -- oeste
 	invisible(Vector3.new(2, H, 860), CFrame.new(125, H / 2, 20)) -- este
 	invisible(Vector3.new(256, H, 2), CFrame.new(0, H / 2, -403)) -- detrás del lobby
-	invisible(Vector3.new(26, H, 2), CFrame.new(0, H / 2, 446)) -- fin de la carretera norte
+	invisible(Vector3.new(30, H, 2), CFrame.new(0, H / 2, 451)) -- fin de la carretera norte (el suelo llega a z 450)
 	for _, side in { -1, 1 } do
-		invisible(Vector3.new(2, H, 50), CFrame.new(side * 13.2, H / 2, 421)) -- a los lados de la carretera (z 396..446)
+		invisible(Vector3.new(3, H, 58), CFrame.new(side * 13.5, H / 2, 423)) -- a los lados de la carretera (z 394..452)
 	end
+	-- Suelo de seguridad bajo el estadio y la carretera: si hubiera un hueco, se pisa esto en vez de caer al vacío
+	invisible(Vector3.new(250, 3, 126), CFrame.new(0, -1.5, 389)) -- su cara superior queda a ras del suelo (y = 0)
 	return caps
 end
 
