@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
+local ItemModel = require(script.Parent.ItemModel)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -121,27 +122,28 @@ local function blocked(from, to)
 	return workspace:Raycast(from, to - from, params) ~= nil
 end
 
-local function newProjectile(player, direction, color, size)
+-- Proyectil: el modelo del objeto (ItemModel) con su bola invisible de colisión. Devuelve (la bola, el modelo).
+-- Para quitarlo hay que destruir el modelo entero.
+local PROJECTILE_MODEL = { Grenade = "Grenade", Molotov = "Molotov", Flare = "Flare" }
+
+local function newProjectile(player, direction, id)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if not head then
 		return nil
 	end
-	local part = Instance.new("Part")
-	part.Shape = Enum.PartType.Ball
-	part.Size = Vector3.one * size
-	part.Color = color
-	part.Material = Enum.Material.Metal
-	part.Position = head.Position + direction * 2.5
+	local model = ItemModel.build(PROJECTILE_MODEL[id])
+	local part = model.PrimaryPart
 	part.CanCollide = true
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.Parent = projectiles
+	local origin = head.Position + direction * 2.5
+	model:PivotTo(CFrame.new(origin, origin + direction))
+	model.Parent = projectiles
 	part:SetNetworkOwner(nil)
-	return part
+	return part, model
 end
 
 local function throw(part, direction, speed)
 	part.AssemblyLinearVelocity = direction * speed + Vector3.new(0, 14, 0)
+	part.AssemblyAngularVelocity = Vector3.new(math.random(-9, 9), math.random(-9, 9), math.random(-9, 9)) -- gira en el aire
 end
 
 local function explode(player, position)
@@ -234,10 +236,68 @@ local function placeFlare(position)
 	Debris:AddItem(flare, cfg.Duration)
 end
 
+-- Segundos con el objeto en la mano antes de lanzarlo (el gesto de sacarlo); las vendas duran Config.Items.Bandage.Time
+local WINDUP = { Grenade = 0.4, Molotov = 0.4, Flare = 0.5 }
+
+-- Lanza el proyectil ya con el objeto fuera de la mano (se llama tras el gesto)
+local function launch(player, id, direction)
+	local cfg = I[id]
+	local humanoid = getHumanoid(player)
+	if not humanoid or humanoid.Health <= 0 or PlayerState.get(player) ~= "Normal" or Items.count(player, id) <= 0 then
+		return
+	end
+	local part, model = newProjectile(player, direction, id)
+	if not part then
+		return
+	end
+	Items.add(player, id, -1)
+	throw(part, direction, cfg.ThrowSpeed)
+
+	if id == "Grenade" then
+		task.delay(cfg.Fuse, function()
+			if part.Parent then
+				local position = part.Position
+				model:Destroy()
+				explode(player, position)
+			end
+		end)
+	elseif id == "Molotov" then
+		local landed = false
+		local function land()
+			if landed or not part.Parent then
+				return
+			end
+			landed = true
+			local position = part.Position
+			model:Destroy()
+			fireZone(player, position)
+		end
+		task.delay(0.25, function() -- un instante para despegarse de la mano antes de detectar golpes
+			if part.Parent then
+				part.Touched:Connect(function(hit)
+					if not hit:IsDescendantOf(player.Character) and hit.CanCollide then
+						land()
+					end
+				end)
+			end
+		end)
+		task.delay(3, land)
+	elseif id == "Flare" then
+		task.delay(1.4, function()
+			if part.Parent then
+				local position = part.Position
+				model:Destroy()
+				placeFlare(position)
+			end
+		end)
+	end
+end
+
 -- Usa un objeto lanzable o las vendas. `direction` = hacia dónde mira (lo manda el cliente).
+-- Primero se saca el objeto en la mano (ItemModel.hold); luego se lanza o se aplica.
 function Items.use(player, id, direction)
 	local cfg = I[id]
-	if not cfg or id == "Medkit" or typeof(id) ~= "string" then
+	if typeof(id) ~= "string" or not cfg or id == "Medkit" then
 		return
 	end
 	if PlayerState.get(player) ~= "Normal" or player:GetAttribute("Carrying") or Items.count(player, id) <= 0 then
@@ -258,7 +318,11 @@ function Items.use(player, id, direction)
 		end
 		lastUse[player] = os.clock()
 		Items.add(player, id, -1)
+		local release = ItemModel.hold(player, id) -- el rollo en la mano mientras se venda
 		task.delay(cfg.Time, function()
+			if release then
+				release()
+			end
 			local current = getHumanoid(player)
 			if current and current.Health > 0 and PlayerState.get(player) == "Normal" then
 				current.Health = math.min(current.MaxHealth, current.Health + cfg.Heal * Difficulty.get().MedkitHeal)
@@ -272,51 +336,13 @@ function Items.use(player, id, direction)
 	end
 	direction = direction.Unit
 	lastUse[player] = os.clock()
-	local part = newProjectile(player, direction, cfg.Color, id == "Flare" and 0.8 or 1.2)
-	if not part then
-		return
-	end
-	Items.add(player, id, -1)
-	throw(part, direction, cfg.ThrowSpeed)
-
-	if id == "Grenade" then
-		task.delay(cfg.Fuse, function()
-			if part.Parent then
-				local position = part.Position
-				part:Destroy()
-				explode(player, position)
-			end
-		end)
-	elseif id == "Molotov" then
-		local landed = false
-		local function land()
-			if landed or not part.Parent then
-				return
-			end
-			landed = true
-			local position = part.Position
-			part:Destroy()
-			fireZone(player, position)
+	local release = ItemModel.hold(player, id)
+	task.delay(release and WINDUP[id] or 0, function()
+		if release then
+			release()
 		end
-		task.delay(0.25, function() -- un instante para despegarse de la mano antes de detectar golpes
-			if part.Parent then
-				part.Touched:Connect(function(hit)
-					if not hit:IsDescendantOf(player.Character) and hit.CanCollide then
-						land()
-					end
-				end)
-			end
-		end)
-		task.delay(3, land)
-	elseif id == "Flare" then
-		task.delay(1.4, function()
-			if part.Parent then
-				local position = part.Position
-				part:Destroy()
-				placeFlare(position)
-			end
-		end)
-	end
+		launch(player, id, direction)
+	end)
 end
 
 function Items.start()
