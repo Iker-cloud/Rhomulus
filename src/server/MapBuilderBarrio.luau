@@ -1641,8 +1641,8 @@ local function shopDetails(map, rng)
 		end
 		local lampLight = Instance.new("PointLight") -- luz cálida y estable (aquí se respira)
 		lampLight.Color = Color3.fromRGB(255, 214, 160)
-		lampLight.Range = 28
-		lampLight.Brightness = 1.1
+		lampLight.Range = 20
+		lampLight.Brightness = 0.35 -- tenue: la luz buena la dan las antorchas y la estufa
 		lampLight.Parent = tube
 	end
 
@@ -1986,12 +1986,47 @@ local function buildSafePoint(map, refs)
 	deco(block(map, "RadioTienda", Vector3.new(2.4, 1.4, 1.2), Vector3.new(-25, 3.7, -102), C.oscuro, Enum.Material.Metal))
 	sign(map, "Pista1", "El comandante dijo que el Refugio Remo todavía resiste", Vector3.new(9, 4, 0.4), CFrame.new(-27.7, 8, -102) * CFrame.Angles(0, -math.pi / 2, 0), C.blanco, C.oscuro)
 
-	-- Luz interior
+	-- Luz interior: tenue (la lámpara y los tubos del techo dan poca luz) y antorchas en las paredes
 	local lamp = deco(block(map, "Lampara", Vector3.new(4, 0.4, 1), Vector3.new(0, 15.7, -110), Color3.fromRGB(240, 245, 255), Enum.Material.Neon))
 	local light = Instance.new("PointLight")
-	light.Range = 40
-	light.Brightness = 1.5
+	light.Range = 24
+	light.Brightness = 0.5
+	light.Color = Color3.fromRGB(255, 232, 200)
 	light.Parent = lamp
+
+	-- Antorchas: soporte, palo inclinado hacia el cuarto, trapo, llama con fuego y una luz cálida. `normal` apunta de la pared al interior.
+	local function torch(position, normal)
+		local cf = CFrame.lookAt(position, position + normal)
+		deco(block(map, "AntorchaSoporte", Vector3.new(0.6, 0.35, 0.5), cf * CFrame.new(0, 0, -0.2), C.oscuro, Enum.Material.Metal))
+		deco(block(map, "AntorchaPalo", Vector3.new(0.35, 2.2, 0.35), cf * CFrame.new(0, 0.9, -0.4) * CFrame.Angles(math.rad(-20), 0, 0), SAFE_WOOD, Enum.Material.Wood))
+		deco(block(map, "AntorchaTrapo", Vector3.new(0.62, 0.7, 0.62), cf * CFrame.new(0, 2.05, -0.85) * CFrame.Angles(math.rad(-20), 0, 0), Color3.fromRGB(58, 40, 28), Enum.Material.Fabric))
+		local flame = deco(block(map, "AntorchaLlama", Vector3.one * 0.85, cf * CFrame.new(0, 2.75, -0.95), C.lonaNaranja, Enum.Material.Neon))
+		flame.Shape = Enum.PartType.Ball
+		local core = deco(block(map, "AntorchaNucleo", Vector3.one * 0.5, cf * CFrame.new(0, 2.7, -0.95), RHO_YELLOW, Enum.Material.Neon))
+		core.Shape = Enum.PartType.Ball
+		local fire = Instance.new("ParticleEmitter")
+		fire.Texture = "rbxasset://textures/particles/fire_main.dds"
+		fire.Rate = 16
+		fire.Lifetime = NumberRange.new(0.4, 0.8)
+		fire.Speed = NumberRange.new(1, 2.5)
+		fire.SpreadAngle = Vector2.new(12, 12)
+		fire.Color = ColorSequence.new(Color3.fromRGB(255, 190, 80), Color3.fromRGB(230, 70, 20))
+		fire.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
+		fire.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+		fire.LightEmission = 0.8
+		fire.Parent = flame
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(255, 150, 70)
+		glow.Range = 20
+		glow.Brightness = 1.1
+		glow.Parent = flame
+	end
+	for _, x in { -16, 16 } do
+		torch(Vector3.new(x, 9.5, -127.4), Vector3.new(0, 0, 1)) -- pared norte (entrada), a los lados de la puerta
+		torch(Vector3.new(x, 9.5, -92.6), Vector3.new(0, 0, -1)) -- pared sur (salida)
+	end
+	torch(Vector3.new(-27.4, 9.5, -125), Vector3.new(1, 0, 0)) -- paredes laterales, junto a las salidas
+	torch(Vector3.new(27.4, 9.5, -125), Vector3.new(-1, 0, 0))
 
 	shopDetails(map, Random.new(31))
 
