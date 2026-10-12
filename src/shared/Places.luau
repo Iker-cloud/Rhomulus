@@ -4,5 +4,5 @@ return {
 	Menu = 138934951914195,
 	Game = 81842065981101,
 	-- Música del menú: ID de un audio subido a Roblox con derechos propios (0 = sin música). Sonido en bucle, tecla M para silenciar.
-	MenuMusic = 0,
+	MenuMusic = 9046799798, -- "Darkness Distilled (b)" de APM, de la biblioteca de música de Roblox (la misma de Config.Sounds.Music.Calm)
 }
