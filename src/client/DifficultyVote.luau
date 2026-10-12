@@ -15,7 +15,7 @@ local DARK = Color3.fromRGB(18, 18, 20)
 local PALE = Color3.fromRGB(215, 210, 200)
 local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
 local ACTION = "DifficultyVoteKeys"
-local ROW_HEIGHT = 92
+local ROW_HEIGHT = 84
 
 local DifficultyVote = {}
 
@@ -45,8 +45,8 @@ function DifficultyVote.start()
 	-- Panel de votación (izquierda, centrado en vertical)
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0, 0.5)
-	panel.Position = UDim2.new(0, 24, 0.5, 0)
-	panel.Size = UDim2.fromOffset(390, 64 + #Difficulties.Order * ROW_HEIGHT)
+	panel.Position = UDim2.new(0, 20, 0.5, 60) -- bajo el aviso de la radio
+	panel.Size = UDim2.fromOffset(340, 64 + #Difficulties.Order * ROW_HEIGHT)
 	panel.BackgroundColor3 = DARK
 	panel.BackgroundTransparency = 0.08
 	panel.BorderSizePixel = 0
@@ -76,7 +76,7 @@ function DifficultyVote.start()
 		stroke.Transparency = 1
 		stroke.Parent = row
 		label(row, `{i}`, UDim2.fromOffset(20, 24), UDim2.fromOffset(8, 4), 20, Color3.fromRGB(150, 146, 140))
-		label(row, string.upper(d.Name), UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, d.Color)
+		label(row, d.Upper, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, d.Color)
 		local count = label(row, "0", UDim2.fromOffset(40, 26), UDim2.new(1, -48, 0, 3), 22, Color3.new(1, 1, 1), Enum.TextXAlignment.Right)
 		local desc = label(row, d.Description, UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 30), 13, PALE, nil, OSWALD_LIGHT)
 		desc.TextWrapped = true
@@ -113,7 +113,7 @@ function DifficultyVote.start()
 		local voting = workspace:GetAttribute("Stage") == "Vote"
 		panel.Visible = voting
 		local d = Difficulties.get(workspace:GetAttribute("Difficulty"))
-		tag.Text = `DIFICULTAD · {string.upper(d.Name)}`
+		tag.Text = `DIFICULTAD · {d.Upper}`
 		tag.TextColor3 = d.Color
 		tag.Visible = not voting and workspace:GetAttribute("Stage") ~= nil
 		if voting then

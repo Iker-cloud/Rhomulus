@@ -3,7 +3,7 @@
 -- TENSIÓN es el balance base de Config: todos sus multiplicadores valen 1. Las demás escalan a partir de ahí.
 --
 -- Campos de cada dificultad:
---   Name / Description / Color     lo que ve el jugador (menú, votación, etiqueta en pantalla)
+--   Name / Upper / Description / Color  lo que ve el jugador (menú, votación, etiqueta); Upper = el nombre en mayúsculas (con acento)
 --   Health, Speed, Damage          multiplican la vida, la velocidad y el daño de TODOS los zombies (también el Tanque)
 --   MaxAlive, Horde                multiplican el máximo de zombies vivos y el tamaño de hordas y emboscadas
 --   FastChance                     probabilidad de que un zombie común sea rápido (en vez de 0.2 fijo)
@@ -22,6 +22,7 @@ local Difficulties = {
 
 	Calma = {
 		Name = "Calma",
+		Upper = "CALMA",
 		Description = "Para conocer el barrio: menos zombies, más débiles y lentos. Todo cuesta menos y aguantas más caído.",
 		Color = Color3.fromRGB(110, 190, 140),
 		Health = 0.8,
@@ -42,6 +43,7 @@ local Difficulties = {
 
 	Tension = {
 		Name = "Tensión",
+		Upper = "TENSIÓN",
 		Description = "La experiencia pensada: hordas medianas, zombies normales y precios justos. Hay que cuidarse las espaldas.",
 		Color = Color3.fromRGB(240, 200, 80),
 		Health = 1,
@@ -62,6 +64,7 @@ local Difficulties = {
 
 	Crisis = {
 		Name = "Crisis",
+		Upper = "CRISIS",
 		Description = "Más zombies, más duros y más rápidos. Los Tanques llegan seguido y hay menos ayuda; las latas rinden algo más.",
 		Color = Color3.fromRGB(235, 130, 55),
 		Health = 1.5,
@@ -82,6 +85,7 @@ local Difficulties = {
 
 	Colapso = {
 		Name = "Colapso",
+		Upper = "COLAPSO",
 		Description = "El barrio ya cayó: hordas enormes de zombies que muerden fuerte, Tanques sin descanso y casi nada de ayuda.",
 		Color = Color3.fromRGB(226, 38, 44),
 		Health = 2,

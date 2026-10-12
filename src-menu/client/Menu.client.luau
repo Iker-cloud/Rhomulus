@@ -427,7 +427,7 @@ builders.create = function()
 		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(dx, 748),
 			Size = UDim2.fromOffset(w, 56), BorderSizePixel = 0 }, s)
 		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
-		local label = text(s, string.upper(Difficulties[id].Name), ANTON, 38, Vector2.new(dx + w / 2, 776),
+		local label = text(s, Difficulties[id].Upper, ANTON, 38, Vector2.new(dx + w / 2, 776),
 			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
 		button(s, dx, 748, w, 56, function()
 			st.difficulty = id
@@ -527,7 +527,7 @@ builders.joined = function()
 	codeText(s, st.code, "CONECTADO")
 	playerList(s, st.names, st.hostIndex, st.youIndex)
 	text(s, spaced("MAPA: " .. mapName(st.map), 3), OSW_BOLD, 44, Vector2.new(876, 728), { width = 900 })
-	text(s, spaced("DIFICULTAD: " .. string.upper(Difficulties.get(st.difficulty).Name), 3), OSW_BOLD, 44,
+	text(s, spaced("DIFICULTAD: " .. Difficulties.get(st.difficulty).Upper, 3), OSW_BOLD, 44,
 		Vector2.new(876, 790), { width = 900 })
 	rule(s, 120, 872, 1680)
 	backButton(s, "main", true)
