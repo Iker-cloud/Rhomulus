@@ -21,6 +21,7 @@ local NAMES = {
 	"UseItem", -- cliente -> servidor: (id, dirección) usar un objeto del inventario (granada, molotov, vendas, bengala)
 	"Buy", -- cliente -> servidor: (id) comprar en una estación ("Ammo" o un objeto de Config.Items)
 	"OpenShop", -- servidor -> cliente: (posición de la estación) abre la tienda
+	"GroundReady", -- cliente -> servidor: ya tiene suelo cargado bajo los pies (suelta al personaje recién aparecido)
 	"SkillCheck", -- servidor -> cliente: ("start", id, horaInicio, periodo, zonaInicio, zonaTamaño) | ("result", acertó) | ("cancel")
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba
 }

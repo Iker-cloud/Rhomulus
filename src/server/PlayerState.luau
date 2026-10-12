@@ -146,6 +146,26 @@ function PlayerState.resetSelfRevives()
 	end
 end
 
+-- Deja el personaje quieto en `target` hasta que el cliente confirme que tiene suelo (Remotes.GroundReady) o pase el tiempo máximo
+local function settle(player, character, root, target)
+	root.Anchored = true
+	character:PivotTo(target)
+	character:SetAttribute("AwaitGround", true)
+	pcall(function()
+		player:RequestStreamAroundAsync(target.Position, 8)
+	end)
+	local deadline = os.clock() + Config.Player.SpawnGroundTimeout
+	while character.Parent and character:GetAttribute("AwaitGround") and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	character:SetAttribute("AwaitGround", nil)
+	task.wait(Config.Player.SpawnStreamWait) -- margen: que el cliente termine de colocar lo recibido antes de soltarlo
+	if character.Parent and root.Parent then
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.Anchored = false
+	end
+end
+
 local function onCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid")
 	bleedTokens[player] = (bleedTokens[player] or 0) + 1
@@ -164,21 +184,18 @@ local function onCharacter(player, character)
 	spawnOverride[player] = nil
 	if base then
 		local root = character:WaitForChild("HumanoidRootPart")
-		-- Dispersos para que no reaparezcan encimados
-		local target = base * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6))
+		root.Anchored = true -- quieto desde el primer instante (antes de que cargue el avatar)
 		-- Con StreamingEnabled el suelo del mapa recién construido tarda en llegar al cliente: se espera quieto a que cargue
-		-- (si no, el personaje cae al vacío). RequestStreamAroundAsync devuelve cuando ya llegó o al pasar el tiempo.
-		root.Anchored = true
-		character:PivotTo(target)
-		pcall(function()
-			player:RequestStreamAroundAsync(target.Position, 8)
-		end)
-		task.wait(Config.Player.SpawnStreamWait) -- margen: que el cliente termine de colocar lo recibido antes de soltarlo
+		-- (si no, el personaje cae al vacío)
+		local appearanceDeadline = os.clock() + 6
+		while player.Parent and not player:HasAppearanceLoaded() and os.clock() < appearanceDeadline do
+			task.wait(0.1)
+		end
 		if character.Parent and root.Parent then
-			root.Anchored = false
+			-- Dispersos para que no reaparezcan encimados
+			settle(player, character, root, base * CFrame.new(math.random(-6, 6), 0, math.random(-6, 6)))
 		end
 	end
-
 end
 
 -- Red de seguridad: si alguien cae al vacío (suelo sin cargar, hueco del mapa...) se le devuelve al último punto seguro
@@ -200,16 +217,7 @@ local function rescue(player)
 			break
 		end
 	end
-	root.Anchored = true
-	character:PivotTo(target)
-	pcall(function()
-		player:RequestStreamAroundAsync(target.Position, 8)
-	end)
-	task.wait(Config.Player.SpawnStreamWait)
-	if root.Parent then
-		root.AssemblyLinearVelocity = Vector3.zero
-		root.Anchored = false
-	end
+	settle(player, character, root, target)
 	rescuing[player] = nil
 end
 
@@ -239,6 +247,12 @@ function PlayerState.start()
 		end
 	end
 
+	Remotes.GroundReady.OnServerEvent:Connect(function(player)
+		local character = player.Character
+		if character and character:GetAttribute("AwaitGround") then
+			character:SetAttribute("AwaitGround", nil)
+		end
+	end)
 	Remotes.SelfRevive.OnServerEvent:Connect(PlayerState.selfRevive)
 	Remotes.Sprint.OnServerEvent:Connect(function(player, on)
 		if typeof(on) == "boolean" then

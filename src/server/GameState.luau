@@ -529,7 +529,7 @@ function GameState.start()
 	Players.CharacterAutoLoads = false
 	-- El mapa se construye en cada ronda tras la votación (vote -> loadMap)
 
-	Players.PlayerAdded:Connect(function(player)
+	local function onJoin(player)
 		if stage == "Lobby" or stage == "Vote" then
 			player:SetAttribute("Ready", false)
 			player:LoadCharacter()
@@ -545,7 +545,14 @@ function GameState.start()
 			player:SetAttribute("Ready", true)
 			player:LoadCharacter()
 		end
-	end)
+	end
+	Players.PlayerAdded:Connect(onJoin)
+	-- Quien ya estaba conectado antes de arrancar este módulo también necesita su personaje
+	for _, player in Players:GetPlayers() do
+		if not player.Character then
+			task.spawn(onJoin, player)
+		end
+	end
 
 	Remotes.Ready.OnServerEvent:Connect(function(player)
 		if stage == "Lobby" then
