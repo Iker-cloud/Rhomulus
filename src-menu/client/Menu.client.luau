@@ -299,6 +299,7 @@ local DESCRIPTIONS = {
 	"Entra a una partida con desconocidos (hasta 4). El mapa se vota al llegar.",
 	"Crea una sala privada con código para jugar con tus amigos. Tú eliges el mapa.",
 	"Escribe el código que te dio el anfitrión para entrar a su sala.",
+	"El objetivo, los controles, las dificultades y consejos para sobrevivir.",
 }
 local desc = text(main, "", OSW, 40, Vector2.new(120, 874), { width = 1100, transparency = 1 })
 local arrow = text(main, "▶", OSW, 38, Vector2.new(52, 520), { width = 40, transparency = 1 })
@@ -335,14 +336,18 @@ local items = {
 		setStatus(nil)
 		show("join")
 	end },
+	{ "CÓMO JUGAR", function()
+		setStatus(nil)
+		show("help")
+	end },
 }
 for i, item in items do
-	local y = 448 + 130 * (i - 1)
-	text(main, spaced(item[1], 0), ANTON, 108, Vector2.new(120, y + 66), { width = 1000 })
-	rule(main, 120, y + 130, 900)
-	local b = button(main, 40, y, 980, 130, item[2])
+	local y = 404 + 112 * (i - 1)
+	text(main, spaced(item[1], 0), ANTON, 94, Vector2.new(120, y + 57), { width = 1000 })
+	rule(main, 120, y + 112, 900)
+	local b = button(main, 40, y, 980, 112, item[2])
 	b.MouseEnter:Connect(function()
-		arrow.Position = UDim2.fromOffset(52, y + 72)
+		arrow.Position = UDim2.fromOffset(52, y + 62)
 		arrow.TextTransparency = 0
 		desc.Text = DESCRIPTIONS[i]
 		desc.TextTransparency = 1
@@ -352,6 +357,183 @@ for i, item in items do
 		arrow.TextTransparency = 1
 		fade(desc, 0.15, { TextTransparency = 1 })
 	end)
+end
+
+-- 4) Cómo jugar ------------------------------------------------------------
+-- Cuatro pestañas: objetivo, controles, consejos y dificultades. Los textos de las dificultades salen de shared/Difficulties.
+local help = newScreen("help")
+
+-- Párrafo con salto de línea automático (la esquina superior izquierda va en `pos`)
+local function paragraph(parent, str, font, size, pos, width, height, props)
+	props = props or {}
+	return make("TextLabel", {
+		BackgroundTransparency = 1, Text = str, FontFace = font, TextSize = size, TextColor3 = props.color or BLACK,
+		TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+		LineHeight = props.lineHeight or 1.1, Position = UDim2.fromOffset(pos.X, pos.Y), Size = UDim2.fromOffset(width, height),
+	}, parent)
+end
+
+-- Casilla de tecla: fondo negro y letras rojas. Devuelve su ancho.
+local function keycap(parent, x, y, label)
+	local w = math.max(64, 19 * #label + 28)
+	make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, 52) }, parent)
+	text(parent, label, ANTON, 36, Vector2.new(x + w / 2, y + 27),
+		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w, color = RED })
+	return w
+end
+
+-- 1.5 -> "1,5"; 1 -> "1"; 1.25 -> "1,25"
+local function ratio(n)
+	local s = string.format("%.2f", n)
+	s = string.gsub(s, "0+$", "")
+	s = string.gsub(s, "%.$", "")
+	s = string.gsub(s, "%.", ",")
+	return s
+end
+
+local HELP_TABS = { { "OBJETIVO", 200 }, { "CONTROLES", 240 }, { "CONSEJOS", 220 }, { "DIFICULTADES", 290 } }
+
+local STEPS = {
+	{ "VOTEN Y PREPÁRENSE", "Voten mapa y dificultad; practiquen y pulsen Y para empezar." },
+	{ "CRUCEN EL BARRIO", "Tres tramos, tres rutas cada uno y dos puntos seguros." },
+	{ "ABRAN LA IGLESIA", "Lleven las garrafas al generador de la plaza." },
+	{ "LLEGUEN AL ESTADIO", "Crucen la terminal hasta el Refugio Remo." },
+	{ "LLAMEN A LA RADIO", "Aguanten la horda hasta que llegue la furgoneta." },
+}
+
+local CONTROLS = {
+	{ "COMBATE", {
+		{ "CLIC", "DISPARAR" }, { "CLIC DER.", "APUNTAR" }, { "R", "RECARGAR" },
+		{ "1 · 2 · Q", "CAMBIAR ARMA" }, { "SHIFT", "CORRER" }, { "V", "CAMBIAR CÁMARA" },
+	} },
+	{ "EQUIPO", {
+		{ "E", "INTERACTUAR" }, { "F", "CARGAR AL CAÍDO" }, { "G", "SOLTAR" },
+		{ "ESPACIO", "ACIERTA AL REVIVIR" }, { "H", "LEVANTARSE SOLO" }, { "Y", "LISTO EN EL LOBBY" },
+	} },
+	{ "OBJETOS", {
+		{ "3", "GRANADA" }, { "4", "BOTIQUÍN" }, { "5", "MOLOTOV" },
+		{ "6", "VENDAS" }, { "7", "BENGALA" }, { "1 – 4", "VOTAR DIFICULTAD" },
+	} },
+}
+
+local TIPS = {
+	{ "NO SE SEPAREN", "Un jugador solo cae rápido. Avancen juntos y cúbranse las espaldas." },
+	{ "REVIVAN RÁPIDO", "Mantén E junto al caído y acierta con ESPACIO. Aguanta unos 30 s antes de morir." },
+	{ "LAS LATAS SON DE TODOS", "Se ganan matando y se gastan en la caja de armas, la munición y los suministros." },
+	{ "USEN LOS PUNTOS SEGUROS", "La tienda y la iglesia curan, recargan y dan un respiro antes de seguir." },
+	{ "AGUANTEN EN LOS PASILLOS", "En campo abierto la horda los rodea. Usen puertas y esquinas." },
+	{ "LANCEN BENGALAS", "Atraen a los zombies durante 15 s. Úsenlas para ganar tiempo." },
+	{ "CUIDADO CON EL TANQUE", "Aguanta 600 de vida. Apunten a la cabeza y usen granadas y molotovs." },
+	{ "EL TECHO NO ES SEGURO", "Los zombies trepan a los autobuses en 4 o 5 segundos." },
+}
+
+local buildHelpTab = {}
+
+buildHelpTab[1] = function(c)
+	paragraph(c, "SOBREVIVE\nJUNTO A TU EQUIPO", ANTON, 92, Vector2.new(120, 322), 740, 210, { lineHeight = 1.0 })
+	rule(c, 120, 548, 120, false, 6)
+	paragraph(c, "Cruza de noche el barrio Morro Esperanza hasta el estadio, llama a la radio y aguanta hasta que llegue la furgoneta.",
+		OSW, 38, Vector2.new(120, 580), 720, 140)
+	paragraph(c, "Basta con que uno suba para ganar. Si todos caen, se pierde. Nadie se queda atrás.",
+		OSW_BOLD, 38, Vector2.new(120, 735), 720, 100)
+	for i, step in STEPS do
+		local y = 322 + 104 * (i - 1)
+		text(c, string.format("%02d", i), OSW_BOLD, 40, Vector2.new(900, y + 28), { width = 70 })
+		text(c, step[1], ANTON, 48, Vector2.new(990, y + 28), { width = 800 })
+		text(c, step[2], OSW, 32, Vector2.new(990, y + 74), { width = 810 })
+		if i < #STEPS then
+			rule(c, 900, y + 100, 900)
+		end
+	end
+end
+
+buildHelpTab[2] = function(c)
+	for col, group in CONTROLS do
+		local x = 120 + 580 * (col - 1)
+		text(c, spaced(group[1], 3), OSW_BOLD, 36, Vector2.new(x, 345), { width = 520 })
+		rule(c, x, 376, 520)
+		for i, row in group[2] do
+			local y = 400 + 68 * (i - 1)
+			keycap(c, x, y, row[1])
+			text(c, row[2], OSW_BOLD, 32, Vector2.new(x + 246, y + 27), { width = 300 })
+		end
+	end
+	text(c, "H solo se usa cuando juegas solo: te levantas una vez por zona.", OSW, 30, Vector2.new(120, 822), { width = 1200 })
+	text(c, spaced("MEJOR CON TECLADO Y RATÓN", 2), OSW_BOLD, 28, Vector2.new(1800, 822),
+		{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600 })
+end
+
+buildHelpTab[3] = function(c)
+	for i, tip in TIPS do
+		local col = (i - 1) // 4
+		local row = (i - 1) % 4
+		local x = 120 + 870 * col
+		local y = 322 + 130 * row
+		text(c, string.format("%02d", i), OSW_BOLD, 36, Vector2.new(x, y + 24), { width = 70 })
+		text(c, tip[1], ANTON, 46, Vector2.new(x + 76, y + 24), { width = 720 })
+		paragraph(c, tip[2], OSW, 31, Vector2.new(x + 76, y + 54), 720, 68)
+		rule(c, x, y + 124, 810)
+	end
+end
+
+buildHelpTab[4] = function(c)
+	for i, id in Difficulties.Order do
+		local d = Difficulties[id]
+		local y = 322 + 134 * (i - 1)
+		text(c, string.format("%02d", i), OSW_BOLD, 36, Vector2.new(120, y + 30), { width = 70 })
+		text(c, d.Upper, ANTON, 64, Vector2.new(190, y + 34), { width = 400 })
+		for k = 1, #Difficulties.Order do -- medidor: cuadros negros llenos hasta el nivel de esta dificultad
+			local box = make("Frame", { BackgroundColor3 = BLACK, BackgroundTransparency = (k <= i) and 0 or 1, BorderSizePixel = 0,
+				Position = UDim2.fromOffset(194 + (k - 1) * 40, y + 84), Size = UDim2.fromOffset(32, 14) }, c)
+			make("UIStroke", { Color = BLACK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+		end
+		paragraph(c, d.Description, OSW, 30, Vector2.new(600, y + 6), 740, 100)
+		text(c, "VIDA ×" .. ratio(d.Health) .. "    DAÑO ×" .. ratio(d.Damage), OSW_BOLD, 30, Vector2.new(1390, y + 32), { width = 430 })
+		text(c, "PRECIOS ×" .. ratio(d.Cost) .. "    LATAS ×" .. ratio(d.Reward), OSW_BOLD, 30, Vector2.new(1390, y + 74), { width = 430 })
+		if i < #Difficulties.Order then
+			rule(c, 120, y + 118, 1680)
+		end
+	end
+end
+
+builders.help = function()
+	local s = help
+	clear(s)
+	header(s, "CÓMO JUGAR")
+	local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, s)
+	local tabs = {}
+	local function paintTabs(active)
+		for i, t in tabs do
+			t.box.BackgroundTransparency = (i == active) and 0 or 1
+			t.label.TextColor3 = (i == active) and RED or BLACK
+		end
+	end
+	local function showTab(i)
+		for _, child in holder:GetChildren() do
+			child:Destroy()
+		end
+		local content = make("CanvasGroup", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), GroupTransparency = 1 }, holder)
+		buildHelpTab[i](content)
+		fade(content, 0.25, { GroupTransparency = 0 })
+		paintTabs(i)
+	end
+	local x = 802
+	for i, tab in HELP_TABS do
+		local w = tab[2]
+		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(x, 190), Size = UDim2.fromOffset(w, 62), BorderSizePixel = 0 }, s)
+		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+		local label = text(s, tab[1], ANTON, 40, Vector2.new(x + w / 2, 222),
+			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
+		button(s, x, 190, w, 62, function()
+			showTab(i)
+		end)
+		tabs[i] = { box = box, label = label }
+		x += w + 16
+	end
+	rule(s, 120, 857, 1680)
+	backButton(s, "main")
+	smallVersion(s, 1800, 932)
+	showTab(1)
 end
 
 -- Código y lista de jugadores (comunes a crear / sala) --------------------
