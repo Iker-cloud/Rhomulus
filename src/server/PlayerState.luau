@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulty = require(script.Parent.Difficulty)
+local RateLimit = require(script.Parent.RateLimit)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -250,14 +251,17 @@ function PlayerState.start()
 	end
 
 	Remotes.GroundReady.OnServerEvent:Connect(function(player)
+		if not RateLimit.check(player, "GroundReady", 0.1) then
+			return
+		end
 		local character = player.Character
 		if character and character:GetAttribute("AwaitGround") then
 			character:SetAttribute("AwaitGround", nil)
 		end
 	end)
-	Remotes.SelfRevive.OnServerEvent:Connect(PlayerState.selfRevive)
+	Remotes.SelfRevive.OnServerEvent:Connect(RateLimit.wrap("SelfRevive", 0.3, PlayerState.selfRevive))
 	Remotes.Sprint.OnServerEvent:Connect(function(player, on)
-		if typeof(on) == "boolean" then
+		if typeof(on) == "boolean" and RateLimit.check(player, "Sprint", 0.1) then
 			PlayerState.setSprinting(player, on)
 		end
 	end)

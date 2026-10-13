@@ -315,11 +315,24 @@ function actions.play(player)
 	return {}
 end
 
+-- Límite de frecuencia: cada acción de la sala (usan MemoryStore, que tiene cuota) como mucho cada 0,4 s por jugador
+local lastCall = setmetatable({}, { __mode = "k" }) -- [Player] = { [acción] = os.clock() }
+
 request.OnServerInvoke = function(player, action, arg)
 	local fn = actions[action]
 	if not fn then
 		return { error = "Acción no válida" }
 	end
+	local record = lastCall[player]
+	if not record then
+		record = {}
+		lastCall[player] = record
+	end
+	local now = os.clock()
+	if record[action] and now - record[action] < 0.4 then
+		return { error = "Más despacio, inténtalo de nuevo" }
+	end
+	record[action] = now
 	local ok, result = pcall(fn, player, arg)
 	if not ok then
 		warn("[Rooms]", action, result)

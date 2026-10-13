@@ -8,6 +8,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
+local RateLimit = require(script.Parent.RateLimit)
 local WeaponRig = require(script.Parent.WeaponRig)
 
 local states = {} -- [Player] = { pistol, primary, current, reloading, lastShot, token }
@@ -331,9 +332,9 @@ function Weapons.start()
 	end)
 
 	Remotes.Fire.OnServerEvent:Connect(onFire)
-	Remotes.Reload.OnServerEvent:Connect(startReload)
-	Remotes.Switch.OnServerEvent:Connect(onSwitch)
-	Remotes.Sync.OnServerEvent:Connect(sendAmmo)
+	Remotes.Reload.OnServerEvent:Connect(RateLimit.wrap("Reload", 0.25, startReload))
+	Remotes.Switch.OnServerEvent:Connect(RateLimit.wrap("Switch", 0.15, onSwitch))
+	Remotes.Sync.OnServerEvent:Connect(RateLimit.wrap("Sync", 0.25, sendAmmo))
 end
 
 return Weapons

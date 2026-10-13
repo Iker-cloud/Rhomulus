@@ -26,6 +26,7 @@ local WHITE = Color3.fromRGB(245, 245, 245)
 
 local PANEL_W, PANEL_H = 1180, 700
 local WELCOME_SECONDS = 30 -- la bienvenida se cierra sola pasado este tiempo
+local COMBAT_DISTANCE = 30 -- con un zombie vivo más cerca que esto la ayuda no se abre y, si estaba abierta, se cierra sola
 
 local HelpPanel = {}
 
@@ -192,7 +193,7 @@ function HelpPanel.start()
 
 	label(panel, "CÓMO JUGAR", 32, 16, 360, 56, 42, GOLD, BOLD)
 	box(panel, 0, 86, PANEL_W, 2, GOLD)
-	label(panel, "K o clic fuera para cerrar  ·  La partida sigue mientras lees", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
+	label(panel, "K o clic fuera para cerrar  ·  Se cierra sola si hay zombies cerca", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
 	label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
 
 	local holder = Instance.new("Frame")
@@ -337,12 +338,53 @@ function HelpPanel.start()
 		end
 	end
 
+	-- Aviso breve en el centro de abajo ("Ayuda cerrada: hay zombies cerca")
+	local notice = label(gui, "", 0, 0, 640, 36, 24, GOLD, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
+	notice.AnchorPoint = Vector2.new(0.5, 1)
+	notice.Position = UDim2.new(0.5, 0, 1, -64)
+	notice.TextStrokeTransparency = 0.4
+	notice.TextTransparency = 1
+	local noticeToken = 0
+	local function showNotice(text)
+		noticeToken += 1
+		local token = noticeToken
+		notice.Text = text
+		notice.TextTransparency = 0
+		task.delay(2.2, function()
+			if noticeToken == token then
+				TweenService:Create(notice, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
+			end
+		end)
+	end
+
+	-- ¿Hay un zombie vivo cerca? (la ayuda no debe tapar la pantalla en plena horda)
+	local function zombieNear()
+		local zombies = workspace:FindFirstChild("Zombies")
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not (zombies and root) then
+			return false
+		end
+		for _, model in zombies:GetChildren() do
+			local zombieRoot = model:FindFirstChild("HumanoidRootPart")
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if zombieRoot and humanoid and humanoid.Health > 0 and (zombieRoot.Position - root.Position).Magnitude <= COMBAT_DISTANCE then
+				return true
+			end
+		end
+		return false
+	end
+
 	local function setPanel(open)
 		if panelOpen == open then
 			return
 		end
 		if open and player:GetAttribute("UiOpen") then
 			return -- otra ventana (la tienda) ya tiene el ratón
+		end
+		if open and zombieNear() then
+			showNotice("Hay zombies cerca: la ayuda se abre cuando estés a salvo")
+			return
 		end
 		panelOpen = open
 		dim.Visible = open
@@ -384,6 +426,40 @@ function HelpPanel.start()
 			setWelcome(false)
 		end
 	end)
+
+	-- Con el panel abierto: se cierra solo si se acercan zombies o si el jugador recibe daño
+	task.spawn(function()
+		while true do
+			task.wait(0.4)
+			if panelOpen and zombieNear() then
+				setPanel(false)
+				showNotice("Ayuda cerrada: hay zombies cerca")
+			end
+		end
+	end)
+	local healthConnection = nil
+	local function watchHealth(character)
+		if healthConnection then
+			healthConnection:Disconnect()
+			healthConnection = nil
+		end
+		local humanoid = character:WaitForChild("Humanoid", 10)
+		if not humanoid then
+			return
+		end
+		local lastHealth = humanoid.Health
+		healthConnection = humanoid.HealthChanged:Connect(function(health)
+			if health < lastHealth and panelOpen then
+				setPanel(false)
+				showNotice("Ayuda cerrada: te han herido")
+			end
+			lastHealth = health
+		end)
+	end
+	player.CharacterAdded:Connect(watchHealth)
+	if player.Character then
+		task.spawn(watchHealth, player.Character)
+	end
 
 	-- Bienvenida: la primera vez que llega al lobby (se espera a que el servidor diga si ya la vio)
 	local function refreshWelcome()

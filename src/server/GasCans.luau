@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Director = require(script.Parent.Director)
 local PlayerState = require(script.Parent.PlayerState)
+local RateLimit = require(script.Parent.RateLimit)
 local Points = require(script.Parent.Points)
 
 local GasCans = {}
@@ -173,7 +174,7 @@ function GasCans.init(gas)
 		return
 	end
 	globalsConnected = true
-	Remotes.Drop.OnServerEvent:Connect(drop)
+	Remotes.Drop.OnServerEvent:Connect(RateLimit.wrap("DropGas", 0.3, drop))
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state ~= "Normal" then
 			drop(player)

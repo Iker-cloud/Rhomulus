@@ -12,6 +12,7 @@ local PropModel = require(script.Parent.PropModel)
 local Weapons = require(script.Parent.Weapons)
 local Items = require(script.Parent.Items)
 local Difficulty = require(script.Parent.Difficulty)
+local RateLimit = require(script.Parent.RateLimit)
 local CajaMisteriosa = require(script.Parent.ZombieData.CajaMisteriosa)
 local WeaponModel = require(script.Parent.WeaponModel)
 local RifleAsalto = require(script.Parent.ZombieData.RifleAsalto)
@@ -321,7 +322,7 @@ function WeaponBox.init(refs)
 	stations = refs.ammoStations
 	if not buyConnected then
 		buyConnected = true
-		Remotes.Buy.OnServerEvent:Connect(onBuy)
+		Remotes.Buy.OnServerEvent:Connect(RateLimit.wrap("Buy", 0.25, onBuy))
 	end
 	for _, station in refs.ammoStations do
 		station.prompt.ActionText = "Suministros"

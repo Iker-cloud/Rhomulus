@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local RateLimit = require(script.Parent.RateLimit)
 
 local HelpState = {}
 
@@ -46,6 +47,9 @@ function HelpState.start()
 
 	-- El cliente avisa al cerrar la bienvenida
 	Remotes.HelpSeen.OnServerEvent:Connect(function(player)
+		if not RateLimit.check(player, "HelpSeen", 1) then
+			return
+		end
 		if player:GetAttribute("HelpSeen") then
 			return
 		end

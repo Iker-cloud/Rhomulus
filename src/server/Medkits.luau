@@ -11,6 +11,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
 local Items = require(script.Parent.Items)
 local Difficulty = require(script.Parent.Difficulty)
+local RateLimit = require(script.Parent.RateLimit)
 local Points = require(script.Parent.Points)
 
 local Medkits = {}
@@ -117,7 +118,7 @@ function Medkits.init(list)
 
 	if not globalsConnected then
 		globalsConnected = true
-		Remotes.UseMedkit.OnServerEvent:Connect(useMedkit)
+		Remotes.UseMedkit.OnServerEvent:Connect(RateLimit.wrap("UseMedkit", 0.3, useMedkit))
 		Players.PlayerRemoving:Connect(function(player)
 			healing[player] = nil
 		end)

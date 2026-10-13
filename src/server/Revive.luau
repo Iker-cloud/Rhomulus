@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local PlayerState = require(script.Parent.PlayerState)
+local RateLimit = require(script.Parent.RateLimit)
 local SkillCheck = require(script.Parent.SkillCheck)
 local Points = require(script.Parent.Points)
 
@@ -321,10 +322,13 @@ function Revive.start()
 		updatePrompts(player)
 	end)
 
-	Remotes.Drop.OnServerEvent:Connect(drop)
+	Remotes.Drop.OnServerEvent:Connect(RateLimit.wrap("DropCarry", 0.3, drop))
 
 	-- Pulsación de la prueba de acción: el servidor decide con la hora que dice el cliente (ya limitada por SkillCheck.judge)
 	Remotes.SkillCheckPress.OnServerEvent:Connect(function(helper, id, pressTime)
+		if not RateLimit.check(helper, "SkillCheckPress", 0.1) then
+			return
+		end
 		local session = sessions[helper]
 		local check = session and session.check
 		if not session then

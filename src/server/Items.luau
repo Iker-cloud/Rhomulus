@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
+local RateLimit = require(script.Parent.RateLimit)
 local ItemModel = require(script.Parent.ItemModel)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
@@ -458,7 +459,7 @@ function Items.use(player, id, direction)
 end
 
 function Items.start()
-	Remotes.UseItem.OnServerEvent:Connect(Items.use)
+	Remotes.UseItem.OnServerEvent:Connect(RateLimit.wrap("UseItem", 0.2, Items.use))
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state == "Dead" then
 			Items.clear(player)

@@ -12,6 +12,7 @@ local Atmosphere = require(script.Parent.Atmosphere)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
 local Difficulty = require(script.Parent.Difficulty)
+local RateLimit = require(script.Parent.RateLimit)
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Dummies = require(script.Parent.Dummies)
 local GasCans = require(script.Parent.GasCans)
@@ -561,6 +562,9 @@ function GameState.start()
 	end
 
 	Remotes.Ready.OnServerEvent:Connect(function(player)
+		if not RateLimit.check(player, "Ready", 0.5) then
+			return
+		end
 		if stage == "Lobby" then
 			player:SetAttribute("Ready", true)
 		end
