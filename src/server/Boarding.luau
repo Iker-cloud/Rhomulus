@@ -119,39 +119,21 @@ local function seatPlayer(player, def)
 	for _, key in { "BoardStart", "BoardFrom", "BoardSide", "BoardSeat" } do
 		character:SetAttribute(key, nil)
 	end
-	root.Anchored = false
+	-- Se sienta a mano: anclado sobre el asiento y con la animación de sentado. No se usa Seat:Sit porque suelda el personaje a la
+	-- furgoneta y, al irse ella (la mueve cada cliente), la cámara se quedaba atrás. Cada cliente lleva al pasajero pegado a su asiento
+	-- (client/VanAnimator.followPassengers, con el atributo VanSeat).
 	humanoid.JumpPower = 0
 	humanoid.JumpHeight = 0
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	character:SetAttribute("VanSeat", seat.Name)
+	root.Anchored = true
+	root.CFrame = seat.CFrame * CFrame.new(0, seat.Size.Y / 2 + VanLayout.SitHeight, 0)
 	player:SetAttribute("Boarded", true)
-	pcall(function()
-		seat:Sit(humanoid)
-	end)
-	task.delay(0.3, function()
-		-- Si el asiento no lo sentó, se coloca a mano soldado al asiento
-		if humanoid.Parent and root.Parent and humanoid.SeatPart ~= seat then
-			root.CFrame = seat.CFrame * CFrame.new(0, seat.Size.Y / 2 + 1.6, 0)
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = seat
-			weld.Part1 = root
-			weld.Parent = root
-		end
-	end)
 
 	local sit = loadTrack(humanoid, A.Sit, Enum.AnimationPriority.Action, true)
 	if sit then
 		sit:Play(0.2)
 	end
-	-- Nadie se baja a medio viaje: si lo sacan del asiento, vuelve a sentarse
-	humanoid:GetPropertyChangedSignal("SeatPart"):Connect(function()
-		if humanoid.SeatPart == nil and player:GetAttribute("Boarded") and seat.Parent then
-			task.defer(function()
-				if humanoid.Parent and humanoid.Health > 0 then
-					seat:Sit(humanoid)
-				end
-			end)
-		end
-	end)
 end
 
 -- Empieza a subir `player` por la puerta de `side`

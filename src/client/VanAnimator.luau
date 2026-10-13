@@ -8,6 +8,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
 local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -205,6 +206,25 @@ local function departurePose(t)
 	return 0, z, math.pi, 0, 0.035 * math.exp(-1.2 * t3), TURN_END_SPEED + AWAY_ACCEL * t3
 end
 
+-- Los sobrevivientes sentados se van con la furgoneta. El servidor los deja anclados en su asiento (atributo VanSeat = nombre del
+-- asiento; no van soldados a la furgoneta porque la mueve cada cliente con PivotTo y el servidor la devolvía a su sitio con ellos
+-- dentro: la cámara veía irse a la furgoneta). Aquí, cada cuadro y antes de que la cámara siga al personaje, se coloca a cada pasajero
+-- sobre su asiento, también en primera persona.
+local function followPassengers(state)
+	local model = state.model
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local seatName = character and character:GetAttribute("VanSeat")
+		local root = seatName and character:FindFirstChild("HumanoidRootPart")
+		local seat = seatName and model:FindFirstChild(seatName)
+		if root and seat then
+			local target = seat.CFrame * CFrame.new(0, seat.Size.Y / 2 + VanLayout.SitHeight, 0)
+			root.CFrame = target
+			root.AssemblyLinearVelocity = Vector3.zero
+		end
+	end
+end
+
 local function updateDoors(state, dt)
 	local model = state.model
 	if not (state.motorR and state.motorL) then
@@ -356,6 +376,15 @@ function VanAnimator.start()
 	RunService.PreSimulation:Connect(function(dt)
 		for _, state in vans do
 			update(state, dt)
+		end
+	end)
+
+	-- Después de mover la furgoneta y antes de que la cámara siga al personaje
+	RunService:BindToRenderStep("VanPassengers", Enum.RenderPriority.Character.Value + 1, function()
+		for _, state in vans do
+			if state.departed then
+				followPassengers(state)
+			end
 		end
 	end)
 end

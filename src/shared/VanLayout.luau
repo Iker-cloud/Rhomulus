@@ -11,6 +11,7 @@ VanLayout.DoorY = 4.68 -- centro de la puerta en altura
 VanLayout.DoorSlide = 2.2 -- cuánto se desliza hacia el frente al abrirse
 VanLayout.SeatX = 1.95 -- centro de los bancos (x = ±SeatX)
 VanLayout.BenchHeight = 0.9 -- altura del banco sobre el suelo
+VanLayout.SitHeight = 1.49 -- cuánto por encima de la cara de arriba del asiento queda la raíz del personaje sentado (medido con Seat:Sit en R15)
 -- Fases del gesto de subir (fracciones de Config.Boarding.Duration): llegar a la puerta, girarse, trepar al suelo de la caja, caminar
 -- hasta el asiento. La última fracción hasta 1 es el giro para sentarse.
 VanLayout.Phases = { 0.27, 0.33, 0.58, 0.88 }
