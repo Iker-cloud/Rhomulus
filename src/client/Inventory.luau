@@ -9,13 +9,16 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ItemUse = require(script.Parent.ItemUse)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(246, 196, 70)
 local DARK = Color3.fromRGB(20, 20, 22)
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local SLOT = 64
+local SLOT = 64 -- tamaño de cada ranura en PC; en celular se achican (ver layout en Inventory.start)
 local GAP = 6
+local TOUCH_SLOT = 42
+local TOUCH_GAP = 4
 
 local Inventory = {}
 
@@ -111,8 +114,10 @@ local function buildSlot(parent, index, id, label)
 	icon.Size = UDim2.fromOffset(40, 32)
 	icon.Position = UDim2.new(0.5, -20, 0, 14)
 	icon.Parent = slot
+	local iconScale = Instance.new("UIScale")
+	iconScale.Parent = icon
 	local name = text(slot, label, UDim2.new(1, 0, 0, 14), UDim2.new(0, 0, 1, -16), 12, Color3.fromRGB(215, 210, 200))
-	return { frame = slot, stroke = stroke, number = number, count = count, icon = icon, name = name, id = id }
+	return { frame = slot, stroke = stroke, number = number, count = count, icon = icon, iconScale = iconScale, name = name, id = id }
 end
 
 function Inventory.start()
@@ -156,13 +161,58 @@ function Inventory.start()
 		end)
 	end
 
+	-- Distribución: en PC la barra de 7 ranuras va abajo a la derecha. En celular va compacta y centrada abajo, y solo muestra
+	-- las dos armas y los objetos que se tienen (o el que está en la mano).
+	local layoutKey = nil
+	local function layout()
+		local touch = Controls.isTouch()
+		local itemInHand = player:GetAttribute("ItemReady")
+		local key = tostring(touch) .. tostring(itemInHand)
+		for i = 3, #slots do
+			key ..= (player:GetAttribute("Item_" .. slots[i].id) or 0) > 0 and "1" or "0"
+		end
+		if key == layoutKey then
+			return
+		end
+		layoutKey = key
+
+		local size = touch and TOUCH_SLOT or SLOT
+		local gap = touch and TOUCH_GAP or GAP
+		local x = 0
+		for i, s in slots do
+			local visible = not touch or i <= 2 or (player:GetAttribute("Item_" .. s.id) or 0) > 0 or itemInHand == s.id
+			s.frame.Visible = visible
+			s.frame.Size = UDim2.fromOffset(size, size)
+			s.frame.Position = UDim2.fromOffset(x, 0)
+			if visible then
+				x += size + gap
+			end
+			s.name.Visible = not touch
+			s.number.TextSize = touch and 12 or 15
+			s.number.Position = touch and UDim2.fromOffset(3, 0) or UDim2.fromOffset(5, 2)
+			s.count.TextSize = touch and 14 or 18
+			s.count.Position = touch and UDim2.new(1, -31, 1, -17) or UDim2.new(1, -33, 0, 1)
+			s.icon.AnchorPoint = touch and Vector2.new(0.5, 0.5) or Vector2.zero
+			s.icon.Position = touch and UDim2.new(0.5, 0, 0.5, 1) or UDim2.new(0.5, -20, 0, 14)
+			s.iconScale.Scale = touch and 0.72 or 1
+		end
+		bar.Size = UDim2.fromOffset(math.max(x - gap, 0), size)
+		bar.AnchorPoint = touch and Vector2.new(0.5, 1) or Vector2.new(1, 1)
+		bar.Position = touch and UDim2.new(0.5, 0, 1, -10) or UDim2.new(1, -20, 1, -20)
+	end
+
 	local drawnPrimary = nil
 	RunService.RenderStepped:Connect(function()
+		layout()
 		local weaponKey = player:GetAttribute("WeaponKey")
 		local primaryKey = player:GetAttribute("PrimaryKey")
 		if primaryKey ~= drawnPrimary then
 			drawnPrimary = primaryKey
-			slots[1].icon:ClearAllChildren()
+			for _, child in slots[1].icon:GetChildren() do
+				if not child:IsA("UIScale") then
+					child:Destroy()
+				end
+			end
 			if primaryKey then
 				ICONS.Rifle(slots[1].icon)
 			end
