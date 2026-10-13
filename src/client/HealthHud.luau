@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local BLOOD = Color3.fromRGB(205, 78, 0)
@@ -35,6 +36,7 @@ function HealthHud.start()
 	root.Position = basePosition
 	root.BackgroundTransparency = 1
 	root.Parent = gui
+	UiFit.scale(root)
 
 	-- Émbolo
 	rect(root, UDim2.fromOffset(8, 44), UDim2.fromOffset(0, 3), GLASS)

@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Shooting = require(script.Parent.Shooting)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 
@@ -19,10 +20,19 @@ local function wanted()
 	if not held or Shooting.isReloading() then
 		return false
 	end
-	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+	if Controls.isFiring() or Controls.isAiming() then
 		return false
 	end
 	return (player:GetAttribute("State") or "Normal") == "Normal" and player:GetAttribute("Carrying") == nil
+end
+
+-- El botón de correr del celular se alterna
+function Sprint.setHeld(on)
+	held = on
+end
+
+function Sprint.isHeld()
+	return held
 end
 
 local function isShift(input)

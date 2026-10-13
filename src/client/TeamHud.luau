@@ -8,10 +8,39 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DownedHud = require(script.Parent.DownedHud)
+local Controls = require(script.Parent.Controls)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local TeamHud = {}
+
+local selfReviveStart = nil -- cuándo empezó a mantener H (o el botón de levantarse en celular)
+
+-- Levantarse solo (1 jugador): mantener H unos segundos
+local function canSelfRevive()
+	return (player:GetAttribute("State") or "Normal") == "Downed"
+		and #Players:GetPlayers() == 1
+		and (player:GetAttribute("SelfRevives") or 0) > 0
+end
+
+function TeamHud.canSelfRevive()
+	return canSelfRevive()
+end
+
+function TeamHud.beginSelfRevive()
+	if canSelfRevive() then
+		selfReviveStart = os.clock()
+	end
+end
+
+function TeamHud.endSelfRevive()
+	selfReviveStart = nil
+end
+
+function TeamHud.drop()
+	Remotes.Drop:FireServer()
+end
 
 local function bleedRemaining(target)
 	local bleedEnd = target:GetAttribute("BleedEnd")
@@ -91,6 +120,7 @@ function TeamHud.start()
 	panel.Size = UDim2.fromOffset(220, 0)
 	panel.AutomaticSize = Enum.AutomaticSize.Y
 	panel.Parent = gui
+	UiFit.scale(panel)
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = panel
@@ -116,27 +146,19 @@ function TeamHud.start()
 		end
 	end)
 
-	-- Levantarse solo (1 jugador): mantener H unos segundos
-	local selfReviveStart = nil
-	local function canSelfRevive()
-		return (player:GetAttribute("State") or "Normal") == "Downed"
-			and #Players:GetPlayers() == 1
-			and (player:GetAttribute("SelfRevives") or 0) > 0
-	end
-
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
 			return
 		end
 		if input.KeyCode == Enum.KeyCode.G then
-			Remotes.Drop:FireServer()
-		elseif input.KeyCode == Enum.KeyCode.H and canSelfRevive() then
-			selfReviveStart = os.clock()
+			TeamHud.drop()
+		elseif input.KeyCode == Enum.KeyCode.H then
+			TeamHud.beginSelfRevive()
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.H then
-			selfReviveStart = nil
+			TeamHud.endSelfRevive()
 		end
 	end)
 	RunService.Heartbeat:Connect(function()
@@ -208,7 +230,7 @@ function TeamHud.start()
 				if selfReviveStart then
 					hintText = `Levantándote… {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
 				else
-					hintText = "Mantén H para levantarte"
+					hintText = Controls.isTouch() and "Mantén el botón para levantarte" or "Mantén H para levantarte"
 				end
 			end
 			local remaining = bleedRemaining(player)
@@ -217,7 +239,8 @@ function TeamHud.start()
 		elseif carrying then
 			downedCard.hide()
 			local item = player:GetAttribute("CarryingItem") -- una garrafa (server/GasCans) en vez de un compañero
-			notice.Text = item and `Cargando {item} — G para soltar` or `Cargando a {carrying} — G para soltar`
+			local dropKey = Controls.isTouch() and "el botón" or "G"
+				notice.Text = item and `Cargando {item} — {dropKey} para soltar` or `Cargando a {carrying} — {dropKey} para soltar`
 		else
 			downedCard.hide()
 			notice.Text = ""

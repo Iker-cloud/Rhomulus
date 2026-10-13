@@ -310,7 +310,14 @@ function ResultHud.start()
 
 		-- Animación de entrada: aparece creciendo, las filas se encienden una a una y las gotas bajan
 		TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 0 }):Play()
-		TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		-- La tarjeta llega a tamaño completo, o al que quepa en pantallas bajas (celular)
+		task.spawn(function()
+			task.wait()
+			local view = gui.AbsoluteSize
+			local height = math.max(card.AbsoluteSize.Y / scale.Scale, 1)
+			local target = math.clamp(math.min(view.X * 0.96 / 620, view.Y * 0.94 / height), 0.4, 1)
+			TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = target }):Play()
+		end)
 		for i, row in rows do
 			task.delay(0.4 + 0.12 * i, function()
 				if row.Parent then

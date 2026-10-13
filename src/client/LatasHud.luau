@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local YELLOW = Color3.fromRGB(255, 196, 30)
@@ -30,6 +31,7 @@ function LatasHud.start()
 	frame.BackgroundColor3 = YELLOW
 	frame.BorderSizePixel = 0
 	frame.Parent = gui
+	UiFit.scale(frame)
 
 	local stripes = {}
 	local count = 9 -- máx. 20 puntos por degradado (2 por franja)

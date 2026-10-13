@@ -16,6 +16,12 @@
         }
       }
     },
+    "StarterGui": {
+      "$ignoreUnknownInstances": true,
+      "$properties": {
+        "ScreenOrientation": "LandscapeSensor"
+      }
+    },
     "StarterPlayer": {
       "$properties": {
         "EnableMouseLockOption": false

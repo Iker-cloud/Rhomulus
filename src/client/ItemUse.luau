@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local MedkitHud = require(script.Parent.MedkitHud)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 local I = Config.Items
@@ -27,6 +28,14 @@ local HINTS = {
 	Flare = "MANTÉN EL CLIC para cargar el tiro · SUELTA para disparar la bengala · CLIC DERECHO cancela",
 	Bandage = "CLIC para vendarte (+%d de vida)",
 	Medkit = "CLIC para curarte, o para curar al compañero que miras",
+}
+-- En celular el botón de disparo hace de clic
+local TOUCH_HINTS = {
+	Grenade = "MANTÉN el botón para cargar la fuerza · SUELTA para lanzar",
+	Molotov = "MANTÉN el botón para cargar la fuerza · SUELTA para lanzar",
+	Flare = "MANTÉN el botón para cargar el tiro · SUELTA para disparar",
+	Bandage = "TOCA el botón para vendarte (+%d de vida)",
+	Medkit = "TOCA el botón para curarte o curar al compañero que miras",
 }
 
 local ItemUse = {}
@@ -243,6 +252,50 @@ local function stopCharging(send)
 	charging = false
 end
 
+-- Clic principal con un objeto en la mano (clic del ratón o botón de disparo del celular). Devuelve si había objeto.
+function ItemUse.press()
+	local id = player:GetAttribute("ItemReady")
+	if not id or player:GetAttribute("UiOpen") then
+		return false
+	end
+	local char = character()
+	if char and char:GetAttribute("ItemId") then
+		return true -- todavía hace el gesto del anterior
+	end
+	if I[id].Throwable then
+		charging = true
+		localChargeStart = workspace:GetServerTimeNow()
+		Remotes.ChargeItem:FireServer(true)
+	elseif id == "Bandage" then
+		Remotes.UseItem:FireServer("Bandage")
+	elseif id == "Medkit" then
+		Remotes.UseMedkit:FireServer(MedkitHud.pickTarget())
+	end
+	return true
+end
+
+-- Se suelta el clic: lanza lo que se estaba cargando
+function ItemUse.release()
+	if charging then
+		charging = false
+		local id = player:GetAttribute("ItemReady")
+		if id then
+			Remotes.UseItem:FireServer(id, aimDirection())
+		end
+	end
+end
+
+-- Cancela la carga (clic derecho o botón de cancelar)
+function ItemUse.cancel()
+	if charging then
+		stopCharging(true)
+	end
+end
+
+function ItemUse.isCharging()
+	return charging
+end
+
 function ItemUse.start()
 	ui = buildUi()
 
@@ -252,21 +305,9 @@ function ItemUse.start()
 		end
 		local id = player:GetAttribute("ItemReady")
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and id then
-			local char = character()
-			if char and char:GetAttribute("ItemId") then
-				return -- todavía hace el gesto del anterior
-			end
-			if I[id].Throwable then
-				charging = true
-				localChargeStart = workspace:GetServerTimeNow()
-				Remotes.ChargeItem:FireServer(true)
-			elseif id == "Bandage" then
-				Remotes.UseItem:FireServer("Bandage")
-			elseif id == "Medkit" then
-				Remotes.UseMedkit:FireServer(MedkitHud.pickTarget())
-			end
+			ItemUse.press()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton2 and charging then
-			stopCharging(true) -- cancela la carga
+			ItemUse.cancel()
 		else
 			-- La tecla de cada objeto lo saca o lo guarda
 			for _, itemId in I.Order do
@@ -278,12 +319,8 @@ function ItemUse.start()
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and charging then
-			charging = false
-			local id = player:GetAttribute("ItemReady")
-			if id then
-				Remotes.UseItem:FireServer(id, aimDirection())
-			end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			ItemUse.release()
 		end
 	end)
 
@@ -315,11 +352,17 @@ function ItemUse.start()
 		-- Ayuda del objeto en la mano
 		local healing = player:GetAttribute("HealingEnd") ~= nil
 		if id and HINTS[id] and not busy and not healing then
-			local text = HINTS[id]
+			local text = (Controls.isTouch() and TOUCH_HINTS or HINTS)[id]
 			if id == "Bandage" then
 				text = string.format(text, I.Bandage.Heal)
 			end
-			ui.hintText.Text = text .. `  ·  [{I[id].KeyLabel}] guardar`
+			ui.hintText.Text = Controls.isTouch() and text or (text .. `  ·  [{I[id].KeyLabel}] guardar`)
+			-- en celular el cartel es más estrecho (a los lados están los botones) y sube sobre el inventario
+			local touch = Controls.isTouch()
+			ui.hint.Position = touch and UDim2.new(0.5, 0, 1, -158) or UDim2.new(0.5, 0, 1, -122)
+			ui.hint.Size = touch and UDim2.new(0.42, 0, 0, 40) or UDim2.fromOffset(560, 28)
+			ui.hintText.TextSize = touch and 13 or 16
+			ui.hintText.TextWrapped = touch
 			ui.hint.Visible = not charging
 		else
 			ui.hint.Visible = false

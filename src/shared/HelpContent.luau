@@ -1,6 +1,6 @@
 -- Textos de la ayuda "Cómo jugar": los usan el menú (src-menu/client/Menu.client) y la partida (client/HelpPanel), así que
 -- se editan aquí una sola vez. Las dificultades no están aquí: salen de shared/Difficulties.
-return {
+local Content = {
 	Tabs = { "OBJETIVO", "CONTROLES", "CONSEJOS", "DIFICULTADES" },
 
 	Headline = "SOBREVIVE\nJUNTO A TU EQUIPO",
@@ -57,3 +57,50 @@ return {
 		},
 	},
 }
+
+-- Versión para pantallas táctiles: reemplaza solo lo que habla de teclas y ratón
+Content.Touch = {
+	Steps = table.clone(Content.Steps),
+	Tips = table.clone(Content.Tips),
+	Controls = {
+		{ "COMBATE", {
+			{ "FUEGO", "DISPARAR" }, { "APUNTAR", "ACERCAR LA MIRA" }, { "RECARGAR", "RECARGAR" },
+			{ "CORRER", "ALTERNA LA CARRERA" }, { "ARRASTRA", "MIRAR A TU ALREDEDOR" }, { "VISTA", "CAMBIAR CÁMARA" },
+		} },
+		{ "EQUIPO", {
+			{ "E", "INTERACTUAR" }, { "F", "CARGAR AL CAÍDO" }, { "SOLTAR", "SOLTAR AL CARGADO" },
+			{ "TOCA", "ACIERTA AL REVIVIR" }, { "LEVANTAR", "LEVANTARSE SOLO" }, { "LISTO", "LISTO EN EL LOBBY" },
+		} },
+		{ "OBJETOS", {
+			{ "BARRA", "TOCA UN OBJETO" }, { "FUEGO", "USARLO O LANZARLO" }, { "CANCELAR", "ANULAR EL LANZAMIENTO" },
+			{ "?", "ESTA AYUDA" }, { "AJUSTES", "SENSIBILIDAD" }, { "PANEL", "TOCA PARA VOTAR" },
+		} },
+	},
+	ControlsNote = "LEVANTAR solo sale jugando solo (una vez por zona). Los botones E y F aparecen cuando hay algo cerca.",
+	ControlsSide = "PENSADO PARA PANTALLA TÁCTIL",
+	Welcome = {
+		Title = "BIENVENIDO A RHOMULUS",
+		Lines = {
+			"Cruza el barrio con tu equipo hasta el estadio y aguanta hasta que llegue la furgoneta.",
+			"Arrastra el dedo para mirar. FUEGO dispara, APUNTAR acerca la mira y RECARGAR recarga.",
+			"El botón E revive, abre y compra; F carga a un caído. Toca un objeto de la barra para sacarlo.",
+			"Cuando todos estén listos, toquen LISTO.",
+		},
+	},
+}
+Content.Touch.Steps[1] = { "VOTEN Y PREPÁRENSE", "Voten mapa y dificultad; practiquen y toquen LISTO para empezar." }
+Content.Touch.Tips[2] = { "REVIVAN RÁPIDO", "Mantén el botón E junto al caído y toca el botón al acertar. Aguanta unos 30 s antes de morir." }
+
+-- Los textos que corresponden al dispositivo: HelpContent.get(true) en celular, HelpContent.get(false) en PC
+function Content.get(touch)
+	if not touch then
+		return Content
+	end
+	local merged = table.clone(Content)
+	for key, value in Content.Touch do
+		merged[key] = value
+	end
+	return merged
+end
+
+return Content

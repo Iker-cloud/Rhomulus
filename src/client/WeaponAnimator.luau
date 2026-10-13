@@ -9,12 +9,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ArmIK = require(script.Parent.ArmIK)
 local ItemPoses = require(script.Parent.ItemPoses)
+local Controls = require(script.Parent.Controls)
 
 local Hold = Config.WeaponHold
 local localPlayer = Players.LocalPlayer
@@ -203,7 +203,7 @@ local function update(rig, dt)
 	if isLocal then
 		local look = (workspace.CurrentCamera.CFrame * cameraOffset:Inverse()).LookVector
 		pitchTarget = math.asin(math.clamp(look.Y, -1, 1))
-		aiming = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+		aiming = Controls.isAiming()
 	else
 		pitchTarget = character:GetAttribute("AimPitch") or 0
 		aiming = character:GetAttribute("Aiming") == true
@@ -447,7 +447,7 @@ function WeaponAnimator.start()
 			return
 		end
 		local pitch = math.asin(math.clamp(WeaponAnimator.cameraCFrame().LookVector.Y, -1, 1))
-		local aiming = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+		local aiming = Controls.isAiming()
 		if math.abs(pitch - lastPitch) > AIM_SEND_DELTA or aiming ~= lastAiming then
 			lastPitch, lastAiming, lastSend = pitch, aiming, now
 			Remotes.Aim:FireServer(pitch, aiming)

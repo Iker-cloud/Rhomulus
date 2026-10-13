@@ -91,6 +91,26 @@ function Shooting.isReloading()
 	return reloading
 end
 
+-- Acciones que comparten el ratón y los botones del celular (client/TouchControls)
+function Shooting.setFiring(on)
+	if not on then
+		firing = false
+	elseif not itemInHand() then
+		firing = true
+		fire()
+	end
+end
+
+function Shooting.reload()
+	if not itemInHand() then
+		Remotes.Reload:FireServer()
+	end
+end
+
+function Shooting.switchTo(newSlot)
+	switchTo(newSlot)
+end
+
 function Shooting.start()
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then
@@ -117,7 +137,7 @@ function Shooting.start()
 
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			firing = false
+			Shooting.setFiring(false)
 		end
 	end)
 

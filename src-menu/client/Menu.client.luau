@@ -9,6 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 
+-- Pantalla táctil sin ratón (celular o tableta): el lienzo se ajusta mejor a la pantalla y los botones son más altos
+local TOUCH = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -36,7 +39,7 @@ local function mapName(id)
 end
 
 local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Difficulties"))
-local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent"))
+local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent")).get(TOUCH)
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
 local roomState -- última foto de la sala en la que estamos (nil = ninguna)
@@ -110,7 +113,12 @@ uiScale.Parent = root
 local function fit()
 	local v = bg.AbsoluteSize
 	if v.X > 0 and v.Y > 0 then
-		uiScale.Scale = math.min(v.X / 1920, v.Y / 1080)
+		if TOUCH then
+			-- el contenido queda entre x 120 y 1800 e y 124 y 980: se recortan los márgenes vacíos para que todo salga más grande
+			uiScale.Scale = math.min(v.X / 1800, v.Y / 960)
+		else
+			uiScale.Scale = math.min(v.X / 1920, v.Y / 1080)
+		end
 	end
 end
 fit()
@@ -347,6 +355,7 @@ for i, item in items do
 	text(main, spaced(item[1], 0), ANTON, 94, Vector2.new(120, y + 57), { width = 1000 })
 	rule(main, 120, y + 112, 900)
 	local b = button(main, 40, y, 980, 112, item[2])
+	b.Name = "Item" .. i
 	b.MouseEnter:Connect(function()
 		arrow.Position = UDim2.fromOffset(52, y + 62)
 		arrow.TextTransparency = 0
@@ -407,7 +416,7 @@ buildHelpTab[1] = function(c)
 		local y = 322 + 104 * (i - 1)
 		text(c, string.format("%02d", i), OSW_BOLD, 40, Vector2.new(900, y + 28), { width = 70 })
 		text(c, step[1], ANTON, 48, Vector2.new(990, y + 28), { width = 800 })
-		text(c, step[2], OSW, 32, Vector2.new(990, y + 74), { width = 810 })
+		text(c, step[2], OSW, TOUCH and 38 or 32, Vector2.new(990, y + 74), { width = 810 })
 		if i < #STEPS then
 			rule(c, 900, y + 100, 900)
 		end
@@ -485,13 +494,14 @@ builders.help = function()
 		paintTabs(i)
 	end
 	local x = 802
+	local tabY, tabH = TOUCH and 180 or 190, TOUCH and 84 or 62 -- en celular las pestañas son más altas para tocarlas
 	for i, tab in HELP_TABS do
 		local w = tab[2]
-		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(x, 190), Size = UDim2.fromOffset(w, 62), BorderSizePixel = 0 }, s)
+		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(x, tabY), Size = UDim2.fromOffset(w, tabH), BorderSizePixel = 0 }, s)
 		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
-		local label = text(s, tab[1], ANTON, 40, Vector2.new(x + w / 2, 222),
+		local label = text(s, tab[1], ANTON, 40, Vector2.new(x + w / 2, tabY + tabH / 2),
 			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
-		button(s, x, 190, w, 62, function()
+		button(s, x, tabY, w, tabH, function()
 			showTab(i)
 		end)
 		tabs[i] = { box = box, label = label }
@@ -581,7 +591,8 @@ builders.create = function()
 
 	-- Dificultad (izquierda, bajo el código): cuatro casillas y la descripción de la elegida
 	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 714), { width = 500 })
-	local diffDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 810), { width = 700 })
+	local diffH = TOUCH and 66 or 56 -- casillas más altas en celular
+	local diffDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 748 + diffH + 6), { width = 700 })
 	diffDesc.AnchorPoint = Vector2.new(0, 0)
 	diffDesc.Size = UDim2.fromOffset(700, 48)
 	diffDesc.TextWrapped = true
@@ -599,11 +610,11 @@ builders.create = function()
 	for _, id in Difficulties.Order do
 		local w = 166
 		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(dx, 748),
-			Size = UDim2.fromOffset(w, 56), BorderSizePixel = 0 }, s)
+			Size = UDim2.fromOffset(w, diffH), BorderSizePixel = 0 }, s)
 		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
-		local label = text(s, Difficulties[id].Upper, ANTON, 38, Vector2.new(dx + w / 2, 776),
+		local label = text(s, Difficulties[id].Upper, ANTON, 38, Vector2.new(dx + w / 2, 748 + diffH / 2),
 			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
-		button(s, dx, 748, w, 56, function()
+		button(s, dx, 748, w, diffH, function()
 			st.difficulty = id
 			paintDifficulty()
 			task.spawn(function()
@@ -674,7 +685,7 @@ builders.join = function()
 		end
 		enterLabel.TextTransparency = (#t == 4) and 0 or 0.5
 	end)
-	button(s, 1445, 882, 355, 98, function()
+	local function submit()
 		if #joinBox.Text == 4 and not busy then
 			busy = true
 			caption.Text = spaced("BUSCANDO LA SALA…", 3)
@@ -687,7 +698,21 @@ builders.join = function()
 				show("joined")
 			end
 		end
-	end)
+	end
+	button(s, 1445, 882, 355, 98, submit)
+	if TOUCH then
+		-- El teclado de la pantalla tapa el botón ENTRAR: con las 4 letras se cierra solo, y "ir" en el teclado también entra
+		joinBox:GetPropertyChangedSignal("Text"):Connect(function()
+			if #joinBox.Text == 4 then
+				joinBox:ReleaseFocus()
+			end
+		end)
+		joinBox.FocusLost:Connect(function(enterPressed)
+			if enterPressed then
+				submit()
+			end
+		end)
+	end
 end
 
 builders.joined = function()
@@ -744,7 +769,7 @@ for _, l in layers do
 	TweenService:Create(l.label, slow, { TextTransparency = l.target }):Play()
 end
 
-local prompt = text(root, spaced("PRESIONA CUALQUIER TECLA", 4), OSW_BOLD, 38, Vector2.new(120, 947),
+local prompt = text(root, spaced(TOUCH and "TOCA LA PANTALLA" or "PRESIONA CUALQUIER TECLA", 4), OSW_BOLD, 38, Vector2.new(120, 947),
 	{ color = DARK, width = 1100, transparency = 1 })
 local titleRule = rule(root, 120, 886, 1680, false, 4)
 titleRule.BackgroundTransparency = 1

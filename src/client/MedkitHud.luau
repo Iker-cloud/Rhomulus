@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 local M = Config.Medkit
 local RED = Color3.fromRGB(226, 66, 54)
@@ -69,6 +70,7 @@ function MedkitHud.start()
 	badge.BorderSizePixel = 0
 	badge.Visible = false
 	badge.Parent = gui
+	UiFit.scale(badge)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = RED
 	stroke.Transparency = 0.3

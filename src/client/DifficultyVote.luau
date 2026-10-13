@@ -7,7 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Controls = require(script.Parent.Controls)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
 local OSWALD_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
@@ -16,6 +18,7 @@ local PALE = Color3.fromRGB(215, 210, 200)
 local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
 local ACTION = "DifficultyVoteKeys"
 local ROW_HEIGHT = 84
+local COMPACT_ROW_HEIGHT = 40 -- pantallas bajas: sin la descripción de cada dificultad
 
 local DifficultyVote = {}
 
@@ -42,22 +45,26 @@ function DifficultyVote.start()
 	gui.DisplayOrder = 35
 	gui.Parent = player:WaitForChild("PlayerGui")
 
+	local compact = UiFit.isShort()
+	local rowHeight = compact and COMPACT_ROW_HEIGHT or ROW_HEIGHT
+
 	-- Panel de votación (izquierda, centrado en vertical)
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0, 0.5)
-	panel.Position = UDim2.new(0, 20, 0.5, 60) -- bajo el aviso de la radio
-	panel.Size = UDim2.fromOffset(340, 64 + #Difficulties.Order * ROW_HEIGHT)
+	panel.Position = UDim2.new(0, 20, 0.5, compact and -30 or 60) -- bajo el aviso de la radio (en pantallas bajas más arriba: abajo está la jeringa)
+	panel.Size = UDim2.fromOffset(compact and 260 or 340, 64 + #Difficulties.Order * rowHeight)
 	panel.BackgroundColor3 = DARK
 	panel.BackgroundTransparency = 0.08
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
+	UiFit.scale(panel)
 	local panelStroke = Instance.new("UIStroke")
 	panelStroke.Color = Color3.fromRGB(246, 196, 70)
 	panelStroke.Thickness = 2
 	panelStroke.Parent = panel
 	label(panel, "DIFICULTAD", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Color3.fromRGB(246, 196, 70))
-	label(panel, "Pulsa 1 a 4 para votar", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
+	label(panel, Controls.isTouch() and "Toca una dificultad para votar" or "Pulsa 1 a 4 para votar", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
 
 	local rows = {}
 	for i, id in Difficulties.Order do
@@ -65,8 +72,8 @@ function DifficultyVote.start()
 		local row = Instance.new("TextButton")
 		row.AutoButtonColor = false
 		row.Text = ""
-		row.Position = UDim2.fromOffset(10, 64 + (i - 1) * ROW_HEIGHT)
-		row.Size = UDim2.new(1, -20, 0, ROW_HEIGHT - 6)
+		row.Position = UDim2.fromOffset(10, 64 + (i - 1) * rowHeight)
+		row.Size = UDim2.new(1, -20, 0, rowHeight - 6)
 		row.BackgroundColor3 = Color3.fromRGB(34, 34, 38)
 		row.BorderSizePixel = 0
 		row.Parent = panel
@@ -80,6 +87,7 @@ function DifficultyVote.start()
 		local count = label(row, "0", UDim2.fromOffset(40, 26), UDim2.new(1, -48, 0, 3), 22, Color3.new(1, 1, 1), Enum.TextXAlignment.Right)
 		local desc = label(row, d.Description, UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 30), 13, PALE, nil, OSWALD_LIGHT)
 		desc.TextWrapped = true
+		desc.Visible = not compact
 		row.Activated:Connect(function()
 			Remotes.VoteDifficulty:FireServer(id)
 		end)
