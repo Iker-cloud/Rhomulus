@@ -301,6 +301,20 @@ return {
 		AimSensitivity = 0.5, -- multiplicador de sensibilidad del mouse al apuntar
 	},
 
+	-- Calidad gráfica del cliente (client/Performance). Cada nivel solo toca cosas del cliente que cuestan en celular; el servidor y
+	-- los demás jugadores no lo notan. En AUTO el celular arranca en TouchDefault y baja un nivel si los FPS se quedan por debajo
+	-- de FpsBelow durante Seconds (nunca sube solo). El jugador puede fijar el nivel en AJUSTES.
+	Performance = {
+		Levels = {
+			{ Name = "ALTA", LampDistance = 110, FlashlightShadows = true, GlobalShadows = true },
+			{ Name = "MEDIA", LampDistance = 70, FlashlightShadows = false, GlobalShadows = true },
+			{ Name = "BAJA", LampDistance = 40, FlashlightShadows = false, GlobalShadows = false },
+		},
+		PcDefault = 1,
+		TouchDefault = 2,
+		AutoDegrade = { FpsBelow = 24, Seconds = 6, Cooldown = 15 },
+	},
+
 	-- Celular (client/TouchControls). La sensibilidad del jugador (client/Controls, ajustable en AJUSTES) multiplica el giro de la
 	-- cámara tanto al arrastrar el dedo como con el ratón.
 	Touch = {

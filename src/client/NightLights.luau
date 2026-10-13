@@ -6,11 +6,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Performance = require(script.Parent.Performance)
 
 local player = Players.LocalPlayer
 local A = Config.Atmosphere
 local DARK = Color3.fromRGB(45, 40, 35) -- foco apagado
-local CULL_DISTANCE = 110 -- los faroles más lejos que esto no gastan luz (en celular cada luz cuesta)
+-- los faroles más lejos que Performance.lampDistance() no gastan luz (en celular cada luz cuesta)
 
 local NightLights = {}
 
@@ -78,7 +79,7 @@ local function update()
 	local clock = os.clock()
 	local cameraPosition = workspace.CurrentCamera.CFrame.Position
 	for bulb, data in lamps do
-		local far = (bulb.Position - cameraPosition).Magnitude > CULL_DISTANCE
+		local far = (bulb.Position - cameraPosition).Magnitude > Performance.lampDistance()
 		if far ~= data.far then
 			data.far = far
 			data.light.Enabled = data.on and not far

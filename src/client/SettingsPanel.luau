@@ -1,4 +1,4 @@
--- Ajustes del jugador: sensibilidad de la cámara (ratón y dedo). Se abre con la tecla O o con el botón de engranaje del celular
+-- Ajustes del jugador: sensibilidad de la cámara (ratón y dedo), calidad gráfica y panel de rendimiento. Se abre con la tecla O o con el botón de engranaje del celular
 -- (client/TouchControls). Mientras está abierto el jugador tiene el atributo "UiOpen" (libera el ratón, igual que la tienda).
 -- Se recuerda mientras dura la sesión: el juego aún no guarda datos entre partidas.
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Controls = require(script.Parent.Controls)
+local Performance = require(script.Parent.Performance)
 
 local player = Players.LocalPlayer
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
@@ -67,7 +68,7 @@ function SettingsPanel.start()
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(360, 200)
+	panel.Size = UDim2.fromOffset(360, 340)
 	panel.BackgroundColor3 = DARK
 	panel.BackgroundTransparency = 0.05
 	panel.BorderSizePixel = 0
@@ -81,7 +82,7 @@ function SettingsPanel.start()
 	scale.Parent = panel
 	local function fit()
 		local viewport = workspace.CurrentCamera.ViewportSize
-		scale.Scale = math.clamp(math.min(viewport.Y / 260, viewport.X / 400), 0.6, 1)
+		scale.Scale = math.clamp(math.min(viewport.Y / 380, viewport.X / 400), 0.6, 1)
 	end
 	fit()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
@@ -108,6 +109,39 @@ function SettingsPanel.start()
 	end
 	refresh()
 	Controls.sensitivityChanged:Connect(refresh)
+
+	-- Calidad gráfica: AUTO / ALTA / MEDIA / BAJA
+	label(panel, "CALIDAD GRÁFICA", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 196), 18, Color3.fromRGB(215, 210, 200))
+	local qualityPrev = button(panel, "<", UDim2.fromOffset(64, 44), UDim2.fromOffset(16, 222))
+	qualityPrev.Name = "QualityPrev"
+	local qualityNext = button(panel, ">", UDim2.fromOffset(64, 44), UDim2.new(1, -80, 0, 222))
+	qualityNext.Name = "QualityNext"
+	local quality = label(panel, "", UDim2.new(1, -176, 0, 44), UDim2.fromOffset(88, 222), 24, Color3.new(1, 1, 1), Enum.TextXAlignment.Center)
+	quality.TextYAlignment = Enum.TextYAlignment.Center
+	local function refreshQuality()
+		quality.Text = Performance.levelName()
+	end
+	refreshQuality()
+	Performance.changed:Connect(refreshQuality)
+	qualityPrev.Activated:Connect(function()
+		Performance.cycleMode(-1)
+	end)
+	qualityNext.Activated:Connect(function()
+		Performance.cycleMode(1)
+	end)
+
+	-- Panel de rendimiento (FPS, memoria, piezas)
+	local perf = button(panel, "", UDim2.new(1, -32, 0, 40), UDim2.fromOffset(16, 284))
+	perf.Name = "PerfToggle"
+	perf.TextSize = 20
+	local function refreshPerf()
+		perf.Text = Performance.isOverlayShown() and "RENDIMIENTO: VISIBLE" or "RENDIMIENTO: OCULTO"
+	end
+	refreshPerf()
+	perf.Activated:Connect(function()
+		Performance.setOverlay(not Performance.isOverlayShown())
+		refreshPerf()
+	end)
 
 	local T = Config.Touch
 	minus.Activated:Connect(function()
