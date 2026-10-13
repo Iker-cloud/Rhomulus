@@ -1,6 +1,6 @@
 -- Ayuda dentro de la partida:
---   * Panel "CÓMO JUGAR" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (Esc también
---     cierra; flechas izquierda/derecha cambian de pestaña). El juego sigue mientras se lee. Los textos son shared/HelpContent y
+--   * Panel "CÓMO JUGAR" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (también con la X o
+--     un clic fuera; Esc lo reserva Roblox para su menú; flechas izquierda/derecha cambian de pestaña). El juego sigue mientras se lee. Los textos son shared/HelpContent y
 --     shared/Difficulties, los mismos que usa el menú.
 --   * Tarjeta de bienvenida la primera vez que el jugador llega al lobby (server/HelpState guarda que ya la vio).
 --   * Una pista pequeña "K · AYUDA" abajo al centro.
@@ -70,7 +70,7 @@ end
 
 -- Casilla de tecla (fondo dorado, letras oscuras); devuelve su ancho
 local function keycap(parent, x, y, text)
-	local w = math.max(52, 14 * #text + 22)
+	local w = math.max(52, 14 * (utf8.len(text) or #text) + 22)
 	local f = box(parent, x, y, w, 40, GOLD)
 	label(f, text, 0, 0, w, 40, 24, DARK, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
 	return w
@@ -93,7 +93,7 @@ buildTab[1] = function(c)
 	label(c, HelpContent.Headline, 40, 24, 480, 140, 56, WHITE, BOLD, { lineHeight = 1.0 })
 	box(c, 40, 172, 90, 5, GOLD)
 	label(c, HelpContent.Objective[1], 40, 196, 470, 130, 23, PALE, REGULAR, { wrap = true })
-	label(c, HelpContent.Objective[2], 40, 340, 470, 100, 23, WHITE, BOLD, { wrap = true })
+	label(c, HelpContent.Objective[2], 40, 282, 470, 100, 23, WHITE, BOLD, { wrap = true })
 	for i, step in HelpContent.Steps do
 		local y = 20 + 98 * (i - 1)
 		label(c, string.format("%02d", i), 580, y, 50, 40, 32, GOLD, BOLD)
@@ -192,7 +192,7 @@ function HelpPanel.start()
 
 	label(panel, "CÓMO JUGAR", 32, 16, 360, 56, 42, GOLD, BOLD)
 	box(panel, 0, 86, PANEL_W, 2, GOLD)
-	label(panel, "K o Esc para cerrar  ·  La partida sigue mientras lees", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
+	label(panel, "K o clic fuera para cerrar  ·  La partida sigue mientras lees", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
 	label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
 
 	local holder = Instance.new("Frame")
@@ -270,7 +270,7 @@ function HelpPanel.start()
 	label(welcome, HelpContent.Welcome.Title, 32, 24, 640, 50, 38, GOLD, BOLD)
 	box(welcome, 32, 80, 120, 4, GOLD)
 	for i, line in HelpContent.Welcome.Lines do
-		box(welcome, 36, 116 + 52 * (i - 1) + 10, 8, 8, GOLD)
+		box(welcome, 36, 104 + 52 * (i - 1) + 9, 8, 8, GOLD)
 		label(welcome, line, 60, 104 + 52 * (i - 1), 610, 52, 21, WHITE, REGULAR, { wrap = true })
 	end
 	local gotIt = Instance.new("TextButton")

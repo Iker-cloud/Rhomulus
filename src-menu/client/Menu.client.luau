@@ -376,7 +376,7 @@ end
 
 -- Casilla de tecla: fondo negro y letras rojas. Devuelve su ancho.
 local function keycap(parent, x, y, label)
-	local w = math.max(64, 19 * #label + 28)
+	local w = math.max(64, 19 * (utf8.len(label) or #label) + 28)
 	make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, 52) }, parent)
 	text(parent, label, ANTON, 36, Vector2.new(x + w / 2, y + 27),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w, color = RED })
