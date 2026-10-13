@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Controls)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local GameHud = {}
@@ -46,6 +47,8 @@ function GameHud.start()
 	feed.AutomaticSize = Enum.AutomaticSize.Y
 	feed.BackgroundTransparency = 1
 	feed.Parent = gui
+	UiFit.scale(feed)
+	UiFit.scale(timer)
 	local feedLayout = Instance.new("UIListLayout")
 	feedLayout.Padding = UDim.new(0, 2)
 	feedLayout.Parent = feed

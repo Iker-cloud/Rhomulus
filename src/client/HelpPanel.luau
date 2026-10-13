@@ -342,7 +342,8 @@ function HelpPanel.start()
 			welcome.BackgroundTransparency = 1
 			TweenService:Create(welcome, TweenInfo.new(0.35), { BackgroundTransparency = 0 }):Play()
 			local view = gui.AbsoluteSize
-			welcomeScale.Scale = math.min(1, view.X / 760, view.Y / 440)
+			welcomeScale.Scale = math.min(1, view.X / 760, view.Y / (view.Y < 600 and 410 or 440))
+			welcome.Position = UDim2.fromScale(0.5, view.Y < 600 and 0.5 or 0.58) -- en pantallas bajas, al centro
 		else
 			welcome.Visible = false
 			markSeen()

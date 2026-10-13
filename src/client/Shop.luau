@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
 local GOLD = Color3.fromRGB(246, 196, 70)
@@ -56,6 +57,7 @@ function Shop.start()
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
+	UiFit.fitPanel(panel, 420, 70 + #entries * 52)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = GOLD
 	stroke.Thickness = 2

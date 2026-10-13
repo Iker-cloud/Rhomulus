@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local UiFit = require(script.Parent.UiFit)
 local localPlayer = Players.LocalPlayer
 
 local YELLOW = Color3.fromRGB(255, 196, 30)
@@ -32,6 +33,7 @@ function ContribHud.start()
 	panel.BackgroundTransparency = 0.2
 	panel.BorderSizePixel = 0
 	panel.Parent = gui
+	UiFit.scale(panel)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 6)
 	padding.PaddingBottom = UDim.new(0, 6)

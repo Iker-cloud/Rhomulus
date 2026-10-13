@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Icons = require(script.Parent.Icons)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local GOLD = Color3.fromRGB(246, 196, 70)
@@ -156,6 +157,7 @@ local function buildUi()
 	row.AutomaticSize = Enum.AutomaticSize.X
 	row.BackgroundTransparency = 1
 	row.Parent = gui
+	UiFit.scale(row)
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center

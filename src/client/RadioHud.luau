@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local Controls = require(script.Parent.Controls)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 -- clave -> { color, remitente }
@@ -65,6 +66,7 @@ function RadioHud.start()
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
+	UiFit.scale(panel)
 	local basePosition = UDim2.new(0.5, 0, 0, 80)
 	panel.Position = basePosition
 

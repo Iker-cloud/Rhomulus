@@ -10,6 +10,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DownedHud = require(script.Parent.DownedHud)
 local Controls = require(script.Parent.Controls)
 
+local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 local TeamHud = {}
@@ -119,6 +120,7 @@ function TeamHud.start()
 	panel.Size = UDim2.fromOffset(220, 0)
 	panel.AutomaticSize = Enum.AutomaticSize.Y
 	panel.Parent = gui
+	UiFit.scale(panel)
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
 	layout.Parent = panel
