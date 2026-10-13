@@ -147,7 +147,7 @@ return {
 
 	-- Sonidos (Creator Store, gratis). Cambia cualquier id aquí para sustituirlo.
 	Sounds = {
-		Volume = { Headshot = 0.7, Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },
+		Volume = { Headshot = 0.9, Shot = 0.6, Reload = 0.5, DryFire = 0.5, Zombie = 0.7, Siren = 0.7, Box = 0.6, VanHorn = 0.9 },
 		Shot = {
 			Pistol = "rbxassetid://132539859090895",
 			Rifle = "rbxassetid://113879008765178",
@@ -158,8 +158,8 @@ return {
 		Reload = "rbxassetid://117963160131194",
 		ReloadShotgun = "rbxassetid://139827026287805",
 		DryFire = "rbxassetid://117629133235583",
-		Headshot = "rbxassetid://117629133235583", -- provisional: el clic de DryFire, agudo. Cambia el id por un "ding" cuando haya uno
-		HeadshotPitch = 2,
+		Headshot = "rbxassetid://137096881472307", -- "ding" de headshot (0.6 s, Creator Store). Suena solo para quien dispara
+		HeadshotPitch = 1,
 		ZombieGrowls = {
 			"rbxassetid://129294628821291",
 			"rbxassetid://100949226522885",
