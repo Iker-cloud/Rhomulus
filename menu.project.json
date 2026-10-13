@@ -10,6 +10,9 @@
         },
         "Difficulties": {
           "$path": "src/shared/Difficulties.luau"
+        },
+        "HelpContent": {
+          "$path": "src/shared/HelpContent.luau"
         }
       }
     },
