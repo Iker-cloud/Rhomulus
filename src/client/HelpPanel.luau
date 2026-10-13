@@ -11,9 +11,12 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
-local HelpContent = require(ReplicatedStorage.Shared.HelpContent)
+local HelpContentBase = require(ReplicatedStorage.Shared.HelpContent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Controls)
+
+-- Textos del dispositivo (teclas en PC, botones en celular); se eligen al abrir el juego
+local HelpContent = HelpContentBase.get(Controls.isTouch())
 
 local player = Players.LocalPlayer
 
@@ -194,8 +197,10 @@ function HelpPanel.start()
 
 	label(panel, "CÓMO JUGAR", 32, 16, 360, 56, 42, GOLD, BOLD)
 	box(panel, 0, 86, PANEL_W, 2, GOLD)
-	label(panel, "K o clic fuera para cerrar  ·  Se cierra sola si hay zombies cerca", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
-	label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
+	label(panel, Controls.isTouch() and "Toca fuera para cerrar  ·  Se cierra sola si hay zombies cerca" or "K o clic fuera para cerrar  ·  Se cierra sola si hay zombies cerca", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
+	if not Controls.isTouch() then
+		label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
+	end
 
 	local holder = Instance.new("Frame")
 	holder.BackgroundTransparency = 1
@@ -290,7 +295,7 @@ function HelpPanel.start()
 	more.AutoButtonColor = false
 	more.FontFace = BOLD
 	more.TextSize = 22
-	more.Text = "K  ·  VER LA AYUDA COMPLETA"
+	more.Text = Controls.isTouch() and "VER LA AYUDA COMPLETA" or "K  ·  VER LA AYUDA COMPLETA"
 	more.TextColor3 = GOLD
 	more.BackgroundColor3 = DARK
 	more.BorderSizePixel = 0

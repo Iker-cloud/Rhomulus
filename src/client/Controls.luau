@@ -50,6 +50,22 @@ function Controls.isFiring()
 	return Controls.firing or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 end
 
+-- Avisos del servidor (radio, equipo) que nombran teclas: igual para todos, así que cada cliente los traduce
+local TOUCH_RULES = {
+	{ "Presionen Y cuando estén listos", "Toquen LISTO cuando estén listos" },
+	{ "la dificultad con 1 a 4", "la dificultad tocando el panel" },
+	{ "sácalo con %d y haz clic para", "tócalo en la barra y pulsa el botón para" },
+}
+
+function Controls.touchText(message)
+	if touchMode then
+		for _, rule in TOUCH_RULES do
+			message = string.gsub(message, rule[1], rule[2])
+		end
+	end
+	return message
+end
+
 function Controls.getSensitivity()
 	return sensitivity
 end

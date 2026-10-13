@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
@@ -57,7 +58,7 @@ function DifficultyVote.start()
 	panelStroke.Thickness = 2
 	panelStroke.Parent = panel
 	label(panel, "DIFICULTAD", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Color3.fromRGB(246, 196, 70))
-	label(panel, "Pulsa 1 a 4 para votar", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
+	label(panel, Controls.isTouch() and "Toca una dificultad para votar" or "Pulsa 1 a 4 para votar", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
 
 	local rows = {}
 	for i, id in Difficulties.Order do

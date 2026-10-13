@@ -36,7 +36,7 @@ local function mapName(id)
 end
 
 local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Difficulties"))
-local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent"))
+local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent")).get(UserInputService.TouchEnabled and not UserInputService.MouseEnabled)
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
 local roomState -- última foto de la sala en la que estamos (nil = ninguna)
@@ -744,7 +744,7 @@ for _, l in layers do
 	TweenService:Create(l.label, slow, { TextTransparency = l.target }):Play()
 end
 
-local prompt = text(root, spaced("PRESIONA CUALQUIER TECLA", 4), OSW_BOLD, 38, Vector2.new(120, 947),
+local prompt = text(root, spaced((UserInputService.TouchEnabled and not UserInputService.MouseEnabled) and "TOCA LA PANTALLA" or "PRESIONA CUALQUIER TECLA", 4), OSW_BOLD, 38, Vector2.new(120, 947),
 	{ color = DARK, width = 1100, transparency = 1 })
 local titleRule = rule(root, 120, 886, 1680, false, 4)
 titleRule.BackgroundTransparency = 1

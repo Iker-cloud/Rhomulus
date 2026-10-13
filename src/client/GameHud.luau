@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 
@@ -53,7 +54,7 @@ function GameHud.start()
 		local line = text(feed, 16)
 		line.Size = UDim2.fromOffset(380, 22)
 		line.TextXAlignment = Enum.TextXAlignment.Left
-		line.Text = message
+		line.Text = Controls.touchText(message)
 		task.delay(4, function()
 			line:Destroy()
 		end)

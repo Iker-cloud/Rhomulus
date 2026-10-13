@@ -5,6 +5,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local Controls = require(script.Parent.Controls)
+
 local player = Players.LocalPlayer
 
 -- clave -> { color, remitente }
@@ -159,7 +161,7 @@ function RadioHud.start()
 			barFrame.BackgroundColor3 = color
 		end
 
-		body.Text = withKeys(message, color)
+		body.Text = withKeys(Controls.touchText(message), color)
 		total = utf8.len(message) or #message
 		reveal = 0 -- el texto aparece letra por letra
 		body.MaxVisibleGraphemes = 0
