@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local HelpContent = require(ReplicatedStorage.Shared.HelpContent)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 
@@ -312,6 +313,11 @@ function HelpPanel.start()
 
 	-- ===== Lógica =====
 	local panelOpen = false
+	-- En celular la ayuda se abre con el botón "?" y no se muestra la tecla K
+	hint.Visible = not Controls.isTouch()
+	Controls.touchChanged:Connect(function()
+		hint.Visible = not panelOpen and not Controls.isTouch()
+	end)
 	local welcomeOpen = false
 	local welcomeShown = false -- ya se mostró en esta sesión (no se repite si se cierra)
 	local function markSeen()
@@ -389,11 +395,16 @@ function HelpPanel.start()
 		panelOpen = open
 		dim.Visible = open
 		player:SetAttribute("UiOpen", open or nil)
-		hint.Visible = not open
+		hint.Visible = not open and not Controls.isTouch()
 		if open then
 			setWelcome(false)
 			showTab(currentTab)
 		end
+	end
+
+	-- El botón "?" del celular (client/TouchControls)
+	function HelpPanel.toggle()
+		setPanel(not panelOpen)
 	end
 
 	gotIt.Activated:Connect(function()

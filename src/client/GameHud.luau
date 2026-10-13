@@ -9,6 +9,11 @@ local player = Players.LocalPlayer
 
 local GameHud = {}
 
+-- Listo en el lobby (tecla Y o botón del celular)
+function GameHud.ready()
+	Remotes.Ready:FireServer()
+end
+
 local function text(parent, size, color)
 	local label = Instance.new("TextLabel")
 	label.BackgroundTransparency = 1
@@ -73,7 +78,7 @@ function GameHud.start()
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and input.KeyCode == Enum.KeyCode.Y then
-			Remotes.Ready:FireServer()
+			GameHud.ready()
 		end
 	end)
 end

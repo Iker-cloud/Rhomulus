@@ -301,6 +301,17 @@ return {
 		AimSensitivity = 0.5, -- multiplicador de sensibilidad del mouse al apuntar
 	},
 
+	-- Celular (client/TouchControls). La sensibilidad del jugador (client/Controls, ajustable en AJUSTES) multiplica el giro de la
+	-- cámara tanto al arrastrar el dedo como con el ratón.
+	Touch = {
+		LookDegPerPixel = 0.3, -- grados que gira la cámara por píxel arrastrado, con sensibilidad 1
+		AimLookFactor = 0.55, -- al apuntar el giro se frena (como AimSensitivity del ratón)
+		MaxPitch = 80, -- grados máximos hacia arriba y hacia abajo
+		SensitivityMin = 0.4,
+		SensitivityMax = 2.5,
+		SensitivityStep = 0.1,
+	},
+
 	Player = {
 		WalkSpeed = 16,
 		SprintSpeed = 24, -- mantener Shift (no al apuntar, disparar o recargar)

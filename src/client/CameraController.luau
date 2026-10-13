@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Controls = require(script.Parent.Controls)
 
 local player = Players.LocalPlayer
 local firstPerson = false
@@ -55,8 +56,10 @@ local function faceCamera()
 		UserInputService.MouseIconEnabled = true
 		return
 	end
-	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-	UserInputService.MouseIconEnabled = false
+	-- En modo táctil el ratón (si lo hay) queda libre para pulsar los botones
+	local touch = Controls.isTouch()
+	UserInputService.MouseBehavior = touch and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
+	UserInputService.MouseIconEnabled = touch
 	humanoid.AutoRotate = false
 
 	local look = workspace.CurrentCamera.CFrame.LookVector
@@ -66,9 +69,29 @@ local function faceCamera()
 	end
 end
 
+-- Sensibilidad del ratón: la que eligió el jugador (AJUSTES), más baja al apuntar
+local function applyMouseSensitivity()
+	UserInputService.MouseDeltaSensitivity = Controls.getSensitivity() * (aiming and Config.Camera.AimSensitivity or 1)
+end
+
 local function setAiming(on)
 	aiming = on
-	UserInputService.MouseDeltaSensitivity = on and Config.Camera.AimSensitivity or 1
+	applyMouseSensitivity()
+end
+
+-- Botón de apuntar del celular
+function CameraController.setAiming(on)
+	setAiming(on)
+end
+
+function CameraController.isAiming()
+	return aiming
+end
+
+-- Alterna primera y tercera persona (tecla V o botón del celular)
+function CameraController.toggleView()
+	firstPerson = not firstPerson
+	apply()
 end
 
 -- Zoom suave entre FOV normal y FOV de mira
@@ -90,8 +113,7 @@ function CameraController.start()
 
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if not processed and input.KeyCode == Enum.KeyCode.V then
-			firstPerson = not firstPerson
-			apply()
+			CameraController.toggleView()
 		end
 	end)
 
@@ -108,6 +130,7 @@ function CameraController.start()
 	UserInputService.WindowFocusReleased:Connect(function()
 		setAiming(false)
 	end)
+	Controls.sensitivityChanged:Connect(applyMouseSensitivity)
 
 	RunService.RenderStepped:Connect(function(dt)
 		faceCamera()
