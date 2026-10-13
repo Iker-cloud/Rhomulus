@@ -29,7 +29,7 @@ local function nearestTarget(fromPosition)
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		-- Los caídos no son objetivo: los zombies van por los que siguen de pie
-		if humanoid and root and humanoid.Health > 0 and PlayerState.get(player) == "Normal" then
+		if humanoid and root and humanoid.Health > 0 and PlayerState.get(player) == "Normal" and not player:GetAttribute("Boarded") and not player:GetAttribute("Boarding") then
 			local distance = (root.Position - fromPosition).Magnitude
 			if not bestDistance or distance < bestDistance then
 				best, bestDistance = { player = player, root = root, character = character }, distance

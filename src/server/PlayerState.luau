@@ -89,8 +89,8 @@ end
 
 -- Daño a un jugador (zombies, etc.). Si lo dejaría en 0, cae en vez de morir.
 function PlayerState.damage(player, amount)
-	if PlayerState.get(player) ~= "Normal" then
-		return
+	if PlayerState.get(player) ~= "Normal" or player:GetAttribute("Boarded") or player:GetAttribute("Boarding") then
+		return -- quien sube a la furgoneta (server/Boarding) ya está a salvo
 	end
 	local humanoid = getHumanoid(player)
 	if not humanoid or humanoid.Health <= 0 then

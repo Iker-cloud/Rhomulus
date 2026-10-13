@@ -12,6 +12,7 @@ local CajaMunicion = require(script.Parent.ZombieData.CajaMunicion)
 local Generador = require(script.Parent.ZombieData.Generador)
 local Radio = require(script.Parent.ZombieData.Radio)
 local Furgoneta = require(script.Parent.ZombieData.Furgoneta)
+local VanInterior = require(script.Parent.VanInterior)
 
 local MapBuilder = {}
 
@@ -267,8 +268,9 @@ end
 function MapBuilder.makeVan(position)
 	local model, hitbox = PropModel.build(Furgoneta, position, 0, { wheels = true, scale = Config.Game.VanScale })
 	model.Name = "Van"
-	hitbox.CanCollide = false -- los sobrevivientes entran caminando
+	hitbox.CanCollide = false -- el cuerpo no es sólido: se sube por la puerta lateral con E (server/Boarding)
 	hitbox.Anchored = true
+	VanInterior.build(model, hitbox, CFrame.new(position), Config.Game.VanScale) -- caja hueca, asientos y puertas que se deslizan
 	hitbox.PivotOffset = hitbox.CFrame:Inverse() * CFrame.new(position) -- el pivote del modelo es el punto del suelo (así PivotTo lo coloca donde se pide)
 
 	-- Faros delanteros: luz sobre la calle

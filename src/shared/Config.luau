@@ -168,6 +168,14 @@ return {
 		HordeSiren = "rbxassetid://9119163479",
 		VanHorn = "rbxassetid://93042705532380", -- pitido de la furgoneta al entrar (dura 1.5 s)
 		BoxSpin = "rbxassetid://9046019442",
+		-- Furgoneta de rescate (client/VanAnimator): puertas, motor, marcha atrás y derrape al irse. Suenan en 3D desde la furgoneta.
+		Van = {
+			Door = { "rbxassetid://140296030450157", 0.8 },
+			EngineStart = { "rbxassetid://80004844856889", 0.9 },
+			EngineLoop = { "rbxassetid://112247549523842", 0.7 }, -- bucle; el tono sube con la velocidad
+			ReverseBeep = { "rbxassetid://5471337533", 0.9 },
+			Skid = { "rbxassetid://73429750798250", 1.0 },
+		},
 		-- Objetos de la tienda (server/Items y server/Medkits). Suenan en 3D desde el servidor. Todos de Pro Sound Effects salvo
 		-- la explosión y el fuego (Creator Store). Volumen y tono por sonido: { id, volume, pitch }.
 		Items = {
@@ -228,6 +236,12 @@ return {
 			Fall = "rbxassetid://10921241244",
 		},
 		RunSpeed = 8, -- por encima de esta velocidad se usa la animación de correr
+		-- Subir a la furgoneta (server/Boarding): oficiales de Roblox
+		Boarding = {
+			Walk = "rbxassetid://10921244891", -- el mismo paso de los sobrevivientes
+			Climb = "rbxassetid://507765644", -- trepar
+			Sit = "rbxassetid://2506281703", -- sentado
+		},
 	},
 
 	WeaponBox = {
@@ -515,8 +529,19 @@ return {
 		ExtractionTime = 150, -- segundos hasta que llega la van
 		VanScale = 1.3, -- tamaño de la furgoneta respecto al modelo original (para que cuadre con los avatares)
 		VanArriveTime = 7, -- segundos que tarda la furgoneta en entrar por la calle y frenar
-		VanGrace = 5, -- margen para que suban los demás tras el primero
+		VanGrace = 15, -- margen para que suban los demás tras el primero (la furgoneta sale al subir todos o al acabarse)
 		ResultTime = 15,
+	},
+
+	-- Subir a la furgoneta (server/Boarding, client/BoardingAnimator): se mantiene E en la puerta lateral y el sobreviviente (con el
+	-- compañero caído que cargue) sube con su animación y se sienta. Al terminar el margen la furgoneta arranca y se va (client/VanAnimator).
+	Boarding = {
+		HoldTime = 1.0, -- segundos manteniendo E en la puerta
+		PromptDistance = 12,
+		MaxDistance = 18, -- el servidor rechaza subir desde más lejos que esto
+		Duration = 3.0, -- segundos del gesto de subir hasta que se sienta
+		DepartDelay = 1.2, -- segundos entre cerrar las puertas y arrancar
+		ResultAfter = 6.5, -- segundos desde que arranca hasta que sale la pantalla de victoria
 	},
 
 	Dummy = {

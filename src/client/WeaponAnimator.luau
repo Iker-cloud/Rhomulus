@@ -178,7 +178,8 @@ local function update(rig, dt)
 	local kneeling = reviving ~= nil and workspace:GetServerTimeNow() < reviving and player:GetAttribute("State") ~= "Downed"
 	local key = player:GetAttribute("WeaponKey")
 	local hold = key ~= nil and Hold[key] or nil
-	local active = hold ~= nil and not (carried or downed or kneeling)
+	local boarding = character:GetAttribute("BoardStart") ~= nil -- sube a la furgoneta: los brazos son de la animación de trepar
+	local active = hold ~= nil and not (carried or downed or kneeling or boarding)
 
 	local step = math.min(1, dt * BLEND_SPEED)
 	if not active then

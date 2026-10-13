@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
+local Boarding = require(script.Parent.Boarding)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
 local Difficulty = require(script.Parent.Difficulty)
@@ -129,7 +130,7 @@ end
 local function teamWiped()
 	local players = Players:GetPlayers()
 	for _, player in players do
-		if PlayerState.get(player) == "Normal" then
+		if PlayerState.get(player) == "Normal" or player:GetAttribute("Boarded") or player:GetAttribute("Boarding") then
 			return false
 		end
 	end
@@ -224,6 +225,7 @@ local function resetMap()
 	setLight(map.generatorModel, "luz_estado", LIGHT_OFF)
 	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
 	setLight(map.radioModel, "led_senal", LIGHT_OFF)
+	Boarding.reset()
 	local van = workspace.Map:FindFirstChild("Van")
 	if van then
 		van:Destroy()
@@ -482,25 +484,28 @@ local function extraction()
 	van:PivotTo(map.vanStop) -- posición final real (colisiones y detección de quién subió)
 	van:SetAttribute("Arrived", true)
 
-	setStage("Extraction", "¡Súbanse a la van!", "Board")
+	-- Se abren las puertas y cada quien sube manteniendo E (server/Boarding); con un caído en hombros suben los dos
+	Boarding.open(van)
+	setStage("Extraction", "¡Súbanse a la van! Mantén E en la puerta", "Board")
 	local reached = waitUntil(function()
-		for _, player in livingPlayers() do
-			if inside(map.vanVolume, getRoot(player).Position) then
-				return true
-			end
-		end
-		return false
+		return Boarding.count() > 0
 	end, true)
 	if not reached then
 		return false
 	end
 
-	-- Margen para que lleguen los demás
+	-- Margen para que lleguen los demás; la van sale al subir todos o al acabarse
 	setStage("Extraction", "¡Corran a la van!", "Run")
 	local started = os.clock()
-	while os.clock() - started < Config.Game.VanGrace and not allInside(map.vanVolume) do
+	while os.clock() - started < Config.Game.VanGrace and not Boarding.allBoarded(livingPlayers()) do
 		task.wait(0.25)
 	end
+	Boarding.close()
+
+	-- La van arranca: puertas cerradas, marcha atrás, giro y a toda velocidad (client/VanAnimator); la victoria sale mientras se va
+	setStage("Extraction", "¡Arranca, arranca!", "Run")
+	Boarding.depart()
+	task.wait(Config.Boarding.ResultAfter)
 	return true
 end
 

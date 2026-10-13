@@ -290,6 +290,12 @@ local function onCharacter(player, character)
 	updatePrompts(player)
 end
 
+-- A quién carga `carrier` (nil si a nadie) y soltarlo: los usa server/Boarding al subir a la furgoneta con un caído a cuestas
+function Revive.carriedBy(carrier)
+	return carrying[carrier]
+end
+Revive.drop = drop
+
 function Revive.start()
 	local function setup(player)
 		player.CharacterAdded:Connect(function(character)
