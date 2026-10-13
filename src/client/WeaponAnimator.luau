@@ -226,20 +226,26 @@ local function update(rig, dt)
 	rig.raise += (raiseTarget - rig.raise) * math.min(1, dt * Hold.RaiseSpeed)
 	local raise = rig.raise
 
-	-- Gesto de un objeto (granada, molotov, bengala, vendas): el servidor publica ItemId / ItemStart / ItemEnd en el personaje
+	-- Objeto en la mano (granada, molotov, bengala, vendas, botiquín): el servidor publica en el personaje ItemReady (cuál lleva),
+	-- ItemCharge (hora en que empezó a cargar el lanzamiento) y, al usarlo, ItemId / ItemStart / ItemEnd / ItemPower
+	local itemReady = character:GetAttribute("ItemReady")
+	if itemReady and not ItemPoses.has(itemReady) then
+		itemReady = nil
+	end
 	local itemId = character:GetAttribute("ItemId")
-	local itemT = nil -- progreso del gesto de 0 a 1
+	local itemT = nil -- progreso del gesto de usarlo, de 0 a 1
 	if itemId and ItemPoses.has(itemId) then
 		local startTime, endTime = character:GetAttribute("ItemStart"), character:GetAttribute("ItemEnd")
 		if startTime and endTime and endTime > startTime then
 			local t = (workspace:GetServerTimeNow() - startTime) / (endTime - startTime)
-			if t >= 0 and t <= 1 then
-				itemT = t
+			if t >= 0 then
+				itemT = math.min(t, 1) -- al acabar se queda en la última pose hasta que se guarda
 			end
 		end
 	end
+	rig.itemBlend = (rig.itemBlend or 0) + ((itemReady and 1 or 0) - (rig.itemBlend or 0)) * math.min(1, dt * 9)
 
-	local leftTarget = (hold.TwoHanded or (hold.Support ~= false and raise > 0.5) or reloadT or itemT) and 1 or 0
+	local leftTarget = (hold.TwoHanded or (hold.Support ~= false and raise > 0.5) or reloadT or itemReady or rig.itemBlend > 0.02) and 1 or 0
 	rig.weight += (1 - rig.weight) * step
 	rig.leftWeight += (leftTarget - rig.leftWeight) * step
 
@@ -273,17 +279,28 @@ local function update(rig, dt)
 	end
 	local handL = CFrame.new(leftPosition) * gunRot * Hold.HandGrip:Inverse()
 
-	-- Durante el gesto de un objeto cada mano va hacia su fotograma clave (ItemPoses), mezclada con la pose del arma
-	if itemT then
-		local rPos, rWeight, rTilt, lPos, lWeight, lTilt = ItemPoses.sample(itemId, itemT)
-		if rPos then
-			local rot = yaw * CFrame.Angles(rTilt, 0, 0) * GUN_FROM_AIM
-			handR = handR:Lerp(CFrame.new(anchor + yaw * rPos) * rot * Hold.HandGrip:Inverse(), rWeight)
+	-- Con un objeto en la mano cada mano va a su pose (ItemPoses: lista, cargando o el gesto de usarlo), mezclada con la del arma
+	if itemReady then
+		local now = os.clock()
+		local rPos, rTilt, lPos, lTilt
+		if itemT then
+			rPos, rTilt, lPos, lTilt = ItemPoses.sample(itemReady, itemT, character:GetAttribute("ItemPower") or 0, now, rig.pitch)
+		else
+			local chargeStart = character:GetAttribute("ItemCharge")
+			if chargeStart then
+				local power = math.clamp((workspace:GetServerTimeNow() - chargeStart) / Config.Items.Charge.Time, 0, 1)
+				rPos, rTilt, lPos, lTilt = ItemPoses.charge(itemReady, power, now, rig.pitch)
+			else
+				rPos, rTilt, lPos, lTilt = ItemPoses.ready(itemReady, now, rig.pitch)
+			end
 		end
-		if lPos then
-			local rot = yaw * CFrame.Angles(lTilt, 0, 0) * GUN_FROM_AIM
-			handL = handL:Lerp(CFrame.new(anchor + yaw * lPos) * rot * Hold.HandGrip:Inverse(), lWeight)
-		end
+		rig.lastPose = { rPos, rTilt, lPos, lTilt } -- al guardarlo la mano se va desde aquí hacia el arma
+	end
+	if rig.lastPose and rig.itemBlend > 0.001 then
+		local rPos, rTilt, lPos, lTilt = table.unpack(rig.lastPose)
+		local blend = smooth(rig.itemBlend)
+		handR = handR:Lerp(CFrame.new(anchor + yaw * rPos) * (yaw * CFrame.Angles(rTilt, 0, 0) * GUN_FROM_AIM) * Hold.HandGrip:Inverse(), blend)
+		handL = handL:Lerp(CFrame.new(anchor + yaw * lPos) * (yaw * CFrame.Angles(lTilt, 0, 0) * GUN_FROM_AIM) * Hold.HandGrip:Inverse(), blend)
 	end
 
 	local torsoCF = torso.CFrame

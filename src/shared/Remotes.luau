@@ -18,7 +18,9 @@ local NAMES = {
 	"Crit", -- servidor -> cliente: (killed) el disparo le dio a la cabeza de un zombie
 	"Aim", -- cliente -> servidor: (pitch, aiming) hacia dónde mira, para que los demás vean el arma
 	"UseMedkit", -- cliente -> servidor: (jugador o nil) usar el botiquín en un compañero o en uno mismo
-	"UseItem", -- cliente -> servidor: (id, dirección) usar un objeto del inventario (granada, molotov, vendas, bengala)
+	"UseItem", -- cliente -> servidor: (id, dirección) usar el objeto que se tiene en la mano: lanza (con la carga) o venda
+	"ReadyItem", -- cliente -> servidor: (id o nil) saca o guarda un objeto del inventario (se queda en la mano hasta usarlo)
+	"ChargeItem", -- cliente -> servidor: (bool) empieza o cancela la carga del lanzamiento (granada, molotov, bengala)
 	"Buy", -- cliente -> servidor: (id) comprar en una estación ("Ammo" o un objeto de Config.Items)
 	"OpenShop", -- servidor -> cliente: (posición de la estación) abre la tienda
 	"HelpSeen", -- cliente -> servidor: cerró la tarjeta de bienvenida del lobby (se guarda para no volver a mostrarla)

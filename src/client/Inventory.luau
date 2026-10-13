@@ -1,14 +1,14 @@
 -- Barra de inventario (abajo a la derecha): 7 ranuras con número de tecla. 1 = arma principal, 2 = pistola, 3 a 7 = objetos
 -- (Config.Items.Order). La ranura del arma activa va en amarillo. Los objetos muestran cuántos quedan en la esquina y se
 -- usan con su tecla (o tocando la ranura en celular). La munición NO va aquí: queda junto a la mira (AmmoHud).
--- El botiquín lo usa MedkitHud (tecla 4); lanzables y vendas, esta barra con Remotes.UseItem.
+-- Las teclas y los clics de los objetos los gestiona client/ItemUse; esta barra solo los muestra y los saca al tocar la ranura.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local ItemUse = require(script.Parent.ItemUse)
 
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(246, 196, 70)
@@ -115,21 +115,6 @@ local function buildSlot(parent, index, id, label)
 	return { frame = slot, stroke = stroke, number = number, count = count, icon = icon, name = name, id = id }
 end
 
-local function aimDirection()
-	local camera = workspace.CurrentCamera
-	local size = camera.ViewportSize
-	return camera:ViewportPointToRay(size.X / 2, size.Y / 2).Direction
-end
-
-local function useItem(id)
-	if id == "Medkit" then
-		return -- lo gestiona MedkitHud (elige al compañero al que se mira)
-	end
-	if (player:GetAttribute("Item_" .. id) or 0) > 0 then
-		Remotes.UseItem:FireServer(id, aimDirection())
-	end
-end
-
 function Inventory.start()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Inventory"
@@ -167,26 +152,9 @@ function Inventory.start()
 	for i = 3, #slots do
 		local id = slots[i].id
 		slots[i].frame.Activated:Connect(function()
-			if id == "Medkit" then
-				if (player:GetAttribute("Item_Medkit") or 0) > 0 then
-					Remotes.UseMedkit:FireServer(nil)
-				end
-			else
-				useItem(id)
-			end
+			ItemUse.toggle(id) -- saca o guarda el objeto (client/ItemUse)
 		end)
 	end
-
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or player:GetAttribute("UiOpen") then
-			return
-		end
-		for _, id in Config.Items.Order do
-			if id ~= "Medkit" and input.KeyCode == Config.Items[id].Key then
-				useItem(id)
-			end
-		end
-	end)
 
 	local drawnPrimary = nil
 	RunService.RenderStepped:Connect(function()
@@ -202,9 +170,10 @@ function Inventory.start()
 			slots[1].name.Text = weapon and string.upper(weapon.Name) or "—"
 			slots[1].frame.BackgroundTransparency = primaryKey and 0.12 or 0.45
 		end
+		local itemInHand = player:GetAttribute("ItemReady")
 		local primaryActive = weaponKey ~= nil and weaponKey ~= "Pistol"
 		for i = 1, 2 do
-			local active = (i == 1) == primaryActive
+			local active = itemInHand == nil and (i == 1) == primaryActive
 			slots[i].stroke.Color = active and GOLD or Color3.fromRGB(60, 60, 64)
 			slots[i].number.TextColor3 = active and GOLD or Color3.fromRGB(150, 146, 140)
 		end
@@ -214,6 +183,9 @@ function Inventory.start()
 			slots[i].count.TextColor3 = n > 0 and Color3.new(1, 1, 1) or Color3.fromRGB(120, 116, 112)
 			slots[i].frame.BackgroundTransparency = n > 0 and 0.12 or 0.5
 			slots[i].icon.Visible = n > 0
+			local inHand = itemInHand == slots[i].id
+			slots[i].stroke.Color = inHand and GOLD or Color3.fromRGB(60, 60, 64)
+			slots[i].number.TextColor3 = inHand and GOLD or Color3.fromRGB(150, 146, 140)
 		end
 	end)
 end

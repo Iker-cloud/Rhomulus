@@ -1,10 +1,9 @@
--- Botiquín (cliente): la tecla de Config.Medkit.Key cura al compañero herido al que se mira (a menos de Range) o, si no
--- hay ninguno, a uno mismo. Muestra el botiquín que se lleva (encima de la jeringa) y la barra de la curación en curso.
+-- Botiquín (cliente): lo saca la tecla de Config.Medkit.Key (client/ItemUse) y un clic cura al compañero herido al que se mira
+-- (a menos de Range; MedkitHud.pickTarget) o, si no hay ninguno, a uno mismo. Muestra el botiquín que se lleva (encima de la jeringa) y la barra de la curación en curso.
 -- El servidor (server/Medkits) valida todo y pone los atributos Item_Medkit, HealingEnd y HealingTarget.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -17,7 +16,7 @@ local DARK = Color3.fromRGB(14, 13, 13)
 local MedkitHud = {}
 
 -- Compañero herido más cercano delante de la cámara, dentro del alcance
-local function pickTarget()
+function MedkitHud.pickTarget()
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if not root then
 		return nil
@@ -126,13 +125,6 @@ function MedkitHud.start()
 		else
 			panel.Visible = false
 		end
-	end)
-
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed or input.KeyCode ~= M.Key or (player:GetAttribute("Item_Medkit") or 0) <= 0 then
-			return
-		end
-		Remotes.UseMedkit:FireServer(pickTarget())
 	end)
 end
 

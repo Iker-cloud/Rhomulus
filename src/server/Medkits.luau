@@ -13,6 +13,7 @@ local Items = require(script.Parent.Items)
 local Difficulty = require(script.Parent.Difficulty)
 local RateLimit = require(script.Parent.RateLimit)
 local Points = require(script.Parent.Points)
+local ItemModel = require(script.Parent.ItemModel)
 
 local Medkits = {}
 
@@ -31,6 +32,7 @@ end
 
 local function stopHealing(player)
 	healing[player] = nil
+	Items.unequip(player, true) -- guarda el botiquín y corta el gesto
 	player:SetAttribute("HealingEnd", nil)
 	player:SetAttribute("HealingTarget", nil)
 end
@@ -54,7 +56,8 @@ local function denied(player, target)
 end
 
 local function useMedkit(player, target)
-	if healing[player] or Items.count(player, "Medkit") <= 0 or PlayerState.get(player) ~= "Normal" then
+	-- El botiquín tiene que estar en la mano (se saca con su tecla, client/ItemUse) y se usa con un clic
+	if healing[player] or Items.readyId(player) ~= "Medkit" or Items.count(player, "Medkit") <= 0 or PlayerState.get(player) ~= "Normal" then
 		return
 	end
 	if typeof(target) ~= "Instance" or not target:IsA("Player") or target.Parent ~= Players then
@@ -72,6 +75,23 @@ local function useMedkit(player, target)
 	player:SetAttribute("HealingEnd", endTime)
 	player:SetAttribute("HealingTarget", target == player and "" or target.DisplayName)
 
+	local character = player.Character
+	local sourceRoot = character and character:FindFirstChild("HumanoidRootPart")
+	local held = Items.heldModel(player)
+	Items.announce(character, "Medkit", M.Time) -- gesto (client/ItemPoses): sale la tapa, las gasas, se cierra
+	Items.playSound(sourceRoot, "MedkitOpen")
+	task.delay(M.Time * 0.1, function()
+		if healing[player] == token then
+			ItemModel.setLid(held, true, 0.4)
+			Items.playSound(sourceRoot, "MedkitRip")
+		end
+	end)
+	task.delay(M.Time * 0.88, function()
+		if healing[player] == token then
+			ItemModel.setLid(held, false, 0.3)
+		end
+	end)
+
 	task.spawn(function()
 		while workspace:GetServerTimeNow() < endTime do
 			task.wait(0.1)
@@ -88,6 +108,7 @@ local function useMedkit(player, target)
 		local humanoid = getHumanoid(target)
 		if humanoid then
 			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + M.Heal * Difficulty.get().MedkitHeal)
+			Items.healSparkles(target.Character)
 		end
 		Items.add(player, "Medkit", -1)
 		Points.feed(target == player and `{player.DisplayName} se curó` or `{player.DisplayName} curó a {target.DisplayName}`)
@@ -112,7 +133,7 @@ function Medkits.init(list)
 			pickup.prompt.Enabled = false
 			pickup.model.Parent = nil
 			Items.add(player, "Medkit", 1)
-			Remotes.Feed:FireClient(player, `Botiquín: pulsa {M.KeyLabel} para curarte o curar al compañero que miras`)
+			Remotes.Feed:FireClient(player, `Botiquín: sácalo con {M.KeyLabel} y haz clic para curarte (o curar al compañero que miras)`)
 		end)
 	end
 

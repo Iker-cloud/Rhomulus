@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Players = game:GetService("Players")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local SoundController = require(script.Parent.SoundController)
@@ -62,6 +63,11 @@ local function drawTracers(shooter, from, endPoints)
 	end
 end
 
+-- Con un objeto en la mano (client/ItemUse) el clic y R no son del arma
+local function itemInHand()
+	return Players.LocalPlayer:GetAttribute("ItemReady") ~= nil
+end
+
 local function fire()
 	lastShot = os.clock()
 	if ammo <= 0 and not reloading then
@@ -91,10 +97,15 @@ function Shooting.start()
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if itemInHand() then
+				return
+			end
 			firing = true
 			fire()
 		elseif input.KeyCode == Enum.KeyCode.R then
-			Remotes.Reload:FireServer()
+			if not itemInHand() then
+				Remotes.Reload:FireServer()
+			end
 		elseif input.KeyCode == Enum.KeyCode.One then
 			switchTo("primary")
 		elseif input.KeyCode == Enum.KeyCode.Two then

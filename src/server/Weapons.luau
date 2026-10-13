@@ -131,8 +131,8 @@ local function onFire(player, origin, direction)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local head = character and character:FindFirstChild("Head")
-	if not (state and humanoid and head) or humanoid.Health <= 0 then
-		return
+	if not (state and humanoid and head) or humanoid.Health <= 0 or player:GetAttribute("ItemReady") then
+		return -- con un objeto en la mano (server/Items) no se dispara
 	end
 	if not (isValidVector(origin) and isValidVector(direction)) or direction.Magnitude < 0.001 then
 		return
@@ -227,7 +227,7 @@ end
 
 local function onSwitch(player, slotName)
 	local state = states[player]
-	if not state or (slotName ~= "primary" and slotName ~= "pistol") then
+	if not state or (slotName ~= "primary" and slotName ~= "pistol") or player:GetAttribute("HealingEnd") then
 		return
 	end
 	if slotName == "primary" and not state.primary then
@@ -236,6 +236,7 @@ local function onSwitch(player, slotName)
 	state.current = slotName
 	cancelReload(state)
 	sendAmmo(player)
+	player:SetAttribute("ItemCancel", os.clock()) -- guarda el objeto que lleve en la mano (server/Items)
 end
 
 -- Da un arma principal (de la caja). Reemplaza la anterior y la equipa.
@@ -332,7 +333,11 @@ function Weapons.start()
 	end)
 
 	Remotes.Fire.OnServerEvent:Connect(onFire)
-	Remotes.Reload.OnServerEvent:Connect(RateLimit.wrap("Reload", 0.25, startReload))
+	Remotes.Reload.OnServerEvent:Connect(RateLimit.wrap("Reload", 0.25, function(player)
+		if not player:GetAttribute("ItemReady") then
+			startReload(player)
+		end
+	end))
 	Remotes.Switch.OnServerEvent:Connect(RateLimit.wrap("Switch", 0.15, onSwitch))
 	Remotes.Sync.OnServerEvent:Connect(RateLimit.wrap("Sync", 0.25, sendAmmo))
 end

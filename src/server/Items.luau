@@ -1,6 +1,9 @@
 -- Objetos del inventario (granada, botiquín, molotov, vendas, bengala). Cada jugador guarda su cantidad en el atributo
 -- "Item_<id>" (lo lee client/Inventory). Se compran en las estaciones de munición (WeaponBox llama a Items.tryBuy), se pierden
 -- al morir y al empezar cada partida. Valores en Config.Items. El botiquín lo usa server/Medkits; el resto, Items.use.
+-- Un objeto se saca con su tecla (Items.toggle: queda en la mano, atributo "ItemReady" en el jugador y en el personaje). Granada, molotov
+-- y bengala se cargan manteniendo el clic (ChargeItem: atributo "ItemCharge" = hora del servidor en que empezó) y se lanzan al soltarlo
+-- con una fuerza proporcional; vendas y botiquín se usan con un clic. Al terminar el gesto el objeto se guarda solo.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -19,12 +22,48 @@ local Items = {}
 
 local I = Config.Items
 local busyUntil = {} -- [Player] = os.clock() hasta que termina el gesto del objeto que está usando
+local ready = {} -- [Player] = { id, restore, model, chargeStart, token }: el objeto que lleva en la mano
 local projectiles = Instance.new("Folder")
 projectiles.Name = "Projectiles"
 projectiles.Parent = workspace
 local flares = Instance.new("Folder")
 flares.Name = "Flares" -- Zombies.luau mira esta carpeta: las bengalas atraen a los zombies
 flares.Parent = workspace
+
+-- Sonido 3D de Config.Sounds.Items.<key> pegado a `parent` (parte o attachment). Con loopTime se repite y se corta a los
+-- loopTime segundos; sin él suena una vez. Devuelve el Sound.
+function Items.playSound(parent, key, loopTime)
+	local def = Config.Sounds.Items[key]
+	if not def or not parent then
+		return nil
+	end
+	local sound = Instance.new("Sound")
+	sound.SoundId = def[1]
+	sound.Volume = def[2]
+	sound.PlaybackSpeed = def[3]
+	sound.RollOffMinDistance = 12
+	sound.RollOffMaxDistance = 160
+	sound.Looped = loopTime ~= nil
+	sound.Parent = parent
+	sound:Play()
+	Debris:AddItem(sound, loopTime or 8)
+	return sound
+end
+
+-- Sonido en un punto del mundo (parte anclada invisible)
+local function playAt(position, key, loopTime)
+	local anchor = Instance.new("Part")
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.one * 0.2
+	anchor.Position = position
+	anchor.Parent = projectiles
+	Items.playSound(anchor, key, loopTime)
+	Debris:AddItem(anchor, (loopTime or 8) + 1)
+end
 
 local function attr(id)
 	return "Item_" .. id
@@ -53,6 +92,7 @@ end
 
 function Items.resetAll()
 	for _, player in Players:GetPlayers() do
+		Items.unequip(player, true)
 		Items.clear(player)
 	end
 	flares:ClearAllChildren()
@@ -144,7 +184,7 @@ local function newProjectile(player, direction, id)
 end
 
 local function throw(part, direction, speed)
-	part.AssemblyLinearVelocity = direction * speed + Vector3.new(0, 14, 0)
+	part.AssemblyLinearVelocity = direction * speed + Vector3.new(0, I.Loft, 0)
 	part.AssemblyAngularVelocity = Vector3.new(math.random(-9, 9), math.random(-9, 9), math.random(-9, 9)) -- gira en el aire
 end
 
@@ -157,6 +197,7 @@ local function explode(player, position)
 	blast.DestroyJointRadiusPercent = 0
 	blast.ExplosionType = Enum.ExplosionType.NoCraters
 	blast.Parent = workspace
+	playAt(position, "Explosion")
 	for _, z in zombiesNear(position, cfg.Radius) do
 		if not blocked(position + Vector3.new(0, 1, 0), z.root.Position) then
 			hurtZombie(player, z.humanoid, z.model, cfg.Damage * (1 - 0.5 * z.distance / cfg.Radius))
@@ -175,6 +216,8 @@ local function fireZone(player, position)
 	zone.Size = Vector3.new(cfg.Radius * 2, 0.4, cfg.Radius * 2)
 	zone.Position = position
 	zone.Parent = projectiles
+	playAt(position, "GlassBreak")
+	Items.playSound(zone, "FireLoop", cfg.Duration)
 
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = "rbxasset://textures/particles/fire_main.dds"
@@ -235,6 +278,7 @@ local function placeFlare(position)
 	sparks.LightEmission = 1
 	sparks.Parent = flare
 	flare.Parent = flares
+	Items.playSound(flare, "FlareHiss", cfg.Duration)
 	Debris:AddItem(flare, cfg.Duration)
 end
 
@@ -247,6 +291,7 @@ local function popPin(character)
 		return
 	end
 	local brass = Color3.fromRGB(199, 184, 140)
+	Items.playSound(hand, "PinPull")
 	for i = 1, 2 do
 		local piece = Instance.new("Part")
 		piece.Name = "Pasador"
@@ -298,6 +343,7 @@ local function flareFlash(gun)
 	smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
 	smoke.Parent = flash
 	flash.Parent = projectiles
+	Items.playSound(flash, "FlareShot")
 	smoke:Emit(10)
 	TweenService:Create(flash, TweenInfo.new(0.18), { Size = Vector3.one * 0.1, Transparency = 1 }):Play()
 	TweenService:Create(light, TweenInfo.new(0.18), { Brightness = 0 }):Play()
@@ -328,23 +374,119 @@ local function healSparkles(character)
 	Debris:AddItem(attachment, 1.6)
 end
 
--- Publica el gesto en el personaje (ItemId, ItemStart, ItemEnd: client/ItemPoses lo anima en todos los clientes)
-local function announce(character, id, duration)
+Items.healSparkles = healSparkles
+
+-- Publica el gesto en el personaje (ItemId, ItemStart, ItemEnd, ItemPower: client/ItemPoses lo anima en todos los clientes)
+function Items.announce(character, id, duration, power)
 	local start = workspace:GetServerTimeNow()
 	character:SetAttribute("ItemId", id)
 	character:SetAttribute("ItemStart", start)
 	character:SetAttribute("ItemEnd", start + duration)
+	character:SetAttribute("ItemPower", power or 0)
 	task.delay(duration + 0.1, function()
 		if character:GetAttribute("ItemStart") == start then
 			character:SetAttribute("ItemId", nil)
 			character:SetAttribute("ItemStart", nil)
 			character:SetAttribute("ItemEnd", nil)
+			character:SetAttribute("ItemPower", nil)
 		end
 	end)
 end
 
+local function clearGesture(character)
+	if character then
+		character:SetAttribute("ItemId", nil)
+		character:SetAttribute("ItemStart", nil)
+		character:SetAttribute("ItemEnd", nil)
+		character:SetAttribute("ItemPower", nil)
+	end
+end
+
+-- El objeto que lleva en la mano (id) o nil
+function Items.readyId(player)
+	local r = ready[player]
+	return r and r.id
+end
+
+function Items.heldModel(player)
+	local r = ready[player]
+	return r and r.model
+end
+
+-- Guarda el objeto de la mano y devuelve el arma. `cancelGesture` también corta el gesto en curso.
+function Items.unequip(player, cancelGesture)
+	local r = ready[player]
+	if not r then
+		return
+	end
+	ready[player] = nil
+	r.restore()
+	player:SetAttribute("ItemReady", nil)
+	local character = player.Character
+	if character then
+		character:SetAttribute("ItemReady", nil)
+		character:SetAttribute("ItemCharge", nil)
+		if cancelGesture then
+			clearGesture(character)
+			busyUntil[player] = nil
+		end
+	end
+end
+
+-- Saca el objeto `id` (o lo guarda si ya está en la mano / id es nil)
+function Items.toggle(player, id)
+	local current = ready[player]
+	if id == nil or (current and current.id == id) then
+		if current and os.clock() >= (busyUntil[player] or 0) and not player:GetAttribute("HealingEnd") then
+			Items.unequip(player)
+		end
+		return
+	end
+	local cfg = typeof(id) == "string" and I[id]
+	if not cfg or not table.find(I.Order, id) then
+		return
+	end
+	if PlayerState.get(player) ~= "Normal" or player:GetAttribute("Carrying") or Items.count(player, id) <= 0 then
+		return
+	end
+	if os.clock() < (busyUntil[player] or 0) or player:GetAttribute("HealingEnd") then
+		return -- todavía está haciendo el gesto de otro objeto
+	end
+	local humanoid = getHumanoid(player)
+	if not humanoid or humanoid.Health <= 0 or not player:HasAppearanceLoaded() then
+		return
+	end
+	Items.unequip(player)
+	local restore, model = ItemModel.hold(player, id)
+	if not model then
+		return
+	end
+	ready[player] = { id = id, restore = restore, model = model }
+	player:SetAttribute("ItemReady", id)
+	player.Character:SetAttribute("ItemReady", id)
+end
+
+-- Empieza (true) o cancela (false) la carga del lanzamiento
+local function onCharge(player, on)
+	local r = ready[player]
+	if not r or not I[r.id].Throwable or os.clock() < (busyUntil[player] or 0) then
+		return
+	end
+	local character = player.Character
+	if on == true and not r.chargeStart then
+		r.chargeStart = workspace:GetServerTimeNow()
+		character:SetAttribute("ItemCharge", r.chargeStart)
+		if r.id == "Grenade" then
+			popPin(character) -- tira del pasador al empezar a cargar
+		end
+	elseif on ~= true then
+		r.chargeStart = nil
+		character:SetAttribute("ItemCharge", nil)
+	end
+end
+
 -- Lanza el proyectil ya con el objeto fuera de la mano (se llama en el momento de soltarlo)
-local function launch(player, id, direction)
+local function launch(player, id, direction, speed)
 	local cfg = I[id]
 	local humanoid = getHumanoid(player)
 	if not humanoid or humanoid.Health <= 0 or PlayerState.get(player) ~= "Normal" or Items.count(player, id) <= 0 then
@@ -355,7 +497,7 @@ local function launch(player, id, direction)
 		return
 	end
 	Items.add(player, id, -1)
-	throw(part, direction, cfg.ThrowSpeed)
+	throw(part, direction, speed)
 
 	if id == "Grenade" then
 		task.delay(cfg.Fuse, function()
@@ -397,19 +539,20 @@ local function launch(player, id, direction)
 	end
 end
 
--- Usa un objeto lanzable o las vendas. `direction` = hacia dónde mira (lo manda el cliente).
--- Se saca el objeto en la mano (ItemModel.hold), los brazos hacen el gesto (client/ItemPoses) y en cfg.Anim.Release
--- sale de la mano: se lanza o se aplica. El gesto termina en cfg.Anim.End.
+-- Usa el objeto que tiene en la mano: lanza el lanzable con la fuerza cargada o se venda. `direction` = hacia dónde mira (lo manda el
+-- cliente). Los brazos hacen el gesto (client/ItemPoses), en cfg.Anim.Release sale de la mano y en cfg.Anim.End se guarda solo.
+-- El botiquín lo gestiona server/Medkits.
 function Items.use(player, id, direction)
-	local cfg = I[id]
-	if typeof(id) ~= "string" or not cfg or id == "Medkit" then
+	local r = ready[player]
+	local cfg = typeof(id) == "string" and I[id]
+	if not cfg or id == "Medkit" or not r or r.id ~= id then
 		return
 	end
 	if PlayerState.get(player) ~= "Normal" or player:GetAttribute("Carrying") or Items.count(player, id) <= 0 then
 		return
 	end
 	if os.clock() < (busyUntil[player] or 0) then
-		return -- todavía está haciendo el gesto de otro objeto
+		return
 	end
 	local humanoid = getHumanoid(player)
 	if not humanoid or humanoid.Health <= 0 then
@@ -417,6 +560,7 @@ function Items.use(player, id, direction)
 	end
 	local character = player.Character
 
+	local power = 0
 	if id == "Bandage" then
 		if humanoid.Health >= humanoid.MaxHealth then
 			Remotes.Feed:FireClient(player, "Tienes la vida llena")
@@ -427,24 +571,29 @@ function Items.use(player, id, direction)
 			return
 		end
 		direction = direction.Unit
+		if r.chargeStart then -- la fuerza la mide el servidor, no el cliente
+			power = math.clamp((workspace:GetServerTimeNow() - r.chargeStart) / I.Charge.Time, 0, 1)
+		end
+		r.chargeStart = nil
+		character:SetAttribute("ItemCharge", nil)
 	end
 
 	busyUntil[player] = os.clock() + cfg.Anim.End + I.Cooldown * 0.3
-	local release, held = ItemModel.hold(player, id)
-	announce(character, id, cfg.Anim.End)
-	if id == "Grenade" then
-		task.delay(cfg.Anim.End * 0.3, popPin, character) -- tira del pasador a mitad del gesto
-	end
-
+	local token = {}
+	r.token = token
+	Items.announce(character, id, cfg.Anim.End, power)
+	local root = character:FindFirstChild("HumanoidRootPart")
 	if id == "Bandage" then
 		Items.add(player, id, -1)
+		Items.playSound(root, "BandageRip")
 	end
+
 	task.delay(cfg.Anim.Release, function()
-		if id == "Flare" then
-			flareFlash(held)
+		if ready[player] ~= r or r.token ~= token then
+			return
 		end
-		if release then
-			release()
+		if id == "Flare" then
+			flareFlash(r.model)
 		end
 		if id == "Bandage" then
 			local current = getHumanoid(player)
@@ -453,23 +602,55 @@ function Items.use(player, id, direction)
 				healSparkles(character)
 			end
 		else
-			launch(player, id, direction)
+			if id == "Grenade" or id == "Molotov" then
+				r.model:Destroy() -- ya salió de la mano
+			end
+			if id ~= "Flare" then -- la bengala ya suena con su fogonazo
+				Items.playSound(root, "Throw")
+			end
+			launch(player, id, direction, cfg.ThrowMin + (cfg.ThrowSpeed - cfg.ThrowMin) * power)
+		end
+	end)
+	task.delay(cfg.Anim.End, function()
+		if ready[player] == r and r.token == token then
+			Items.unequip(player)
 		end
 	end)
 end
 
 function Items.start()
-	Remotes.UseItem.OnServerEvent:Connect(RateLimit.wrap("UseItem", 0.2, Items.use))
+	Remotes.UseItem.OnServerEvent:Connect(RateLimit.wrap("UseItem", 0.15, Items.use))
+	Remotes.ReadyItem.OnServerEvent:Connect(RateLimit.wrap("ReadyItem", 0.15, Items.toggle))
+	Remotes.ChargeItem.OnServerEvent:Connect(RateLimit.wrap("ChargeItem", 0.05, onCharge))
+	local function watch(player)
+		-- Cambiar de arma o cargar a un compañero guarda el objeto
+		player:GetAttributeChangedSignal("ItemCancel"):Connect(function()
+			Items.unequip(player, true)
+		end)
+		player:GetAttributeChangedSignal("Carrying"):Connect(function()
+			if player:GetAttribute("Carrying") then
+				Items.unequip(player, true)
+			end
+		end)
+	end
 	PlayerState.Changed.Event:Connect(function(player, state)
+		if state ~= "Normal" then
+			Items.unequip(player, true)
+		end
 		if state == "Dead" then
 			Items.clear(player)
 		end
 	end)
-	Players.PlayerAdded:Connect(Items.clear)
+	Players.PlayerAdded:Connect(function(player)
+		Items.clear(player)
+		watch(player)
+	end)
 	for _, player in Players:GetPlayers() do
 		Items.clear(player)
+		watch(player)
 	end
 	Players.PlayerRemoving:Connect(function(player)
+		Items.unequip(player, true)
 		busyUntil[player] = nil
 	end)
 end

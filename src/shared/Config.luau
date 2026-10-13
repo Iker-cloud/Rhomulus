@@ -168,6 +168,20 @@ return {
 		HordeSiren = "rbxassetid://9119163479",
 		VanHorn = "rbxassetid://93042705532380", -- pitido de la furgoneta al entrar (dura 1.5 s)
 		BoxSpin = "rbxassetid://9046019442",
+		-- Objetos de la tienda (server/Items y server/Medkits). Suenan en 3D desde el servidor. Todos de Pro Sound Effects salvo
+		-- la explosión y el fuego (Creator Store). Volumen y tono por sonido: { id, volume, pitch }.
+		Items = {
+			PinPull = { "rbxassetid://9114659833", 0.7, 1 }, -- la granada: tirar del pasador
+			Throw = { "rbxassetid://9113836369", 0.45, 1.5 }, -- lanzar: silbido de tela rápido y agudo
+			Explosion = { "rbxassetid://126212934401370", 1, 1 },
+			GlassBreak = { "rbxassetid://9114591515", 0.8, 1.1 }, -- el molotov se rompe
+			FireLoop = { "rbxassetid://116275103627699", 0.6, 1 }, -- zona de fuego (bucle mientras dura)
+			FlareShot = { "rbxassetid://132539859090895", 0.55, 0.65 }, -- la pistola de bengalas: tiro de pistola grave
+			FlareHiss = { "rbxassetid://9112780743", 0.5, 1 }, -- bengala encendida (bucle)
+			BandageRip = { "rbxassetid://9113836270", 0.6, 1 }, -- vendas
+			MedkitOpen = { "rbxassetid://117629133235583", 0.6, 0.7 }, -- cierre del botiquín: clic grave
+			MedkitRip = { "rbxassetid://9113836102", 0.6, 0.9 }, -- cinta / venda del botiquín
+		},
 		Music = {
 			Calm = "rbxassetid://9046799798", -- lobby, punto seguro y resultados
 			Tension = "rbxassetid://131562091269894", -- explorando
@@ -447,13 +461,19 @@ return {
 	Items = {
 		Order = { "Grenade", "Medkit", "Molotov", "Bandage", "Flare" },
 		Cooldown = 0.8, -- segundos entre usos
+		-- Se saca el objeto con su tecla (3 a 7; otra vez la misma, o 1 / 2 / Q, lo guarda). Con la granada, el molotov y la bengala se
+		-- mantiene el clic para cargar la fuerza (el arco se ve en pantalla) y al soltarlo se lanza; con el clic derecho se cancela.
+		-- Las vendas y el botiquín se usan con un clic. La fuerza va de 0 a 1 en Charge.Time segundos: la velocidad del lanzamiento
+		-- pasa de ThrowMin (sin cargar) a ThrowSpeed (carga completa) y `Loft` es lo que se le suma hacia arriba.
+		Charge = { Time = 1.1 },
+		Loft = 14,
 		-- Anim = { Release, End }: segundos del gesto al usar el objeto (client/ItemPoses). En Release sale de la mano (se lanza o se
 		-- cura) y en End termina el gesto. Si se cambian, ajustar también las fracciones de ItemPoses (Release / End).
-		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Anim = { Release = 0.75, End = 1.05 }, Damage = 130, Radius = 14, Fuse = 2, ThrowSpeed = 62, Color = Color3.fromRGB(86, 104, 52) },
-		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit)
-		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Anim = { Release = 0.8, End = 1.1 }, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowSpeed = 55, Color = Color3.fromRGB(150, 96, 40) },
-		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.2, End = 1.5 } },
-		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Anim = { Release = 0.7, End = 1.1 }, Duration = 15, LureRange = 75, ThrowSpeed = 58, Color = Color3.fromRGB(235, 70, 55) },
+		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Throwable = true, Anim = { Release = 0.2, End = 0.55 }, Damage = 130, Radius = 14, Fuse = 2, ThrowMin = 26, ThrowSpeed = 100, Color = Color3.fromRGB(86, 104, 52) },
+		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit); el gesto dura Config.Medkit.Time
+		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Throwable = true, Anim = { Release = 0.25, End = 0.65 }, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowMin = 24, ThrowSpeed = 90, Color = Color3.fromRGB(150, 96, 40) },
+		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.3, End = 1.6 } },
+		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Throwable = true, Anim = { Release = 0.12, End = 0.6 }, Duration = 15, LureRange = 75, ThrowMin = 30, ThrowSpeed = 105, Color = Color3.fromRGB(235, 70, 55) },
 	},
 
 	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas

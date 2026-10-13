@@ -3,8 +3,10 @@
 -- Ejes del kit: Z arriba, frente = -Y, cañón de la pistola hacia +X. Aquí: G(x, y, z) = (x, z, y) en Roblox (Y arriba).
 --   ItemModel.build(kind)       modelo con PrimaryPart "Root" (una bola invisible con colisión, en el centro del objeto);
 --                               kind = "Grenade", "Molotov", "FlareGun", "Bandage" o "Flare" (la bengala disparada)
+--   ItemModel.setLid(modelo, abrir, segundos) abre o cierra la tapa del botiquín
 --   ItemModel.hold(player, kind) lo pone en la mano derecha (y esconde el arma activa); devuelve una función que lo quita
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 
 local ItemModel = {}
 
@@ -237,6 +239,74 @@ function BUILDERS.Flare()
 	return model
 end
 
+-- Botiquín: maletín rojo con cruz blanca, asa y cierres, 1.0 x 0.64 x 0.5 (frente = -Z, bisagra atrás = +Z). La tapa gira en una
+-- Motor6D ("Tapa" dentro de la pieza "Tapa"); ItemModel.setLid la abre y la cierra. Dentro lleva gasas, un frasco y una cajita.
+local LID_HINGE = Vector3.new(0, 0.02, 0.25) -- el borde de atrás de la base, donde gira la tapa
+local LID_OPEN = math.rad(112)
+
+function BUILDERS.Medkit()
+	local model, root = newModel("Botiquin", 0.9)
+	local red = rgb(0.78, 0.12, 0.11)
+	local darkRed = rgb(0.58, 0.08, 0.08)
+	local white = rgb(0.96, 0.96, 0.94)
+	local black = rgb(0.13, 0.13, 0.15)
+	local metal = rgb(0.72, 0.72, 0.70)
+	local function vc(parent, name, x, y, z, h, r, color, material)
+		return part(model, parent, name, Enum.PartType.Cylinder, Vector3.new(h, r * 2, r * 2), CFrame.new(x, y, z) * CFrame.Angles(0, 0, math.pi / 2), color, material)
+	end
+
+	-- Base abierta por arriba: caja, bandeja oscura y lo que lleva dentro
+	part(model, root, "Base", Enum.PartType.Block, Vector3.new(1.0, 0.34, 0.5), CFrame.new(0, -0.15, 0), red)
+	part(model, root, "Franja", Enum.PartType.Block, Vector3.new(1.02, 0.05, 0.52), CFrame.new(0, -0.30, 0), darkRed)
+	part(model, root, "Bandeja", Enum.PartType.Block, Vector3.new(0.9, 0.02, 0.4), CFrame.new(0, 0.005, 0), rgb(0.16, 0.16, 0.18))
+	vc(root, "Gasa1", -0.30, 0.095, -0.08, 0.17, 0.085, white, Enum.Material.Fabric)
+	vc(root, "Gasa2", -0.12, 0.095, -0.08, 0.17, 0.085, white, Enum.Material.Fabric)
+	vc(root, "GasaBanda", -0.30, 0.095, -0.08, 0.04, 0.09, rgb(0.84, 0.27, 0.27), Enum.Material.Fabric)
+	vc(root, "Frasco", 0.14, 0.11, -0.05, 0.20, 0.07, rgb(0.25, 0.55, 0.85), Enum.Material.Glass)
+	vc(root, "FrascoTapa", 0.14, 0.225, -0.05, 0.04, 0.05, white, Enum.Material.SmoothPlastic)
+	part(model, root, "Cajita", Enum.PartType.Block, Vector3.new(0.22, 0.10, 0.16), CFrame.new(0.33, 0.06, -0.02), white)
+	part(model, root, "CajitaCruz", Enum.PartType.Block, Vector3.new(0.10, 0.012, 0.03), CFrame.new(0.33, 0.112, -0.02), red)
+	part(model, root, "Tubo", Enum.PartType.Block, Vector3.new(0.5, 0.05, 0.07), CFrame.new(0.05, 0.045, 0.16), rgb(0.88, 0.80, 0.55))
+	-- Cierres a los lados del frente
+	for _, x in { -0.32, 0.32 } do
+		part(model, root, "CierreBase", Enum.PartType.Block, Vector3.new(0.14, 0.09, 0.035), CFrame.new(x, -0.02, -0.262), metal, Enum.Material.Metal)
+	end
+
+	-- Tapa: pieza con bisagra y todo lo que va pegado a ella
+	local lid = part(model, root, "Tapa", Enum.PartType.Block, Vector3.new(1.0, 0.30, 0.5), CFrame.new(0, 0.17, 0), red)
+	local weld = lid:FindFirstChildOfClass("WeldConstraint")
+	weld:Destroy()
+	local hinge = Instance.new("Motor6D")
+	hinge.Name = "Bisagra"
+	hinge.Part0 = root
+	hinge.Part1 = lid
+	hinge.C0 = CFrame.new(LID_HINGE)
+	hinge.C1 = CFrame.new(LID_HINGE - lid.Position)
+	hinge.Parent = lid
+	part(model, lid, "TapaBorde", Enum.PartType.Block, Vector3.new(1.02, 0.05, 0.52), CFrame.new(0, 0.30, 0), darkRed)
+	part(model, lid, "CruzH", Enum.PartType.Block, Vector3.new(0.36, 0.09, 0.016), CFrame.new(0, 0.17, -0.254), white)
+	part(model, lid, "CruzV", Enum.PartType.Block, Vector3.new(0.09, 0.30, 0.016), CFrame.new(0, 0.17, -0.254), white)
+	for _, x in { -0.32, 0.32 } do
+		part(model, lid, "CierreTapa", Enum.PartType.Block, Vector3.new(0.14, 0.07, 0.035), CFrame.new(x, 0.065, -0.262), metal, Enum.Material.Metal)
+	end
+	-- Asa de goma sobre la tapa
+	for _, x in { -0.20, 0.20 } do
+		part(model, lid, "AsaPoste", Enum.PartType.Block, Vector3.new(0.07, 0.10, 0.09), CFrame.new(x, 0.37, 0), black)
+	end
+	part(model, lid, "Asa", Enum.PartType.Block, Vector3.new(0.47, 0.06, 0.11), CFrame.new(0, 0.44, 0), black)
+	return model
+end
+
+function ItemModel.setLid(model, open, duration)
+	local lid = model and model:FindFirstChild("Tapa")
+	local hinge = lid and lid:FindFirstChild("Bisagra")
+	if not hinge then
+		return
+	end
+	local goal = CFrame.new(LID_HINGE) * CFrame.Angles(open and LID_OPEN or 0, 0, 0)
+	TweenService:Create(hinge, TweenInfo.new(duration or 0.4, open and Enum.EasingStyle.Back or Enum.EasingStyle.Quad, open and Enum.EasingDirection.Out or Enum.EasingDirection.In), { C0 = goal }):Play()
+end
+
 function ItemModel.build(kind)
 	return BUILDERS[kind]()
 end
@@ -252,11 +322,12 @@ local GRIPS = {
 	Molotov = { rot = UPRIGHT, point = Vector3.new(0, -0.25, 0) }, -- agarrada por la botella, la llama arriba
 	FlareGun = { rot = FORWARD, point = Vector3.new(-0.48, -0.18, 0) }, -- por la empuñadura
 	Bandage = { rot = UPRIGHT, point = Vector3.zero },
+	Medkit = { rot = UPRIGHT, point = Vector3.new(0, 0.02, 0) }, -- por el canto de la base, con la tapa arriba
 }
 
-local HELD = { Grenade = "Grenade", Molotov = "Molotov", Flare = "FlareGun", Bandage = "Bandage" }
+local HELD = { Grenade = "Grenade", Molotov = "Molotov", Flare = "FlareGun", Bandage = "Bandage", Medkit = "Medkit" }
 
--- Muestra el objeto de `itemId` ("Grenade", "Molotov", "Flare", "Bandage") en la mano del jugador y esconde el arma activa.
+-- Muestra el objeto de `itemId` ("Grenade", "Molotov", "Flare", "Bandage", "Medkit") en la mano del jugador y esconde el arma activa.
 -- Devuelve (una función que lo quita y restaura el arma, el modelo). Nil si el personaje no está listo.
 function ItemModel.hold(player, itemId)
 	local character = player.Character
