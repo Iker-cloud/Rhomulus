@@ -153,6 +153,15 @@ local function onFire(player, origin, direction)
 		return
 	end
 
+	-- Bloom: la dispersión crece al disparar seguido y se recupera con el tiempo sin disparar
+	local bloomCfg = cfg.Bloom
+	local bloom = 0
+	if bloomCfg then
+		bloom = math.max(0, (state.bloom or 0) - bloomCfg.Recover * (now - state.lastShot))
+		state.bloom = math.min(bloomCfg.Max, bloom + bloomCfg.PerShot)
+		player:SetAttribute("BloomValue", state.bloom) -- la mira (client/Hud) lo recupera con BloomTime
+		player:SetAttribute("BloomTime", workspace:GetServerTimeNow())
+	end
 	state.lastShot = now
 	slot.ammo -= 1
 	sendAmmo(player)
@@ -179,7 +188,7 @@ local function onFire(player, origin, direction)
 	local endPoints = {}
 
 	for _ = 1, cfg.Pellets do
-		local dir = spread(unit, cfg.Spread)
+		local dir = spread(unit, cfg.Spread + bloom)
 		local result = workspace:Raycast(origin, dir * cfg.Range, params)
 		if not (result and result.Instance:IsDescendantOf(workspace.Zombies)) then
 			local limit = result and (result.Position - origin).Magnitude or cfg.Range
@@ -234,6 +243,8 @@ local function onSwitch(player, slotName)
 		return
 	end
 	state.current = slotName
+	state.bloom = 0
+	player:SetAttribute("BloomValue", 0)
 	cancelReload(state)
 	sendAmmo(player)
 	player:SetAttribute("ItemCancel", os.clock()) -- guarda el objeto que lleve en la mano (server/Items)

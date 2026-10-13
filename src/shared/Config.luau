@@ -7,6 +7,9 @@ return {
 			Damage = 20,
 			Pellets = 1,
 			Spread = 0, -- grados de dispersión
+			-- Bloom: al disparar seguido la dispersión crece PerShot grados por tiro (hasta Max) y se recupera Recover grados por segundo
+			-- sin disparar (server/Weapons; la mira lo muestra como un aro, client/Hud). Sustituye al retroceso de cámara.
+			Bloom = { PerShot = 1, Max = 3, Recover = 3 },
 			MagSize = 12,
 			FireCooldown = 0.25, -- segundos entre disparos
 			ReloadTime = 1.5,
@@ -20,6 +23,7 @@ return {
 			Damage = 25,
 			Pellets = 1,
 			Spread = 1,
+			Bloom = { PerShot = 0.35, Max = 3.5, Recover = 5 },
 			MagSize = 30,
 			FireCooldown = 0.1,
 			ReloadTime = 2,
@@ -52,6 +56,7 @@ return {
 			Damage = 14,
 			Pellets = 1,
 			Spread = 2.5,
+			Bloom = { PerShot = 0.3, Max = 4, Recover = 6 },
 			MagSize = 40,
 			FireCooldown = 0.07,
 			ReloadTime = 1.8,
@@ -69,7 +74,8 @@ return {
 	--   Grip = donde la mano derecha agarra · Fore = donde se apoya la izquierda · Mag = cargador (o puerto de la escopeta)
 	-- HighGrip/LowGrip: posición de la mano derecha respecto al pecho (X derecha, Y arriba, -Z adelante), con el arma
 	-- arriba (apuntando) o abajo (en reposo). Kick = studs que patea hacia atrás, Rise = cuánto sube el cañón (rad),
-	-- Camera = sacudida de cámara por disparo (grados).
+	-- Camera = sacudida de cámara por disparo (grados): se mantiene baja para que la mira no se vaya hacia arriba; la imprecisión
+	-- al disparar seguido es el Bloom de Config.Weapons.
 	WeaponHold = {
 		-- Marco de la palma en la mano (R15): el arma queda con el cañón hacia donde apunta el antebrazo
 		HandGrip = CFrame.new(0, -0.16, 0) * CFrame.fromMatrix(Vector3.zero, Vector3.new(0, 1, 0), Vector3.new(0, 0, -1), Vector3.new(-1, 0, 0)),
@@ -93,7 +99,7 @@ return {
 			Reload = "Mag",
 			Kick = 0.25,
 			Rise = 0.12,
-			Camera = 1.2,
+			Camera = 0.4,
 		},
 		Rifle = {
 			Scale = 0.9,
@@ -110,7 +116,7 @@ return {
 			Reload = "Mag",
 			Kick = 0.22,
 			Rise = 0.05,
-			Camera = 0.6,
+			Camera = 0.2,
 		},
 		Shotgun = {
 			Scale = 0.9,
@@ -126,7 +132,7 @@ return {
 			ShellLoops = 4,
 			Kick = 0.5,
 			Rise = 0.3,
-			Camera = 3,
+			Camera = 2.2,
 		},
 		SMG = {
 			Scale = 0.9,
@@ -141,7 +147,7 @@ return {
 			Reload = "Mag",
 			Kick = 0.15,
 			Rise = 0.04,
-			Camera = 0.5,
+			Camera = 0.15,
 		},
 	},
 
