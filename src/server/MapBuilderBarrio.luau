@@ -1889,10 +1889,7 @@ local function churchDetails(map, rng)
 	deco(pole(folder, "PilaPie", Vector3.new(-22, 0, 164), 2.6, 1, C.concreto, Enum.Material.Concrete))
 	deco(pole(folder, "PilaBol", Vector3.new(-22, 2.6, 164), 0.7, 2, C.concreto, Enum.Material.Concrete))
 	deco(pole(folder, "PilaAgua", Vector3.new(-22, 3.25, 164), 0.1, 1.6, Color3.fromRGB(60, 110, 150), Enum.Material.Glass)).Transparency = 0.3
-	noticeBoard(folder, on("west", 166, 8, 0.2), "Rhomulus cayó, pero el Refugio Remo sigue en pie")
-	local _, banner2 = blankBoard(folder, "LemaIglesia", Vector3.new(20, 3.6, 0.3), on("back", 0, 11.2, 0.3), RHO_BLACK, 50)
-	boardRect(banner2, 0.02, 0.08, 0.96, 0.84, SAFE_GOLD)
-	boardText(banner2, "AQUÍ NADIE SE QUEDA ATRÁS", 0.04, 0.1, 0.92, 0.8, RHO_BLACK, Enum.TextXAlignment.Center)
+	-- (sin carteles en la nave: el aviso y el lema atravesaban columnas, vitrales y los rayos de la cruz)
 
 	-- Marcos verdes de zona segura (puerta de entrada y de salida)
 	for _, z in { 160.7, 199.3 } do
@@ -2283,7 +2280,7 @@ local function buildChurch(map, refs)
 	end
 	for i, z in { 170, 182, 194 } do
 		local color = ({ C.rojo, C.azul, C.amarillo })[i]
-		for _, x in { -27.8, 27.8 } do
+		for _, x in { -27.7, 27.7 } do -- el cristal sobresale 0.1 del marco de piedra (a 27.8 compartía plano con él y parpadeaba)
 			deco(block(map, "Vitral", Vector3.new(0.3, 6, 3), Vector3.new(x, 11, z), color, Enum.Material.Neon)).Transparency = 0.3
 		end
 	end
@@ -3635,7 +3632,7 @@ local function buildStadium(map, refs, rng, spawns, config)
 	container(map, 56, 360, 20)
 
 	-- Caseta de la radio (oeste), con cobertura de sacos; estación de munición (este); botiquín sobre una mesa
-	block(map, "CasetaRadio", Vector3.new(8, 10, 12), Vector3.new(-76, 5, 352), C.salmon)
+	CollectionService:AddTag(block(map, "CasetaRadio", Vector3.new(8, 10, 12), Vector3.new(-76, 5, 352), C.salmon), "ClimbableBus") -- los zombies trepan a su techo (server/Zombies)
 	deco(block(map, "CasetaRadioTecho", Vector3.new(9, 0.5, 13), Vector3.new(-76, 10.3, 352), C.oxido, Enum.Material.CorrodedMetal))
 	local radioModel, radio = PropModel.build(Radio, Vector3.new(-67, 0, 352), 0)
 	radio.Name = "Radio"
