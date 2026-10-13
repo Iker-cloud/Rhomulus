@@ -95,6 +95,8 @@
 
 # GDD
 
+*Actualizado el 13 de octubre de 2026 con todo lo hecho hasta ahora (mapa 1, objetos, dificultades, menú con salas y celular).*
+
 ## Resumen
 
 Un shooter cooperativo de zombies para 1 a 4 jugadores: el equipo cruza un mapa infestado, de un punto seguro a un punto de extracción, y solo gana si sobrevive junto.
@@ -104,11 +106,12 @@ Un shooter cooperativo de zombies para 1 a 4 jugadores: el equipo cruza un mapa 
 | Nombre | **Rhomulus** (decidido el 7 de oct. de 2026; falta confirmarlo con Isaac). Antes: "Proyecto Zombies" |
 | Género | Acción / supervivencia cooperativa, con cámara en primera y tercera persona |
 | Inspiración | Left 4 Dead: hordas, trabajo en equipo, revivir compañeros, extracción final; caja de armas al azar de los modos zombies de Call of Duty |
-| Plataforma | Roblox (PC primero; móvil y consola después del MVP) |
-| Jugadores | 1 a 4 por servidor |
+| Plataforma | PC y celular (controles táctiles hechos; falta probarlos con un dedo real); consola después |
+| Jugadores | 1 a 4 por servidor, con salas privadas por código o partida con desconocidos |
 | Duración de partida | 10 a 15 minutos |
 | Público | Jugadores de Roblox de 12+ años que buscan acción en grupo |
-| Desarrollador | Iker, primer juego en Roblox Studio |
+| Desarrollo | Iker e Isaac; primer juego en Roblox Studio |
+| Estado | Fase 7: pulido y prueba con amigos. El mapa 1 (Morro Esperanza) está completo y se juega de principio a fin |
 
 Lo que lo hace divertido: la presión de la horda obliga a quedarse juntos, y caer sin ayuda significa perder. El juego premia cubrirse las espaldas, no jugar solo.
 
@@ -128,156 +131,200 @@ Ciclo entre partidas (después del MVP): ganar monedas por partida completada, d
 
 ## Estructura de una partida
 
-El juego tiene tres mapas, cada uno con su propio vehículo de extracción; todos siguen la misma estructura de partida de 10 a 15 minutos.
+El juego tiene tres mapas previstos, cada uno con su propio vehículo de extracción; todos siguen la misma estructura de partida de 10 a 15 minutos.
 
-| Mapa | Ambiente | Extracción final |
-| --- | --- | --- |
-| Ciudad abandonada | Calles con autos chocados, edificios en ruinas, callejones | Una van que llega por la calle principal |
-| Centro comercial | Pasillos, tiendas, escaleras eléctricas, estacionamiento | Un auto deportivo en el estacionamiento |
-| Aeropuerto | Terminal, bandas de equipaje, hangar y pista | Un avión que hay que alcanzar en la pista |
+| Mapa | Ambiente | Extracción final | Estado |
+| --- | --- | --- | --- |
+| **Morro Esperanza** (barrio de la ciudad Rhomulus) | Favela latina de noche: callejones, escaleras, azoteas, tienda, iglesia, mercado, terminal y estadio | La furgoneta del Refugio Remo, que entra por el portón norte del estadio | **Hecho** (3 tramos, 2 puntos seguros) |
+| Prueba | Mapa gris del MVP: una calle larga, un generador y la extracción | Una van | Hecho, se mantiene para probar |
+| Centro comercial | Pasillos, tiendas, escaleras eléctricas, estacionamiento | Un auto deportivo en el estacionamiento | Después |
+| Aeropuerto | Terminal, bandas de equipaje, hangar y pista | Un avión que hay que alcanzar en la pista | Después |
 
-El MVP construye un solo mapa completo (la ciudad abandonada) y los otros dos reutilizan todos sus sistemas. Se empieza por la ciudad porque es la geometría más sencilla: calles abiertas y edificios simples.
+Los mapas nuevos reutilizan todos los sistemas. El diseño del mapa 1 está en `docs/mapa-1-barrio.md`.
 
 Estructura de cada partida:
 
-1. **Lobby:** los jugadores se juntan, votan el mapa y presionan "Listo".
-2. **Zona 1:** zombies sueltos, pocos recursos. Sirve para aprender los controles.
-3. **Punto seguro:** cuarto cerrado donde no entran zombies. Hay munición y botiquines; se avanza cuando todos están dentro.
-4. **Zona 2:** pasillos, más zombies y una horda activada por un evento (abrir un portón, encender un generador).
-5. **Final — Extracción:** el equipo llama al rescate y aguanta una horda continua durante 2 a 3 minutos hasta que llega el vehículo de ese mapa.
-6. **Resultado:** victoria si al menos un jugador llega al vehículo; derrota si todos caen. Pantalla con estadísticas (kills, compañeros revividos, daño recibido).
+1. **Menú de entrada** (otro lugar de la experiencia): título, y desde ahí *Jugar* (partida con desconocidos, hasta 4), *Crear partida* (sala privada con código de 4 letras; el anfitrión elige mapa y dificultad), *Unirse con código* y *Cómo jugar*.
+2. **Votación** (sala aparte con un podio por mapa, 20 s, empate al azar): se vota el mapa con `E` y la dificultad con 1 a 4 (o tocando el panel en celular).
+3. **Lobby** (la cochera): maniquíes para practicar, tarjeta de bienvenida la primera vez, y *Listo* (`Y` o botón) para empezar.
+4. **Tramo 1:** tres rutas (Calle, Callejón, Escalera) que se juntan en el primer punto seguro. Zombies sueltos, pocos recursos.
+5. **Punto seguro 1 (la tienda):** sin zombies; estación de suministros y recarga gratis. Se avanza cuando todos están dentro.
+6. **Tramo 2:** plaza con el generador, que abre la iglesia. Primero hay que llevarle **3 garrafas de gas** desde el mercado (cada entrega atrae zombies); al arrancar sale una horda con un Tanque. Emboscadas en las plazoletas.
+7. **Punto seguro 2 (la iglesia).**
+8. **Tramo 3:** terminal con emboscada y Tanque, avenida lateral y andenes, hasta la explanada.
+9. **Extracción (estadio):** el equipo llama a la radio, aguanta una horda continua con Tanques periódicos durante la cuenta atrás hasta que llega la furgoneta y todos suben.
+10. **Resultado:** victoria si al menos un jugador sube a la furgoneta; derrota si todos caen. Pantalla con estadísticas (kills, revividos, daño recibido) y botón para volver al menú.
 
-Si un jugador muere, reaparece en el siguiente punto seguro, igual que en Left 4 Dead. Así nadie se queda viendo la partida entera.
+Cada ruta del tramo tiene su color (roja, amarilla, azul). La ruta Escalera tiene azoteas de 10 de alto con rampas, latas extra y botiquín arriba, más expuestas. Una columna de luz, un cartel con la distancia y una flecha en el borde de la pantalla guían hacia el objetivo.
+
+Si un jugador muere, mira a sus compañeros en **modo espectador** (cambia de compañero con `A`/`D` o tocando su ficha) y reaparece en el siguiente punto seguro, igual que en Left 4 Dead. Así nadie se queda viendo la partida entera.
 
 ## Sistemas
 
-Cada sistema tiene una versión mínima para el MVP; los valores numéricos son puntos de partida para balancear en pruebas.
+Cada sistema se describe como está hoy en el juego; los valores numéricos viven en `Config` y se afinan en pruebas.
 
 ### Jugador
 
-- Vida: 100 puntos. Al llegar a 0, el jugador cae (no muere): puede disparar con pistola desde el suelo mientras se desangra durante 30 s.
-- Revivir: un compañero mantiene presionada una tecla 4 s junto a él y lo levanta con 30 de vida. Mientras tanto, cada personaje dice una frase al azar en un globo de texto (después, con voz). Ejemplos del que revive: "¡Arriba, que todavía no es tu hora!", "¿Otra vez en el piso?", "Me debes una". Ejemplos del caído: "Ya me andaba", "Tardaste muchísimo".
-- Cargar: un compañero puede levantar al caído y llevarlo en hombros a un lugar seguro antes de revivirlo. Quien carga camina más lento y solo usa la pistola; el caído sigue disparando desde el hombro.
-- Si nadie lo revive a tiempo, muere y reaparece en el siguiente punto seguro.
+- Vida: 100 puntos. Al llegar a 0, el jugador cae (no muere): se arrastra, puede disparar la pistola y se desangra durante 30 s (cambia con la dificultad).
+- Correr: mantener `Shift` (en celular, botón que alterna). Se cancela al apuntar, disparar o recargar.
+- Revivir: un compañero mantiene `E` 4 s junto al caído y acierta una **prueba de acción** (un aro con una zona buena y una aguja; `Espacio`, o tocar el aro en celular). Lo levanta con 30 de vida. Mientras tanto, cada personaje dice una frase al azar en un globo de texto (después, con voz). Ejemplos del que revive: "¡Arriba, que todavía no es tu hora!", "¿Otra vez en el piso?", "Me debes una". Ejemplos del caído: "Ya me andaba", "Tardaste muchísimo".
+- Cargar: un compañero puede levantar al caído (`F`) y llevarlo en hombros a un lugar seguro antes de revivirlo; se suelta con `G`. Quien carga camina más lento y solo usa la pistola; el caído sigue disparando desde el hombro. Las garrafas de gas se cargan igual.
+- Levantarse solo: con 1 jugador, mantener `H` 3 s (veces por zona según la dificultad).
+- Si nadie lo revive a tiempo, muere, mira a sus compañeros como espectador y reaparece en el siguiente punto seguro.
+- Poses propias: caído (se arrastra), arrodillado al revivir y colgado al ser cargado.
 
 ### Armas
 
 | Arma | Rol | Daño por tiro | Cargador | Notas |
 | --- | --- | --- | --- | --- |
 | Pistola | Secundaria, munición infinita | 20 | 12 | Siempre disponible, también estando caído |
-| Rifle | Principal, todo terreno | 25 | 30 | Disparo automático |
-| Escopeta | Principal, corto alcance | 8 x 8 perdigones | 8 | Fuerte contra hordas en pasillos |
+| Rifle de asalto | Principal, todo terreno (común) | 25 | 30 | Automático |
+| Escopeta | Principal, corto alcance (común) | 8 x 8 perdigones | 8 | Fuerte contra hordas en pasillos |
+| Subfusil | Principal, mucha cadencia (rara) | 14 | 40 | Automático |
 
-Disparo con raycast desde el servidor (ver Arquitectura). Fuego amigo desactivado en el MVP.
+Disparo con raycast validado en el servidor (ver Arquitectura). Fuego amigo desactivado. Un tiro a la **cabeza hace x2** (crítico, con marcador y sonido solo para el tirador). Al disparar seguido la dispersión crece (**bloom**, con un aro en la mira que lo muestra). Clic derecho apunta con zoom. El arma activa va en la mano con los brazos animados (retroceso visual, recarga por tipo); la primaria queda a la espalda y la pistola en la cadera cuando no están en la mano.
 
 ### Caja de armas
 
 Todos empiezan con pistola; las armas principales salen de una caja misteriosa, como en los modos zombies de Call of Duty.
 
-- Cuesta puntos del equipo (ver Puntos del equipo).
-- Al abrirla, las armas giran unos segundos sobre la caja con luz y sonido, y se detiene en una al azar.
-- Cada arma tiene rareza (común, rara, épica): las épicas salen menos.
-- Hay una caja por zona, en un lugar distinto de la zona en cada partida, para que el equipo siempre tenga una adelante mientras avanza.
-- Arsenal posible: rifle, escopeta, subfusil, francotirador, ametralladora ligera y un arma épica por mapa.
+- Cuesta **500 latas** del equipo (ver Latas).
+- Al abrirla, las armas giran unos segundos sobre la caja con luz y melodía, y se detiene en una al azar (rifle, escopeta o subfusil). Hay 8 s para tomarla antes de que se pierda.
+- Cada arma tiene rareza (común, rara): las raras salen menos.
+- Hay una caja por zona, en un lugar distinto en cada partida, para que el equipo siempre tenga una adelante.
 - Diseño propio de la caja y las armas, sin copiar modelos ni nombres de Call of Duty.
+- Posibles armas futuras: francotirador, ametralladora ligera y un arma épica por mapa.
 
-### Puntos del equipo
+### Latas del equipo (puntos)
 
-Los puntos (en el juego se llaman **latas**) son una sola bolsa compartida por todo el equipo y se ven en la UI de todos.
+Las latas son una sola bolsa compartida por todo el equipo y se ven en la interfaz de todos, con un panel temporal del aporte de cada jugador.
 
-- Se ganan matando zombies, reviviendo o cargando compañeros y completando cada zona.
-- Se gastan en la caja de armas y en estaciones de munición que hay en cada zona.
-- Cualquier jugador puede gastar; la UI muestra quién compró qué, para que el equipo se coordine.
+- Se ganan matando (común 25, rápido 40, Tanque 150), reviviendo (50), cargando (20), completando cada zona (100), entregando una garrafa (50) y recogiendo **montones de latas** sueltos por el mapa (50; 75 en las azoteas).
+- Se gastan en la caja de armas (500) y en las **estaciones de suministros** (ver Objetos y tienda).
+- Cualquier jugador puede gastar; la interfaz avisa quién compró qué, para que el equipo se coordine. La dificultad multiplica precios y ganancias.
+
+### Objetos y tienda
+
+Barra de inventario de 7 ranuras: 1 = arma principal, 2 = pistola, 3 a 7 = objetos. Se sacan con su tecla (o tocando la ranura en celular) y se pierden al morir.
+
+| Objeto | Precio | Máx. | Qué hace |
+| --- | --- | --- | --- |
+| Granada | 100 | 3 | 130 de daño en área (radio 14), mecha de 2 s; se carga la fuerza manteniendo el clic y se lanza al soltar, con el arco a la vista |
+| Botiquín | 200 | 2 | Cura 80 en 5 s; a uno mismo o al compañero herido que se mira |
+| Molotov | 125 | 2 | Fuego en el suelo durante 6 s (14 de daño cada 0,5 s, radio 8) |
+| Vendas | 60 | 3 | Curan 25 en 1,2 s |
+| Bengala | 75 | 2 | Atrae zombies durante 15 s (alcance 75) |
+
+La **tienda de suministros** se abre con `E` en una estación de munición (150 latas la recarga) y vende todo lo anterior. Los botiquines también aparecen sueltos en el mapa nuevo.
+
+### Dificultades
+
+Se votan al inicio de cada ronda (o las elige el anfitrión de una sala). **Tensión** es el balance base.
+
+| Dificultad | Zombies (vida / velocidad / daño) | Máx. vivos / hordas | Tanques | Precios / latas | Ayuda |
+| --- | --- | --- | --- | --- | --- |
+| Calma | x0,8 / x0,9 / x0,6 | x0,7 / x0,6 | Más espaciados | x0,8 / x1 | Caído aguanta x1,3; 2 levantadas solo |
+| Tensión | x1 / x1 / x1 | x1 / x1 | Normal | x1 / x1 | 1 levantada solo |
+| Crisis | x1,5 / x1,08 / x1,4 | x1,25 / x1,4 | +1 vivo, más seguidos | x1,25 / x1,15 | Curación x0,85; caído x0,85 |
+| Colapso | x2 / x1,15 / x1,8 | x1,4 / x1,8 | +2 vivos, muy seguidos | x1,5 / x1,3 | Curación x0,7; caído x0,7; sin levantarse solo |
+
+Hay un tope de 32 zombies vivos en cualquier dificultad (rendimiento en celular).
 
 ### Cámara
 
-El jugador cambia entre primera y tercera persona con una tecla (en celular, con un botón). En el MVP, la primera persona solo acerca la cámara a la cabeza del personaje, sin brazos ni armas animados por separado; esos *viewmodels* llegan después del MVP. La tercera persona es sobre el hombro, y en ambas el disparo sale del centro de la pantalla para que apuntar se sienta igual.
+El jugador cambia entre primera y tercera persona con una tecla (`V`; botón en celular). La tercera persona es sobre el hombro; el disparo sale del centro de la pantalla en ambas para que apuntar se sienta igual. Con clic derecho (o el botón de apuntar) hay zoom y la sensibilidad baja. La sensibilidad es ajustable por el jugador (`O`).
 
 ### Enemigos
 
-| Enemigo | Vida | Comportamiento | Cuándo entra |
+| Enemigo | Vida | Comportamiento | Estado |
 | --- | --- | --- | --- |
-| Zombie común | 50 | Persigue al jugador más cercano y golpea (10 de daño) | MVP |
-| Zombie rápido | 30 | Corre al doble de velocidad, poca vida | MVP |
-| Zombie tanque | 800 | Lento, golpea fuerte (40), aparece en el final | Después del MVP |
-| Zombie especial que atrapa a un jugador | 150 | Inmoviliza a un jugador; la víctima se libera presionando una tecla muchas veces (en celular, tocando un botón rápido) o un compañero le dispara al zombie | Después del MVP |
+| Zombie común | 50 | Persigue al jugador más cercano y golpea (10 de daño) | Hecho |
+| Zombie rápido | 30 | Corre al doble de velocidad, poca vida | Hecho |
+| Zombie Tanque | 600 | Lento, golpea fuerte (35); aparece en la horda del generador, en la emboscada de la terminal y cada cierto tiempo en la extracción | Hecho |
+| Zombie especial que atrapa a un jugador | 150 | Inmoviliza a un jugador; la víctima se libera presionando una tecla muchas veces (en celular, tocando un botón rápido) o un compañero le dispara al zombie | Después |
 
-IA básica: buscar al jugador más cercano con `PathfindingService`, recalcular la ruta cada 0.5 a 1 s, atacar al estar a menos de 4 studs.
+IA básica: buscar al jugador más cercano con `PathfindingService`, recalcular la ruta cada 0.5 a 1 s, atacar al estar a menos de 4 studs. Los zombies trepan a los techos bajos (autobuses) en 4 o 5 segundos. Modelos propios hechos con bloques de Roblox; el común tiene un modo ligero de menos piezas.
 
 ### Director de hordas
 
-Un script del servidor decide cuándo y dónde aparecen zombies, fuera de la vista de los jugadores. En el MVP es simple: un límite de zombies vivos (ej. 25), puntos de aparición por zona y hordas fijas en los eventos. Después puede volverse dinámico (más presión si el equipo va bien, respiro si va mal), como el "AI Director" de Left 4 Dead.
+Un script del servidor decide cuándo y dónde aparecen zombies, fuera de la vista de los jugadores: límite de zombies vivos, puntos de aparición por zona, hordas en los eventos (generador, garrafas, extracción) y **emboscadas** al entrar en las plazoletas. Más adelante puede volverse dinámico (más presión si el equipo va bien, respiro si va mal), como el "AI Director" de Left 4 Dead.
 
-La dificultad se ajusta al número de jugadores al iniciar la partida (valores iniciales para balancear en pruebas):
+Se ajusta al número de jugadores al iniciar la partida y se multiplica por la dificultad:
 
-| Jugadores | Zombies vivos máx. | Tamaño de horda | Ajuste extra |
-| --- | --- | --- | --- |
-| 1 | 10 | 25% | Puede levantarse solo una vez por zona |
-| 2 | 18 | 60% | Ninguno |
-| 3 | 22 | 80% | Ninguno |
-| 4 | 25 | 100% | Ninguno |
+| Jugadores | Zombies vivos máx. | Tamaño de horda | Tanques a la vez | Ajuste extra |
+| --- | --- | --- | --- | --- |
+| 1 | 10 | 25% | 1 | Puede levantarse solo (por zona, según dificultad) |
+| 2 | 18 | 60% | 1 | Ninguno |
+| 3 | 22 | 80% | 2 | Ninguno |
+| 4 | 25 | 100% | 2 | Ninguno |
 
-Si alguien sale o entra a mitad de partida, los valores se recalculan en el siguiente punto seguro.
+En la extracción llegan menos a la vez (60% del máximo) pero sin parar. Si alguien sale o entra a mitad de partida, los valores se recalculan en el siguiente punto seguro.
 
 ### Recursos
 
-- Munición: se compra con puntos del equipo en estaciones de cada zona; cada punto seguro da una recarga gratis.
-- Botiquín: cura 80 de vida en 5 s; se puede usar en uno mismo o en un compañero.
+- Munición: se compra con latas en las estaciones de suministros; cada punto seguro da una recarga gratis.
+- Curación: botiquín (80 en 5 s) y vendas (25 en 1,2 s); ambos sirven en uno mismo, el botiquín también en un compañero.
 
 ### Interfaz (UI)
 
-- Barra de vida y munición propias.
-- Vida y estado de cada compañero (normal, caído, muerto).
-- Indicador en pantalla de compañero caído.
-- Pantalla de resultados al final.
+- Estilo propio, con tipografía Oswald, placas inclinadas y cinta de peligro: munición junto a la mira (4 estilos), jeringa de sangre, latas y aporte del equipo, inventario de 7 ranuras, panel de radio con las órdenes del comandante, placas de señalética, prompts con precio, barras de vida de enemigos, guía de objetivo, tarjeta de caído, espectador con fichas, pantallas de victoria y derrota.
+- Vida y estado de cada compañero (normal, caído, muerto) y marcador sobre los caídos.
+- Ayuda "Cómo jugar" (`K`): objetivo, controles, consejos y dificultades; también en el menú. Tarjeta de bienvenida la primera vez.
+- Ajustes (`O`): sensibilidad, calidad gráfica y panel de rendimiento.
+
+### Controles en celular
+
+El joystick y el salto los pone Roblox; el giro es arrastrar el dedo por la pantalla. A la derecha: FUEGO (mantener = automática; arrastrar sin soltar gira la cámara), APUNTAR y CORRER (alternan), RECARGAR y CANCELAR (al cargar un lanzamiento). Los botones **E** y **F** aparecen solo cuando hay algo cerca (revivir, caja, comprar, generador, radio, furgoneta…), y SOLTAR, LEVANTAR y LISTO cuando corresponde. Arriba: vista, ayuda y ajustes. Los textos de ayuda, bienvenida y radio tienen versión táctil. La interfaz se encoge en pantallas bajas y respeta las zonas seguras (muescas).
 
 ### Guardado de datos
 
-El MVP no guarda nada entre partidas. Después se usa `DataStoreService` para monedas, desbloqueos y estadísticas totales.
+El MVP no guarda nada entre partidas (ni siquiera la sensibilidad). Después se usa `DataStoreService` para monedas, desbloqueos, estadísticas totales y ajustes del jugador.
 
 ### Estilo visual
 
 Realista y atractivo, con una regla por encima de todo: el juego debe correr bien en PC, celular y consola.
 
-- Iluminación Future y `Atmosphere` para niebla y polvo; materiales PBR (`SurfaceAppearance`) solo en lo que se ve de cerca.
-- Presupuesto de rendimiento: modelos con pocos polígonos, texturas reutilizadas, `StreamingEnabled` activado y decoración anclada y sin colisión.
+- **Noche de terror latina:** luz de luna, niebla, linterna del jugador, faroles que parpadean y se apagan (apagones con chispas), carteles pintados a mano, grafitis, sangre estilizada y detalles de barrio. Se puede apagar con `Config.Atmosphere.Enabled`.
+- Iluminación y `Atmosphere` para niebla; materiales PBR (`SurfaceAppearance`) solo en lo que se ve de cerca.
+- Presupuesto de rendimiento: modelos con pocas piezas, texturas reutilizadas, decoración anclada y sin colisión, y `StreamingEnabled` activado si hace falta.
 - Zombies ligeros: pocas piezas por modelo; el límite de zombies vivos también protege el rendimiento.
-- Meta: 30 FPS estables en un celular de gama media; cada mapa se prueba ahí antes de darlo por terminado.
+- Meta: 30 FPS estables en un celular de gama media; cada mapa se prueba ahí antes de darlo por terminado. El cliente tiene tres niveles de calidad gráfica (ALTA, MEDIA, BAJA) con bajada automática si los FPS caen, y un panel de rendimiento para medir en el dispositivo; el plan B está en `docs/rendimiento-celular.md`.
 - Primero se construye cada mapa en bloques grises para probar que sea divertido, y después se hace el pase de arte.
 
 ### Audio
 
 El sonido carga la mitad de la tensión: el jugador debe poder oír una horda antes de verla.
 
-| Elemento | Qué hace | Cuándo entra |
+| Elemento | Qué hace | Estado |
 | --- | --- | --- |
-| Zombies en 3D | Gruñidos y pasos que suenan desde su posición, para saber de dónde vienen | MVP |
-| Aviso de horda | Un grito o sirena distintivo segundos antes de cada horda | MVP |
-| Armas | Disparo, recarga y "clic" sin munición para cada arma | MVP |
-| Música dinámica | Cambia por estado: calma, tensión, horda y extracción | MVP (versión simple) |
-| Caja de armas | Melodía propia mientras giran las armas | MVP |
-| Ambiente por mapa | Viento y alarmas de autos en la ciudad, música de tienda rota en el centro comercial, avisos de altavoz en el aeropuerto | Con cada mapa |
-| Voces | Las frases de revivir y avisos como "¡Horda!" o "Recargando" | Después del MVP |
+| Zombies en 3D | Gruñidos y pasos que suenan desde su posición, para saber de dónde vienen | Hecho |
+| Aviso de horda | Una sirena distintiva segundos antes de cada horda | Hecho |
+| Armas | Disparo, recarga y "clic" sin munición para cada arma | Hecho |
+| Música dinámica | Cambia por estado: calma, tensión, horda y extracción | Hecho (versión simple) |
+| Caja de armas | Melodía propia mientras giran las armas | Hecho |
+| Ambiente de noche | Viento, sirenas, perros, ruidos sueltos cerca, latido con zombies cerca o poca vida, y sonido por zona del barrio | Hecho |
+| Furgoneta | Frenada, pitido y baliza al llegar | Hecho |
+| Voces | Las frases de revivir y avisos como "¡Horda!" o "Recargando"; voces en español | Después |
 
 Los sonidos deben ser propios o tener licencia libre (por ejemplo, del Creator Store de Roblox).
 
 ## Alcance: MVP vs después
 
-El MVP es una partida completa y jugable de principio a fin con 1 a 4 amigos. Todo lo demás espera hasta que eso funcione y sea divertido.
+El MVP es una partida completa y jugable de principio a fin con 1 a 4 amigos. Todo lo demás espera hasta que eso funcione y sea divertido. Lo que ya está hecho aparece en la columna izquierda; la regla de oro sigue valiendo para lo de la derecha.
 
-| Entra al MVP | Después del MVP |
+| Hecho (entró al MVP o antes de tiempo) | Después del MVP |
 | --- | --- |
-| Ciudad abandonada completa, con extracción en van | Centro comercial (auto deportivo) y aeropuerto (avión) |
-| Pistola inicial y caja de armas con rifle, escopeta y subfusil | Más armas en la caja, rarezas, cuerpo a cuerpo, granadas, brazos animados en primera persona |
-| Zombie común y rápido | Tanque y zombies especiales |
-| Caída, revivir con frases, cargar al compañero y reaparición | Fuego amigo, niveles de dificultad |
-| Director de hordas simple | Director dinámico que ajusta la presión |
-| UI básica de vida, munición y equipo | Chat de voz rápido, marcadores de ítems |
-| Sin guardado de datos | Monedas, desbloqueos y estadísticas con DataStore |
-| Mapa en bloques grises con iluminación Future | Pase de arte realista: modelos, texturas PBR, animaciones, voces y sonidos |
-| PC | Controles para móvil y consola |
-
-Regla de oro: no se agrega nada de la columna derecha hasta que un grupo de amigos haya terminado el MVP y quiera jugarlo otra vez.
+| Mapa 1 Morro Esperanza completo (3 tramos, 2 puntos seguros, extracción en furgoneta) y el mapa de prueba | Centro comercial (auto deportivo) y aeropuerto (avión) |
+| Pistola inicial, caja de armas con rifle, escopeta y subfusil, críticos, bloom y brazos animados | Más armas en la caja (francotirador, ametralladora), arma épica por mapa, cuerpo a cuerpo |
+| Zombie común, rápido y Tanque | Zombies especiales (el que atrapa a un jugador) |
+| Caída, revivir con frases y prueba de acción, cargar al compañero, levantarse solo, espectador y reaparición | Fuego amigo |
+| Director de hordas con límite por jugadores, 4 dificultades votables, emboscadas y eventos (garrafas, generador, radio) | Director dinámico que ajusta la presión |
+| Latas del equipo, tienda de suministros, granada, botiquín, molotov, vendas y bengala | Marcadores de ítems, chat de voz rápido |
+| Menú de entrada con salas por código y votación de mapa y dificultad | Más mapas en la votación |
+| Interfaz propia completa, ayuda "Cómo jugar" y ajustes de sensibilidad | Voces en español, más frases de revivir |
+| Noche de terror, pase de arte del mapa 1 y sonido ambiente | Pase de arte de más mapas |
+| PC y celular (controles táctiles, interfaz adaptada, calidad gráfica con bajada automática) | Consola, y probar el celular con un dedo y un dispositivo reales |
+| Sin guardado de datos | Monedas, desbloqueos, estadísticas y ajustes con DataStore |
 
 ## Identidad del juego (después del MVP)
 
@@ -294,9 +341,11 @@ Toda la lógica que importa (daño, vida, zombies) vive en el servidor; el clien
 
 Estructura cliente-servidor:
 
-- **Servidor (`ServerScriptService`, autoridad):** armas (valida cada disparo, raycast y daño), director de hordas (aparece zombies fuera de la vista, máx. 25), IA de zombies (`PathfindingService` hacia el jugador más cercano), estado de partida (vida, caída, revivir, zonas y extracción).
+- **Servidor (`ServerScriptService`, autoridad):** armas (valida cada disparo, raycast y daño), director de hordas (aparece zombies fuera de la vista; el máximo vivo sale del número de jugadores y la dificultad, con tope de 32), IA de zombies (`PathfindingService` hacia el jugador más cercano), estado de partida (vida, caída, revivir, zonas y extracción).
 - **Compartido (`ReplicatedStorage`):** RemoteEvents (único canal cliente-servidor), módulos compartidos (datos de armas y enemigos), assets (modelos de zombies y armas).
 - **Cliente (`StarterPlayer` / `StarterGui`):** controles (detecta clic y teclas, pide acciones al servidor), UI (vida, munición, equipo, resultados), cámara y efectos.
+- **Dos lugares en una experiencia:** el *menú* (`menu.project.json`, `src-menu`: título, salas por código con `MemoryStoreService` y teletransporte) y la *partida* (`default.project.json`, `src`). Comparten `Places`, `Difficulties` y `HelpContent`. Nunca se conectan los dos proyectos de Rojo a la misma ventana de Studio.
+- **Entrada unificada:** PC y celular llaman a las mismas funciones del cliente (disparar, recargar, usar objeto, soltar…); `Controls` guarda el modo táctil y la sensibilidad, y `TouchControls` pone los botones. El servidor no distingue dispositivos.
 - Flujo: el cliente pide (disparar, revivir, usar botiquín) → el servidor responde (vida, munición, estado del equipo).
 
 El cliente nunca dice "le hice 50 de daño"; dice "disparé hacia aquí" y el servidor decide si le dio y cuánto daño hizo. Así se evitan trampas y los cuatro jugadores ven lo mismo.
@@ -305,26 +354,33 @@ Reglas de organización desde el día uno:
 
 - Un `ModuleScript` por sistema (armas, zombies, director, estado de partida), en vez de un script gigante.
 - Los valores de balance (daño, vida, velocidad) van en un módulo de configuración, no repartidos en el código.
-- Los zombies no usan física pesada ni demasiadas piezas: el límite de 25 vivos es por rendimiento.
+- Los zombies no usan física pesada ni demasiadas piezas: el límite de zombies vivos es por rendimiento. Lo que solo afecta a la pantalla de cada jugador (calidad gráfica, tamaño de la interfaz) se resuelve en el cliente y no cambia el juego de los demás.
 
 ## Plan de desarrollo y decisiones abiertas
 
 Cada fase termina con algo que se puede probar en Studio; no se pasa a la siguiente hasta cumplir su criterio.
 
 1. ~~**Fundamentos de Roblox**~~ (omitida: se va directo a construir).
-2. **Disparar:** pistola con raycast validado en el servidor, munición y cámara en primera y tercera persona. Listo cuando: se le puede disparar a un maniquí y su vida baja.
-3. **Un zombie:** IA que persigue y ataca. Listo cuando: un zombie te sigue por obstáculos, te hace daño y muere a tiros.
-4. **Muchos zombies:** puntos de aparición y director simple con límite. Listo cuando: el juego aguanta 25 zombies sin lag notable.
-5. **Cooperativo:** caída, revivir con frases, cargar al compañero, reaparición y UI de equipo. Listo cuando: dos jugadores en un servidor de prueba pueden revivirse.
-6. **El mapa:** ciudad abandonada con zonas, punto seguro, caja de armas, evento de horda y extracción en van. Listo cuando: se puede jugar la partida completa de inicio a fin.
-7. **Pulido y prueba con amigos:** sonidos, balance, bugs. Listo cuando: 3 amigos terminan una partida y quieren otra. Después se construyen el centro comercial y el aeropuerto con los mismos sistemas.
+2. ~~**Disparar:**~~ pistola con raycast validado en el servidor, munición y cámara en primera y tercera persona.
+3. ~~**Un zombie:**~~ IA que persigue y ataca.
+4. ~~**Muchos zombies:**~~ puntos de aparición y director simple con límite.
+5. ~~**Cooperativo:**~~ caída, revivir con frases, cargar al compañero, reaparición y UI de equipo.
+6. ~~**El mapa:**~~ partida completa de inicio a fin (primero el mapa de prueba, después Morro Esperanza).
+7. **Pulido y prueba con amigos** (fase actual): sonidos, balance, bugs, rendimiento y celular. Listo cuando: 3 amigos terminan una partida y quieren otra. Después se construyen el centro comercial y el aeropuerto con los mismos sistemas.
+
+Pendiente de la fase 7: probar con Isaac y más jugadores (revivir, cargar, derrota con varios), balance, medir los FPS en un celular real y probar los controles táctiles con un dedo, publicar el juego para los amigos.
 
 ### Decisiones abiertas
 
 - [x] Cámara: primera y tercera persona, a elección del jugador
 - [x] Estilo visual: realista pero optimizado para correr bien en todos lados
 - [x] Extracción distinta por mapa: van, auto deportivo y avión
-- [x] Nombre: Rhomulus. Ambientación: **apocalipsis latinoamericano** (ciudad latina en ruinas: carteles pintados a mano, tiendas de barrio, buses, murales, radio de emergencia en español, jerga local). Se aplica después del MVP: primero textos, radio y frases; luego carteles y sonido ambiente
-- [x] Flujo de trabajo: Rojo + Git + GitHub desde el inicio
-- [ ] Lista final de frases para revivir
+- [x] Nombre: Rhomulus. Ambientación: **apocalipsis latinoamericano** (barrio en ruinas: carteles pintados a mano, tiendas de barrio, buses, murales, radio de emergencia en español, jerga local). Textos, radio, carteles y sonido ambiente ya aplicados en el mapa 1; faltan las voces
+- [x] Flujo de trabajo: Rojo + Git + GitHub desde el inicio (la partida y el menú son dos lugares con proyectos de Rojo distintos)
 - [x] Precios de la caja de armas y de la munición (500 y 150 latas; se pueden afinar en pruebas)
+- [x] Dificultad elegible: cuatro niveles (Calma, Tensión, Crisis, Colapso), votados en la partida o elegidos por el anfitrión de una sala
+- [x] Plataforma móvil: controles táctiles, interfaz en pantallas bajas y calidad gráfica adaptable
+- [ ] Lista final de frases para revivir
+- [ ] Nombre final del juego, confirmado con Isaac
+- [ ] Guardar los ajustes del jugador (sensibilidad, calidad) entre partidas
+- [ ] Consola: controles y pruebas
