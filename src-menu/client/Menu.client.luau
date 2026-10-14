@@ -55,6 +55,14 @@ RunService:BindToRenderStep("MenuCursor", Enum.RenderPriority.Last.Value, functi
 	UserInputService.MouseIconEnabled = true
 end)
 
+-- string.upper no pasa a mayúsculas las letras con tilde (UTF-8)
+local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ", ["ü"] = "Ü" }
+local function upperEs(str)
+	return (string.gsub(string.upper(str), "[Ã][¡©­³º±¼]", function(c)
+		return ACCENTS[c] or c
+	end))
+end
+
 local function spaced(str, gap)
 	local out = {}
 	for _, cp in utf8.codes(str) do
@@ -224,13 +232,12 @@ local screens = {}
 local current
 local function newScreen(name)
 	screens[name] = make("CanvasGroup", {
-		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), GroupTransparency = 1, Visible = false,
+		Name = "Pantalla_" .. name, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), GroupTransparency = 1, Visible = false,
 	}, root)
 	return screens[name]
 end
 
 local builders = {} -- se arman al entrar (así la sala siempre sale limpia)
-local joinBox
 
 local function show(name)
 	if builders[name] then
@@ -258,11 +265,6 @@ local function show(name)
 		if l.kind == "main" then
 			fade(l.label, 0.3, { TextTransparency = isMain and 0 or 1 })
 		end
-	end
-	if name == "join" and joinBox then
-		task.delay(0.35, function()
-			joinBox:CaptureFocus()
-		end)
 	end
 end
 
@@ -305,45 +307,20 @@ local function setStatus(msg)
 end
 rule(main, 120, 912, 1680)
 local DESCRIPTIONS = {
-	"Entra a una partida con desconocidos (hasta 4). El mapa se vota al llegar.",
-	"Crea una sala privada con código para jugar con tus amigos. Tú eliges el mapa.",
-	"Escribe el código que te dio el anfitrión para entrar a su sala.",
+	"Mira las salas abiertas y entra a una. Las privadas llevan candado y piden su código.",
+	"Crea tu sala, pública o privada, y elige el mapa y la dificultad.",
 	"El objetivo, los controles, las dificultades y consejos para sobrevivir.",
 }
 local desc = text(main, "", OSW, 40, Vector2.new(120, 874), { width = 1100, transparency = 1 })
 local arrow = text(main, "▶", OSW, 38, Vector2.new(52, 520), { width = 40, transparency = 1 })
 local items = {
 	{ "JUGAR", function()
-		if busy then
-			return
-		end
-		busy = true
-		setStatus("Conectando con la partida…")
-		local r = request:InvokeServer("play")
-		busy = false
-		if r.error then
-			setStatus(r.error)
-		end
+		setStatus(nil)
+		show("list")
 	end },
 	{ "CREAR PARTIDA", function()
-		if busy then
-			return
-		end
-		busy = true
-		setStatus("Creando la partida…")
-		local r = request:InvokeServer("create", "Morro")
-		busy = false
-		if r.error then
-			setStatus(r.error)
-		else
-			setStatus(nil)
-			roomState = r.room
-			show("create")
-		end
-	end },
-	{ "UNIRSE CON CÓDIGO", function()
 		setStatus(nil)
-		show("join")
+		show("setup")
 	end },
 	{ "CÓMO JUGAR", function()
 		setStatus(nil)
@@ -513,11 +490,382 @@ builders.help = function()
 	showTab(1)
 end
 
--- Código y lista de jugadores (comunes a crear / sala) --------------------
-local function codeText(s, code, caption)
-	text(s, spaced("CÓDIGO", 3), OSW_BOLD, 36, Vector2.new(120, 342), { width = 500 })
-	text(s, spaced(code, 0), ANTON, 350, Vector2.new(120, 515), { width = 1100 })
-	text(s, spaced(caption, 1), OSW_LIGHT, 34, Vector2.new(120, 681), { width = 700 })
+-- Salas -----------------------------------------------------------------------------------------------------------------------
+-- Entrar a una sala (devuelta por el servidor): el anfitrión va a su sala y los demás a la sala de espera
+local function enterRoom(st)
+	roomState = st
+	setStatus(nil)
+	show(st.isHost and "create" or "joined")
+end
+
+-- Casillas de elección: la elegida se rellena de negro. items = { { id, etiqueta, ancho }, ... }. Devuelve la función que las repinta.
+local function choiceRow(s, x, y, h, items, textSize, isOn, onPick)
+	local boxes = {}
+	local function paint()
+		for _, b in boxes do
+			local on = isOn(b.id)
+			b.box.BackgroundTransparency = on and 0 or 1
+			b.label.TextColor3 = on and RED or BLACK
+		end
+	end
+	for _, item in items do
+		local w = item[3]
+		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BorderSizePixel = 0 }, s)
+		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+		local label = text(s, item[2], ANTON, textSize, Vector2.new(x + w / 2, y + h / 2),
+			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
+		button(s, x, y, w, h, function()
+			onPick(item[1])
+			paint()
+		end).Name = `Opcion{y}_{tostring(item[1])}`
+		table.insert(boxes, { id = item[1], box = box, label = label })
+		x += w + 16
+	end
+	paint()
+	return paint
+end
+
+-- Candado dibujado con rectángulos (la fuente no tiene el símbolo)
+local function lockIcon(parent, x, y, size, color)
+	local shackle = make("Frame", {
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(x + size * 0.2, y), Size = UDim2.fromOffset(size * 0.6, size * 0.8),
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(0.5, 0) }, shackle)
+	make("UIStroke", { Color = color, Thickness = math.max(3, size * 0.12), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, shackle)
+	local body = make("Frame", {
+		BackgroundColor3 = color, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y + size * 0.4), Size = UDim2.fromOffset(size, size * 0.62),
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(0, 4) }, body)
+	make("Frame", {
+		BackgroundColor3 = RED, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(x + size / 2, y + size * 0.71), Size = UDim2.fromOffset(size * 0.16, size * 0.26),
+	}, parent)
+end
+
+local function difficultyName(id)
+	return Difficulties.get(id).Upper
+end
+
+-- 2) Lista de salas ----------------------------------------------------------------------------------------------------------
+local list = newScreen("list")
+local listToken = 0
+
+-- Intenta entrar a una sala. Devuelve true, o false + motivo + si el código estaba mal.
+local function tryJoin(item, pass)
+	if busy then
+		return false, "Espera un momento"
+	end
+	busy = true
+	local ok, r = pcall(function()
+		return request:InvokeServer("join", item.id, pass)
+	end)
+	busy = false
+	if not ok or not r then
+		return false, "No se pudo conectar. Intenta de nuevo"
+	end
+	if r.room then
+		enterRoom(r.room)
+		return true
+	end
+	return false, r.error or "No se pudo entrar", r.wrongCode
+end
+
+-- Ventana para escribir el código de una sala privada
+local function askCode(s, item)
+	local layer = make("Frame", { BackgroundColor3 = BLACK, BackgroundTransparency = 0.4, Size = UDim2.fromScale(1, 1), Active = true }, s)
+	local panel = make("Frame", { BackgroundColor3 = RED, Position = UDim2.fromOffset(330, 200), Size = UDim2.fromOffset(1260, 700), BorderSizePixel = 0 }, layer)
+	make("UIStroke", { Color = BLACK, Thickness = 6, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, panel)
+	lockIcon(panel, 60, 62, 70, BLACK)
+	text(panel, "SALA PRIVADA", ANTON, 84, Vector2.new(160, 100), { width = 900 })
+	text(panel, spaced(upperEs(item.name), 2), OSW_BOLD, 34, Vector2.new(60, 190), { width = 1100 })
+	rule(panel, 60, 222, 1140)
+
+	local slots = {}
+	for i = 1, 4 do
+		local x = 150 + 270 * (i - 1)
+		local slotBox = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(x, 260), Size = UDim2.fromOffset(220, 260) }, panel)
+		make("UIStroke", { Color = BLACK, Thickness = 5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, slotBox)
+		slots[i] = text(panel, "", ANTON, 250, Vector2.new(x + 110, 395), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 220 })
+	end
+	local caption = text(panel, spaced("ESCRIBE EL CÓDIGO DE 4 LETRAS", 3), OSW_BOLD, 32, Vector2.new(630, 568),
+		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1100 })
+
+	local enterBox = make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Position = UDim2.fromOffset(760, 600), Size = UDim2.fromOffset(440, 80) }, panel)
+	local enterLabel = text(panel, "ENTRAR", ANTON, 62, Vector2.new(980, 640),
+		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 440, color = RED, transparency = 0.5 })
+	outline(panel, 60, 600, 440, 80, 4)
+	text(panel, "CANCELAR", ANTON, 62, Vector2.new(280, 640), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 440 })
+	enterBox.Name = "EnterBox"
+
+	-- La TextBox invisible recibe lo que se escribe (también el teclado del celular)
+	local box = make("TextBox", {
+		BackgroundTransparency = 1, Text = "", TextTransparency = 1, ClearTextOnFocus = false, PlaceholderText = "",
+		Position = UDim2.fromOffset(150, 260), Size = UDim2.fromOffset(1020, 260), ZIndex = 25,
+	}, panel)
+	local function submit()
+		if #box.Text ~= 4 then
+			return
+		end
+		caption.Text = spaced("COMPROBANDO…", 3)
+		local ok, why, wrong = tryJoin(item, box.Text)
+		if ok then
+			layer:Destroy()
+		else
+			caption.Text = spaced(string.upper(why or "NO SE PUDO ENTRAR"), 2)
+			if wrong then
+				box.Text = ""
+			end
+		end
+	end
+	box:GetPropertyChangedSignal("Text"):Connect(function()
+		local t = string.sub(string.gsub(string.upper(box.Text), "[^A-Z]", ""), 1, 4)
+		if t ~= box.Text then
+			box.Text = t
+			return
+		end
+		for i = 1, 4 do
+			slots[i].Text = string.sub(t, i, i)
+		end
+		enterLabel.TextTransparency = (#t == 4) and 0 or 0.5
+		if #t == 4 and TOUCH then
+			box:ReleaseFocus() -- el teclado de la pantalla tapa los botones
+		end
+	end)
+	box.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			submit()
+		end
+	end)
+	button(panel, 760, 600, 440, 80, submit).ZIndex = 26
+	button(panel, 60, 600, 440, 80, function()
+		layer:Destroy()
+	end).ZIndex = 26
+	task.delay(0.2, function()
+		if box.Parent then
+			box:CaptureFocus()
+		end
+	end)
+end
+
+builders.list = function()
+	local s = list
+	clear(s)
+	listToken += 1
+	local token = listToken
+	header(s, "SALAS")
+
+	-- Crear una sala nueva (arriba a la derecha)
+	make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Position = UDim2.fromOffset(1340, 186), Size = UDim2.fromOffset(460, 76) }, s)
+	text(s, "CREAR SALA", ANTON, 56, Vector2.new(1570, 224), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 460, color = RED })
+	button(s, 1340, 186, 460, 76, function()
+		show("setup")
+	end).Name = "CrearSala"
+
+	rule(s, 120, 857, 1680)
+	backButton(s, "main")
+	smallVersion(s, 1800, 932)
+
+	local scroller = make("ScrollingFrame", {
+		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(120, 310), Size = UDim2.fromOffset(1680, 480),
+		CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 8,
+		ScrollBarImageColor3 = BLACK, ScrollingDirection = Enum.ScrollingDirection.Y, ElasticBehavior = Enum.ElasticBehavior.Never,
+	}, s)
+	local emptyTitle = text(s, spaced("NO HAY SALAS ABIERTAS", 3), ANTON, 64, Vector2.new(960, 520),
+		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1500 })
+	local emptyHint = text(s, spaced("CREA LA TUYA CON EL BOTÓN DE ARRIBA", 2), OSW, 38, Vector2.new(960, 600),
+		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1500 })
+	emptyTitle.Visible, emptyHint.Visible = false, false
+	local note = text(s, "", OSW_BOLD, 32, Vector2.new(120, 818), { width = 1680 })
+
+	local lastKey = nil
+	local function render(items)
+		local parts = {}
+		for _, item in items do
+			table.insert(parts, `{item.id}:{item.count}:{tostring(item.public)}:{item.map}:{item.difficulty}:{item.name}`)
+		end
+		local key = table.concat(parts, "|")
+		if key == lastKey then
+			return
+		end
+		lastKey = key
+		local position = scroller.CanvasPosition
+		for _, c in scroller:GetChildren() do
+			c:Destroy()
+		end
+		emptyTitle.Visible, emptyHint.Visible = #items == 0, #items == 0
+		for i, item in items do
+			local y = (i - 1) * 112
+			local full = item.count >= item.max
+			local alpha = full and 0.55 or 0
+			local row = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(4, y + 4), Size = UDim2.fromOffset(1636, 100) }, scroller)
+			row.Name = "Fila" .. i
+			make("UIStroke", { Color = BLACK, Thickness = 3, Transparency = alpha, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, row)
+			local nameX = 36
+			if not item.public then
+				lockIcon(row, 36, 28, 46, BLACK)
+				nameX = 106
+			end
+			text(row, upperEs(item.name), ANTON, 54, Vector2.new(nameX, 50), { width = 800, transparency = alpha })
+			text(row, spaced(string.upper(mapName(item.map)), 1), OSW_BOLD, 34, Vector2.new(930, 30), { width = 520, transparency = alpha })
+			text(row, spaced(difficultyName(item.difficulty), 1), OSW, 32, Vector2.new(930, 72), { width = 520, transparency = alpha })
+			text(row, `{item.count}/{item.max}`, ANTON, 70, Vector2.new(1600, 50),
+				{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, transparency = alpha })
+			if full then
+				text(row, spaced("LLENA", 2), OSW_BOLD, 30, Vector2.new(1370, 50),
+					{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
+			end
+			local click = make("TextButton", {
+				BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), ZIndex = 5,
+			}, row)
+			click.Name = "Sala" .. i
+			click.Activated:Connect(function()
+				if full then
+					note.Text = spaced("ESA SALA ESTÁ LLENA", 2)
+				elseif item.public then
+					note.Text = ""
+					local ok, why = tryJoin(item)
+					if not ok then
+						note.Text = spaced(string.upper(why or "NO SE PUDO ENTRAR"), 2)
+					end
+				else
+					note.Text = ""
+					askCode(s, item)
+				end
+			end)
+		end
+		scroller.CanvasPosition = position
+	end
+
+	-- La lista se refresca sola mientras esta pantalla está abierta
+	task.spawn(function()
+		task.wait()
+		while listToken == token and current == s do
+			local ok, r = pcall(function()
+				return request:InvokeServer("list")
+			end)
+			if listToken ~= token or current ~= s then
+				break
+			end
+			if ok and r and r.rooms then
+				render(r.rooms)
+			elseif ok and r and r.error then
+				note.Text = spaced(string.upper(r.error), 2)
+			end
+			task.wait(3)
+		end
+	end)
+end
+
+-- 3) Nueva sala: pública o privada, mapa y dificultad ----------------------------------------------------------------------------
+local setup = newScreen("setup")
+local setupState = { public = true, map = "Morro", difficulty = Difficulties.Default }
+
+builders.setup = function()
+	local s = setup
+	clear(s)
+	header(s, "NUEVA SALA")
+
+	-- Vista previa: así se verá tu sala en la lista (se actualiza al cambiar las opciones)
+	text(s, spaced("ASÍ APARECERÁ EN LA LISTA", 3), OSW_BOLD, 30, Vector2.new(1000, 336), { width = 800 })
+	local previewHolder = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(1000, 366), Size = UDim2.fromOffset(800, 330) }, s)
+	local function drawPreview()
+		for _, c in previewHolder:GetChildren() do
+			c:Destroy()
+		end
+		local row = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(796, 150) }, previewHolder)
+		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, row)
+		local nameX = 28
+		if not setupState.public then
+			lockIcon(row, 28, 24, 52, BLACK)
+			nameX = 100
+		end
+		text(row, upperEs("Sala de " .. (player.DisplayName ~= "" and player.DisplayName or player.Name)), ANTON, 54, Vector2.new(nameX, 52), { width = 560 })
+		text(row, spaced(upperEs(mapName(setupState.map)), 1), OSW_BOLD, 34, Vector2.new(28, 106), { width = 520 })
+		text(row, "1/4", ANTON, 70, Vector2.new(770, 52), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
+		text(row, spaced(difficultyName(setupState.difficulty), 1), OSW, 32, Vector2.new(770, 112),
+			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 330 })
+		text(previewHolder, setupState.public and "Entra cualquiera con un toque." or "Pedirá un código de 4 letras que te daremos al crear la sala.",
+			OSW, 30, Vector2.new(4, 186), { width = 790 })
+	end
+	drawPreview()
+
+	text(s, spaced("QUIÉN PUEDE ENTRAR", 3), OSW_BOLD, 36, Vector2.new(120, 336), { width = 800 })
+	local visibilityText = text(s, "", OSW, 36, Vector2.new(120, 478), { width = 1500 })
+	local function describeVisibility()
+		visibilityText.Text = setupState.public and "Aparece en la lista y entra cualquiera con un toque. No lleva código."
+			or "Aparece en la lista con candado: solo entra quien tenga el código de 4 letras que te damos."
+	end
+	choiceRow(s, 120, 366, 90, { { true, "PÚBLICA", 380 }, { false, "PRIVADA", 380 } }, 60, function(id)
+		return setupState.public == id
+	end, function(id)
+		setupState.public = id
+		describeVisibility()
+		drawPreview()
+	end)
+	describeVisibility()
+
+	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(120, 548), { width = 500 })
+	choiceRow(s, 120, 578, 80, { { "Prueba", "PRUEBA", 260 }, { "Morro", "MORRO ESPERANZA", 520 } }, 52, function(id)
+		return setupState.map == id
+	end, function(id)
+		setupState.map = id
+		drawPreview()
+	end)
+
+	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 700), { width = 500 })
+	local difficultyDesc = text(s, "", OSW_LIGHT, 28, Vector2.new(120, 822), { width = 1680 })
+	local function describeDifficulty()
+		difficultyDesc.Text = Difficulties.get(setupState.difficulty).Description
+	end
+	local items = {}
+	for _, id in Difficulties.Order do
+		table.insert(items, { id, Difficulties[id].Upper, 206 })
+	end
+	choiceRow(s, 120, 730, 70, items, 40, function(id)
+		return setupState.difficulty == id
+	end, function(id)
+		setupState.difficulty = id
+		describeDifficulty()
+		drawPreview()
+	end)
+	describeDifficulty()
+
+	rule(s, 120, 857, 1680)
+	backButton(s, "list")
+	local errorText = text(s, "", OSW_BOLD, 30, Vector2.new(1340, 932), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900 })
+	make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Position = UDim2.fromOffset(1385, 880), Size = UDim2.fromOffset(415, 100) }, s)
+	text(s, "CREAR", ANTON, 84, Vector2.new(1592, 932), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 415, color = RED })
+	local createButton
+	createButton = button(s, 1385, 880, 415, 100, function()
+		if busy then
+			return
+		end
+		busy = true
+		errorText.Text = spaced("CREANDO LA SALA…", 2)
+		local ok, r = pcall(function()
+			return request:InvokeServer("create", { map = setupState.map, difficulty = setupState.difficulty, public = setupState.public })
+		end)
+		busy = false
+		if ok and r and r.room then
+			enterRoom(r.room)
+		else
+			errorText.Text = spaced(upperEs((ok and r and r.error) or "NO SE PUDO CREAR LA SALA"), 2)
+		end
+	end)
+	createButton.Name = "Crear"
+end
+
+-- Datos comunes de la sala: acceso (código o pública) y jugadores ----------------------------------------------------------------
+local function codeText(s, st)
+	if st.public then
+		text(s, spaced("ACCESO", 3), OSW_BOLD, 36, Vector2.new(120, 342), { width = 500 })
+		text(s, "PÚBLICA", ANTON, 200, Vector2.new(120, 515), { width = 900 })
+		text(s, spaced("CUALQUIERA PUEDE ENTRAR DESDE LA LISTA", 1), OSW_LIGHT, 34, Vector2.new(120, 681), { width = 800 })
+	else
+		text(s, spaced("CÓDIGO", 3), OSW_BOLD, 36, Vector2.new(120, 342), { width = 500 })
+		text(s, spaced(st.code or "", 0), ANTON, 350, Vector2.new(120, 515), { width = 1100 })
+		text(s, spaced("COMPÁRTELO CON TU GRUPO", 1), OSW_LIGHT, 34, Vector2.new(120, 681), { width = 700 })
+	end
 end
 
 local function playerList(s, names, hostIdx, youIdx)
@@ -526,7 +874,7 @@ local function playerList(s, names, hostIdx, youIdx)
 		local y = 407 + 72 * (i - 1)
 		text(s, string.format("%02d", i), OSW_BOLD, 34, Vector2.new(876, y + 2), { width = 60 })
 		if names[i] then
-			text(s, string.upper(names[i]), ANTON, 62, Vector2.new(935, y), { width = 600 })
+			text(s, upperEs(names[i]), ANTON, 62, Vector2.new(935, y), { width = 600 })
 			rule(s, 876, y + 36, 924)
 			if i == hostIdx then
 				outline(s, 1634, y - 22, 166, 44, 2)
@@ -545,7 +893,7 @@ local function playerList(s, names, hostIdx, youIdx)
 	end
 end
 
--- 2) Crear partida (anfitrión) ---------------------------------------------
+-- 4) Tu sala (anfitrión): cambia el acceso, el mapa y la dificultad, y empieza ----------------------------------------------------
 local create = newScreen("create")
 builders.create = function()
 	local s = create
@@ -554,42 +902,42 @@ builders.create = function()
 	if not st then
 		return
 	end
-	header(s, "CREAR PARTIDA")
-	codeText(s, st.code, "COMPÁRTELO CON TU GRUPO")
+	header(s, upperEs(st.name or "TU SALA"))
+	codeText(s, st)
 	playerList(s, st.names, st.hostIndex, nil)
-	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(876, 714), { width = 400 })
-	local x = 876
-	local boxes = {}
-	local function paint()
-		for j, m in boxes do
-			m.box.BackgroundTransparency = (MAPS[j].id == st.map) and 0 or 1
-			m.label.TextColor3 = (MAPS[j].id == st.map) and RED or BLACK
-		end
-	end
-	for i, mapInfo in MAPS do
-		local name = mapInfo.name
-		local w = (i == 1) and 211 or 433
-		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(x, 748),
-			Size = UDim2.fromOffset(w, 87), BorderSizePixel = 0 }, s)
-		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
-		local label = text(s, name, ANTON, 56, Vector2.new(x + w / 2, 792),
-			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
-		button(s, x, 748, w, 87, function()
-			st.map = mapInfo.id
-			paint()
-			task.spawn(function()
-				local r = request:InvokeServer("setMap", mapInfo.id)
-				if r.room then
-					roomState = r.room
-				end
-			end)
-		end)
-		table.insert(boxes, { box = box, label = label })
-		x += w + 24
-	end
-	paint()
 
-	-- Dificultad (izquierda, bajo el código): cuatro casillas y la descripción de la elegida
+	-- Quién puede entrar (arriba a la derecha)
+	local function hostRequest(action, arg, rebuild)
+		task.spawn(function()
+			local ok, r = pcall(function()
+				return request:InvokeServer(action, arg)
+			end)
+			if ok and r and r.room then
+				roomState = r.room
+				if rebuild then
+					builders.create()
+				end
+			end
+		end)
+	end
+	choiceRow(s, 1340, 188, 70, { { true, "PÚBLICA", 222 }, { false, "PRIVADA", 222 } }, 40, function(id)
+		return st.public == id
+	end, function(id)
+		if st.public ~= id then
+			st.public = id
+			hostRequest("setPublic", id, true)
+		end
+	end)
+
+	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(876, 714), { width = 400 })
+	choiceRow(s, 876, 748, 87, { { "Prueba", "PRUEBA", 211 }, { "Morro", "MORRO ESPERANZA", 433 } }, 56, function(id)
+		return st.map == id
+	end, function(id)
+		st.map = id
+		hostRequest("setMap", id)
+	end)
+
+	-- Dificultad (izquierda, bajo el acceso): cuatro casillas y la descripción de la elegida
 	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 714), { width = 500 })
 	local diffH = TOUCH and 66 or 56 -- casillas más altas en celular
 	local diffDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 748 + diffH + 6), { width = 700 })
@@ -597,37 +945,23 @@ builders.create = function()
 	diffDesc.Size = UDim2.fromOffset(700, 48)
 	diffDesc.TextWrapped = true
 	diffDesc.TextYAlignment = Enum.TextYAlignment.Top
-	local diffBoxes = {}
-	local function paintDifficulty()
-		for id, m in diffBoxes do
-			local on = id == st.difficulty
-			m.box.BackgroundTransparency = on and 0 or 1
-			m.label.TextColor3 = on and RED or BLACK
-		end
+	local function describeDifficulty()
 		diffDesc.Text = Difficulties.get(st.difficulty).Description
 	end
-	local dx = 120
+	local diffItems = {}
 	for _, id in Difficulties.Order do
-		local w = 166
-		local box = make("Frame", { BackgroundColor3 = BLACK, Position = UDim2.fromOffset(dx, 748),
-			Size = UDim2.fromOffset(w, diffH), BorderSizePixel = 0 }, s)
-		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
-		local label = text(s, Difficulties[id].Upper, ANTON, 38, Vector2.new(dx + w / 2, 748 + diffH / 2),
-			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
-		button(s, dx, 748, w, diffH, function()
-			st.difficulty = id
-			paintDifficulty()
-			task.spawn(function()
-				local r = request:InvokeServer("setDifficulty", id)
-				if r.room then
-					roomState = r.room
-				end
-			end)
-		end)
-		diffBoxes[id] = { box = box, label = label }
-		dx += w + 12
+		table.insert(diffItems, { id, Difficulties[id].Upper, 166 })
 	end
-	paintDifficulty()
+	local x = 120
+	-- (casillas más estrechas que las de "Nueva sala": comparten la columna con el código)
+	choiceRow(s, x, 748, diffH, diffItems, 38, function(id)
+		return st.difficulty == id
+	end, function(id)
+		st.difficulty = id
+		describeDifficulty()
+		hostRequest("setDifficulty", id)
+	end)
+	describeDifficulty()
 
 	rule(s, 120, 857, 1680)
 	backButton(s, "main", true)
@@ -645,76 +979,8 @@ builders.create = function()
 	end)
 end
 
--- 3) Unirse con código ------------------------------------------------------
-local join = newScreen("join")
+-- 5) Sala de espera (los demás jugadores) -------------------------------------------------------------------------------------
 local joined = newScreen("joined")
-
-builders.join = function()
-	local s = join
-	clear(s)
-	header(s, "UNIRSE CON CÓDIGO")
-	local slots = {}
-	for i = 1, 4 do
-		local x = 475 + 250 * (i - 1)
-		outline(s, x, 400, 220, 260, 5)
-		slots[i] = text(s, "", ANTON, 280, Vector2.new(x + 110, 535),
-			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 220 })
-	end
-	local caption = text(s, spaced("INTRODUCE EL CÓDIGO DEL ANFITRIÓN", 3), OSW_BOLD, 36, Vector2.new(960, 720),
-		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1400 })
-	rule(s, 120, 857, 1680)
-	backButton(s, "main")
-	smallVersion(s, 1400, 932)
-	outline(s, 1445, 882, 355, 98, 2)
-	local enterLabel = text(s, spaced("ENTRAR", 0), ANTON, 84, Vector2.new(1622, 932),
-		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 355, transparency = 0.5 })
-
-	-- La TextBox invisible recibe lo que se escribe (sirve también en celular)
-	joinBox = make("TextBox", {
-		BackgroundTransparency = 1, Text = "", TextTransparency = 1, ClearTextOnFocus = false,
-		PlaceholderText = "", Position = UDim2.fromOffset(475, 400), Size = UDim2.fromOffset(970, 260), ZIndex = 4,
-	}, s)
-	joinBox:GetPropertyChangedSignal("Text"):Connect(function()
-		local t = string.sub(string.gsub(string.upper(joinBox.Text), "[^A-Z]", ""), 1, 4)
-		if t ~= joinBox.Text then
-			joinBox.Text = t
-			return
-		end
-		for i = 1, 4 do
-			slots[i].Text = string.sub(t, i, i)
-		end
-		enterLabel.TextTransparency = (#t == 4) and 0 or 0.5
-	end)
-	local function submit()
-		if #joinBox.Text == 4 and not busy then
-			busy = true
-			caption.Text = spaced("BUSCANDO LA SALA…", 3)
-			local r = request:InvokeServer("join", joinBox.Text)
-			busy = false
-			if r.error then
-				caption.Text = spaced(string.upper(r.error), 3)
-			else
-				roomState = r.room
-				show("joined")
-			end
-		end
-	end
-	button(s, 1445, 882, 355, 98, submit)
-	if TOUCH then
-		-- El teclado de la pantalla tapa el botón ENTRAR: con las 4 letras se cierra solo, y "ir" en el teclado también entra
-		joinBox:GetPropertyChangedSignal("Text"):Connect(function()
-			if #joinBox.Text == 4 then
-				joinBox:ReleaseFocus()
-			end
-		end)
-		joinBox.FocusLost:Connect(function(enterPressed)
-			if enterPressed then
-				submit()
-			end
-		end)
-	end
-end
-
 builders.joined = function()
 	local s = joined
 	clear(s)
@@ -722,8 +988,8 @@ builders.joined = function()
 	if not st then
 		return
 	end
-	header(s, "PARTIDA " .. st.code)
-	codeText(s, st.code, "CONECTADO")
+	header(s, upperEs(st.name or "SALA"))
+	codeText(s, st)
 	playerList(s, st.names, st.hostIndex, st.youIndex)
 	text(s, spaced("MAPA: " .. mapName(st.map), 3), OSW_BOLD, 44, Vector2.new(876, 728), { width = 900 })
 	text(s, spaced("DIFICULTAD: " .. Difficulties.get(st.difficulty).Upper, 3), OSW_BOLD, 44,
@@ -746,7 +1012,7 @@ roomUpdate.OnClientEvent:Connect(function(st)
 		end
 		return
 	end
-	local key = table.concat({ st.code, st.map, st.difficulty or "", table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
+	local key = table.concat({ st.id, st.name or "", tostring(st.public), st.code or "", st.map, st.difficulty or "", table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
 	if key == lastKey then
 		return
 	end
