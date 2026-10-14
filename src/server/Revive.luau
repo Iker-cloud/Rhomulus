@@ -106,6 +106,12 @@ local function drop(carrier)
 	if character then
 		character:SetAttribute("Carried", nil)
 		setCollisionGroup(character, "Default")
+		local droppedRoot = character:FindFirstChild("HumanoidRootPart")
+		if droppedRoot then
+			pcall(function()
+				droppedRoot:SetNetworkOwner(target)
+			end)
+		end
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid.PlatformStand = false
@@ -142,21 +148,44 @@ local function carry(carrier, target)
 	weld.Part1 = targetRoot
 	weld.Parent = targetRoot
 	welds[target] = weld
+	-- Un solo dueño de la física para los dos cuerpos soldados: quien carga (si no, el cliente del caído y el de quien lo carga se pelean)
+	pcall(function()
+		targetRoot:SetNetworkOwner(carrier)
+	end)
 
 	updatePrompts(target)
 end
 
+-- ¿Puede `helper` revivir o cargar a `target`? Devuelve (true) o (false, motivo en español)
 local function canHelp(helper, target)
-	if helper == target or PlayerState.get(helper) ~= "Normal" or carrying[helper] or helper:GetAttribute("Carrying") then
-		return false
+	if helper == target then
+		return false, "no puedes cargarte a ti mismo"
 	end
-	if PlayerState.get(target) ~= "Downed" or carriedBy[target] then
-		return false
+	if PlayerState.get(helper) ~= "Normal" then
+		return false, "tienes que estar de pie"
+	end
+	if carrying[helper] or helper:GetAttribute("Carrying") then
+		return false, "ya llevas algo a cuestas (G para soltar)"
+	end
+	if PlayerState.get(target) ~= "Downed" then
+		return false, "ya no está caído"
+	end
+	if carriedBy[target] then
+		return false, "ya lo está cargando otro"
 	end
 	local helperRoot, targetRoot = getRoot(helper), getRoot(target)
-	return helperRoot ~= nil
-		and targetRoot ~= nil
-		and (helperRoot.Position - targetRoot.Position).Magnitude <= Config.Revive.MaxDistance
+	if not (helperRoot and targetRoot) then
+		return false, "no se encuentra a tu compañero"
+	end
+	if (helperRoot.Position - targetRoot.Position).Magnitude > Config.Revive.MaxDistance then
+		return false, "estás muy lejos"
+	end
+	return true
+end
+
+-- Avisa en pantalla a quien intentó cargar y no pudo (si no, el prompt parece no hacer nada)
+local function refuse(helper, reason)
+	Remotes.Feed:FireClient(helper, `No puedes cargar: {reason}`)
 end
 
 local function makePrompt(root, name, action, key, holdTime, offset)
@@ -176,11 +205,21 @@ end
 
 local function onCharacter(player, character)
 	local root = character:WaitForChild("HumanoidRootPart")
+	-- Si por algún motivo se llama dos veces con el mismo personaje, no se duplican los prompts
+	for _, name in { "RevivePrompt", "CarryPrompt" } do
+		local old = root:FindFirstChild(name)
+		if old then
+			old:Destroy()
+		end
+	end
 
 	local revivePrompt = makePrompt(root, "RevivePrompt", "Revivir", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
 	local carryPrompt = makePrompt(root, "CarryPrompt", "Cargar", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
 
 	revivePrompt.ObjectText = player.DisplayName
+	-- E y F tienen el mismo botón de mando por defecto: sin esto, con mando solo saldría uno de los dos
+	carryPrompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+	carryPrompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 
 	-- Mientras mantiene E, quien revive lleva este atributo (hora en que terminaría); el cliente lo usa para arrodillarlo
 	local function setReviving(helper, on)
@@ -282,8 +321,11 @@ local function onCharacter(player, character)
 	end)
 
 	carryPrompt.Triggered:Connect(function(helper)
-		if canHelp(helper, player) then
+		local ok, reason = canHelp(helper, player)
+		if ok then
 			carry(helper, player)
+		else
+			refuse(helper, reason)
 		end
 	end)
 
