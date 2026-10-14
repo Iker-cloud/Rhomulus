@@ -3654,7 +3654,10 @@ local function buildStadium(map, refs, rng, spawns, config)
 	refs.boxSpots.Extraction = { { Vector3.new(-45, 0, 352), Vector3.new(45, 0, 358), Vector3.new(-25, 0, 390) } }
 
 	-- Llegada, furgoneta y 6 puntos de aparición de la extracción en el perímetro
-	refs.stadiumVolume = volume(map, "StadiumVolume", -20, 20, 332, 346, 12)
+	refs.stadiumVolume = volume(map, "StadiumVolume", -20, 20, 332, 346, 12) -- solo es el destino de la guía (la puerta)
+	-- Para pasar a la radio basta con estar dentro del estadio: toda la cancha y las gradas. Con la franja de la puerta sola, si alguien
+	-- ya había avanzado cuando llegaba el último, nunca estaban los 3 dentro a la vez.
+	refs.stadiumInside = volume(map, "StadiumInside", -120, 120, 332, 398, 40)
 	refs.vanStart = CFrame.new(0, 0, 430)
 	refs.vanStop = CFrame.new(0, 0, 365)
 	refs.vanVolume = volume(map, "VanVolume", -14, 14, 351, 379, 14)

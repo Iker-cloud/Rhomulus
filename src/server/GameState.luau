@@ -517,7 +517,7 @@ local function zone3()
 	WeaponBox.place("Zone3")
 	Ambushes.arm(map.ambushesZone3)
 	local ok = waitUntil(function()
-		return allInside(map.stadiumVolume)
+		return allInside(map.stadiumInside or map.stadiumVolume)
 	end, true)
 	if ok then
 		Points.add(Config.Points.ZoneComplete)
