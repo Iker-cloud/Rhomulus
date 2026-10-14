@@ -13,6 +13,8 @@ local Director = {}
 
 local zone = nil
 local boost = false
+local boostStart = 0 -- os.clock() en que empezó la extracción
+local nextWave = math.huge
 
 function Director.setZone(name)
 	zone = name
@@ -23,6 +25,8 @@ local nextTankTime = math.huge
 
 function Director.setBoost(on)
 	boost = on
+	boostStart = os.clock()
+	nextWave = on and boostStart + Config.Director.Extraction.FirstWave or math.huge
 	-- En la extracción llega un tanque poco después de llamar a la radio y luego cada cierto tiempo
 	nextTankTime = on and os.clock() + Config.Director.Tank.ExtractionFirst * Difficulty.get().TankEvery or math.huge
 end
@@ -58,10 +62,21 @@ local function commonKind()
 	return math.random() < Difficulty.get().FastChance and "Fast" or "Common"
 end
 
+-- Avance de la extracción: 0 al llamar a la radio, 1 cuando llega la van
+local function extractionProgress()
+	return math.clamp((os.clock() - boostStart) / Config.Game.ExtractionTime, 0, 1)
+end
+
+local function lerp(a, b, t)
+	return a + (b - a) * t
+end
+
 local function getMaxAlive()
 	local max = getScaling().MaxAlive
 	if boost then
-		max = math.max(1, math.floor(max * Config.Director.ExtractionCapFactor + 0.5))
+		local E = Config.Director.Extraction
+		max = math.floor(max * lerp(E.CapStart, E.CapEnd, extractionProgress()) + 0.5)
+		max = math.clamp(max, 1, Difficulties.MaxAliveCap)
 	end
 	return max
 end
@@ -126,6 +141,18 @@ local function spawnTank()
 	return spawnOne("Tank")
 end
 
+-- Oleada de la extracción: una horda de golpe (sin Tanque; esos van aparte), respetando el tope de vivos
+local function spawnWave(size)
+	local count = math.max(2, math.floor(size * getScaling().HordeScale + 0.5))
+	for _ = 1, count do
+		if not boost or Zombies.getAlive() >= getMaxAlive() then
+			break
+		end
+		spawnOne()
+		task.wait(Config.Director.HordeSpawnDelay)
+	end
+end
+
 -- Horda: aparece de golpe, respetando el límite de vivos. size es el tamaño al 100% (4 jugadores).
 function Director.spawnHorde(size)
 	if Config.Director.Tank.InHorde then
@@ -186,15 +213,39 @@ end
 function Director.start()
 	task.spawn(function()
 		while true do
+			local pause = Config.Director.SpawnInterval
+			if boost then
+				local E = Config.Director.Extraction
+				pause = lerp(E.IntervalStart, E.IntervalEnd, extractionProgress())
+			end
+			pause *= Difficulty.get().SpawnInterval
 			if zone and #Players:GetPlayers() > 0 then
 				if boost and os.clock() >= nextTankTime and spawnTank() then
 					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval * Difficulty.get().TankEvery
 				end
-				if Zombies.getAlive() < getMaxAlive() then
-					spawnOne()
+				if Zombies.getAlive() < getMaxAlive() and not spawnOne() then
+					pause = math.min(pause, Config.Director.FailedSpawnRetry) -- sin punto libre: reintenta pronto
 				end
 			end
-			task.wait((boost and Config.Director.ExtractionInterval or Config.Director.SpawnInterval) * Difficulty.get().SpawnInterval)
+			task.wait(pause)
+		end
+	end)
+
+	-- Oleadas de la extracción: cada cierto tiempo, y más seguidas y grandes en el último minuto. Paran al llegar la van.
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if boost and zone and #Players:GetPlayers() > 0 and os.clock() >= nextWave then
+				local E = Config.Director.Extraction
+				local remaining = Config.Game.ExtractionTime - (os.clock() - boostStart)
+				if remaining > 0 then
+					local final = remaining <= E.FinalSeconds
+					nextWave = os.clock() + (final and E.FinalEvery or E.WaveEvery)
+					task.spawn(spawnWave, final and E.FinalSize or E.WaveSize)
+				else
+					nextWave = math.huge
+				end
+			end
 		end
 	end)
 end

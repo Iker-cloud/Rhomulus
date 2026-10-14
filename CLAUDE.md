@@ -84,6 +84,7 @@
 - El tiempo de las pruebas puede pasar de los 8 s de `TakeTime` de la caja: tomar el arma en la misma llamada.
 - **Probar el celular sin tocar los lugares publicados:** `rojo build default.project.json -o <temporal>.rbxl` (y `menu.project.json` para el menú), abrir ese archivo en una ventana nueva de Studio, forzar el modo táctil con un parche local (`touchMode = true` en `Controls`, `TOUCH = true` en el menú; marcar `TEMP-PRUEBA` y no commitear) y achicar la ventana a unos 1130×640 para un viewport de ~805×385. Para sincronizar cambios sin Rojo: servir `src` con `python -m http.server` y copiar los `Source` con `HttpService:GetAsync` desde `execute_luau`. El menú no funciona sin publicar (`MemoryStoreService`): anularlo solo en la copia de prueba.
 - Con la herramienta de ratón: los clics por `instance_path` a un botón bajo `UIScale` o con `IgnoreGuiInset` caen unos 58 px más arriba que el botón; la tarjeta de bienvenida (`Help`, DisplayOrder 60) se come los clics en el lobby hasta que se cierra; con `MouseBehavior = LockCenter` los clics a botones fallan (en modo táctil el ratón queda libre). La herramienta no genera desplazamientos del ratón: el arrastre para girar solo se prueba con un gancho temporal.
+- **Cargar a un caído** (`server/Revive`): los prompts E (revivir) y F (cargar) están en el mismo `HumanoidRootPart`. El de cargar usa `Exclusivity = AlwaysShow` y `GamepadKeyCode = ButtonY`: con la exclusividad por defecto (`OnePerButton`) en mando o pantalla táctil solo se muestra uno de los dos y F no sale. Si el servidor rechaza cargar, avisa en pantalla con el motivo (`canHelp` devuelve el motivo). Al cargar, el servidor pasa la física del caído a quien carga (`SetNetworkOwner`) y se la devuelve al soltar.
 - Las propiedades de streaming del `Workspace` (`StreamingTargetRadius`, `StreamingMinRadius`) son `Not Scriptable` y no hay radio por cliente: se ponen a mano en Studio y valen para todas las plataformas.
 
 **Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (las capturas de Studio funcionan con la herramienta de captura, pero la cámara del juego a veces las pisa); proponer commit con mensaje corto en español y pedir confirmación antes del `push`. Iker comparte capturas de diseños de referencia para la interfaz.
@@ -259,7 +260,7 @@ Se ajusta al número de jugadores al iniciar la partida y se multiplica por la d
 | 3 | 22 | 80% | 2 | Ninguno |
 | 4 | 25 | 100% | 2 | Ninguno |
 
-En la extracción llegan menos a la vez (60% del máximo) pero sin parar. Si alguien sale o entra a mitad de partida, los valores se recalculan en el siguiente punto seguro.
+En la extracción la presión **sube con la cuenta atrás** (`Config.Director.Extraction`): el tope de vivos va del 80% al 130% del máximo (con tope de 32), la pausa entre apariciones baja de 2,5 s a 1 s, y salen oleadas cada 22 s que en el último minuto pasan a cada 12 s y más grandes. Todo se multiplica por jugadores y dificultad. Si alguien sale o entra a mitad de partida, los valores se recalculan en el siguiente punto seguro.
 
 ### Recursos
 

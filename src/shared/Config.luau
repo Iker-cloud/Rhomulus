@@ -430,8 +430,24 @@ return {
 		MinSpawnDistance = 50, -- nunca aparecen más cerca de un jugador
 		FarSpawnDistance = 120, -- más lejos que esto cuenta como fuera de vista
 		-- Extracción (después de llamar a la radio): zombies que llegan poco a poco y con menos a la vez
-		ExtractionInterval = 2.5, -- segundos entre apariciones
-		ExtractionCapFactor = 0.6, -- fracción del máximo de vivos normal (con 1 jugador: 6 de 10)
+		-- La presión sube mientras pasa la cuenta atrás (de 0 al inicio a 1 cuando llega la van) y se multiplica por la dificultad:
+		--   tope de vivos = máximo normal x Cap (de CapStart a CapEnd), con el tope de Difficulties.MaxAliveCap
+		--   pausa entre apariciones = Interval (de IntervalStart a IntervalEnd)
+		--   oleadas: cada WaveEvery segundos sale una horda de WaveSize (al 100%: se escala con jugadores y dificultad);
+		--   en los últimos FinalSeconds salen cada FinalEvery y son de FinalSize
+		Extraction = {
+			CapStart = 0.8,
+			CapEnd = 1.3,
+			IntervalStart = 2.5,
+			IntervalEnd = 1.0,
+			FirstWave = 12, -- segundos después de llamar a la radio
+			WaveEvery = 22,
+			WaveSize = 10,
+			FinalSeconds = 60,
+			FinalEvery = 12,
+			FinalSize = 16,
+		},
+		FailedSpawnRetry = 0.4, -- si no hay punto libre, reintenta pronto en vez de esperar la pausa entera
 		MaxFailedSpawns = 4, -- si no hay punto oculto tantas veces seguidas, se relaja la regla de vista
 		-- Tanque: uno al empezar la horda del generador y uno cada cierto tiempo durante la extracción
 		Tank = {
