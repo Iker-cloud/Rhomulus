@@ -42,7 +42,7 @@ local Content = {
 		{ "USEN LOS PUNTOS SEGUROS", "La tienda y la iglesia curan, recargan y dan un respiro antes de seguir." },
 		{ "AGUANTEN EN LOS PASILLOS", "En campo abierto la horda los rodea. Usen puertas y esquinas." },
 		{ "LANCEN BENGALAS", "Atraen a los zombies durante 15 s. Úsenlas para ganar tiempo." },
-		{ "CUIDADO CON EL TANQUE", "Aguanta 600 de vida. Apunten a la cabeza y usen granadas y molotovs." },
+		{ "CUIDADO CON EL TANQUE", "Aguanta 1500 de vida en Tensión. Apunten a la cabeza y usen granadas y molotovs." },
 		{ "EL TECHO NO ES SEGURO", "Los zombies trepan a los autobuses en 4 o 5 segundos." },
 	},
 

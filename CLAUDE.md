@@ -27,7 +27,7 @@
 - Sonido: disparos, recargas, gruñidos 3D, sirena de horda, música por estado, melodía de la caja.
 - Interfaz propia: munición junto a la mira (4 estilos), jeringa de sangre, latas, panel de radio por órdenes, placas de señalética, prompts con precio, barras de vida de enemigos, pantallas de victoria y derrota, tarjeta de caído.
 - Modelos 3D propios de: zombies (común, rápido y Tanque), cajas de munición y misteriosa, maniquíes del lobby, generador, radio, furgoneta de rescate y armas (pistola, rifle de asalto, escopeta, subfusil).
-- Zombie Tanque (600 de vida, lento): aparece en la horda del generador y en la extracción (`Config.Director.Tank`).
+- Zombie Tanque (1500 de vida en Tensión, lento; la dificultad lo multiplica): aparece en la horda del generador y en la extracción (`Config.Director.Tank`).
 - Hitbox de zombies: caja invisible por zombie + tolerancia de puntería (`Config.HitTolerance`); los compañeros ya no bloquean las balas.
 - **Modo espectador** (`client/Spectator`): al morir con 2 o más jugadores la cámara sigue a un compañero vivo (al hombro, mira hacia donde apunta); A / D, flechas o las fichas de abajo cambian de compañero; fundido a negro si está lejos; termina al reaparecer o al acabar la ronda.
 - Poses de sobrevivientes (`client/PoseAnimator`): caído (se arrastra), arrodillado al revivir (atributo `Reviving`) y colgado al ser cargado.
@@ -245,7 +245,7 @@ El jugador cambia entre primera y tercera persona con una tecla (`V`; botón en 
 | --- | --- | --- | --- |
 | Zombie común | 50 | Persigue al jugador más cercano y golpea (10 de daño) | Hecho |
 | Zombie rápido | 30 | Corre al doble de velocidad, poca vida | Hecho |
-| Zombie Tanque | 600 | Lento, golpea fuerte (35); aparece en la horda del generador, en la emboscada de la terminal y cada cierto tiempo en la extracción | Hecho |
+| Zombie Tanque | 1500 | Lento, golpea fuerte (35); aparece en la horda del generador, en la emboscada de la terminal y cada cierto tiempo en la extracción | Hecho |
 | Zombie especial que atrapa a un jugador | 150 | Inmoviliza a un jugador; la víctima se libera presionando una tecla muchas veces (en celular, tocando un botón rápido) o un compañero le dispara al zombie | Después |
 
 IA básica: buscar al jugador más cercano con `PathfindingService`, recalcular la ruta cada 0.5 a 1 s, atacar al estar a menos de 4 studs. Los zombies trepan a los techos bajos (autobuses) en 4 o 5 segundos. Modelos propios hechos con bloques de Roblox; el común tiene un modo ligero de menos piezas.

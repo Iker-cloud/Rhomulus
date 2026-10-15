@@ -413,7 +413,7 @@ return {
 		-- El Tanque (zombie-el-tanque.glb): grande, lento y muy resistente. Aparece en la horda del generador y en la extracción.
 		Tank = {
 			DisplayName = "Tanque",
-			Health = 600,
+			Health = 1500, -- la dificultad lo multiplica (Calma x0,8 ... Colapso x2)
 			Speed = 7,
 			Damage = 35,
 			AttackRange = 6,
