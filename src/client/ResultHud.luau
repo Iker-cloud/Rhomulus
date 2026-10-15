@@ -9,6 +9,7 @@ local TeleportService = game:GetService("TeleportService")
 local Icons = require(script.Parent.Icons)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Places = require(ReplicatedStorage.Shared.Places)
+local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local player = Players.LocalPlayer
 
@@ -80,9 +81,11 @@ function ResultHud.start()
 	gui.DisplayOrder = 5
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	local current = nil -- { holder, connection }
+	local current = nil -- { holder, connection, applyXp }
+	local pendingXp = nil -- XpGain que llegó antes de que la tarjeta estuviera lista
 
 	local function clear()
+		pendingXp = nil
 		if current then
 			current.connection:Disconnect()
 			current.holder:Destroy()
@@ -278,10 +281,74 @@ function ResultHud.start()
 			table.insert(rows, row)
 		end
 
+		-- XP de la partida: "+640 XP" y la barra del nivel llenándose (la manda el servidor con Remotes.XpGain al terminar)
+		local xpRow = Instance.new("Frame")
+		xpRow.LayoutOrder = 5
+		xpRow.BackgroundTransparency = 1
+		xpRow.Size = UDim2.new(1, 0, 0, 40)
+		xpRow.Visible = false
+		xpRow.Parent = content
+		local xpText = Instance.new("TextLabel")
+		xpText.BackgroundTransparency = 1
+		xpText.Size = UDim2.new(0.62, 0, 0, 22)
+		xpText.Font = Enum.Font.GothamBlack
+		xpText.TextSize = 17
+		xpText.TextColor3 = palette.accent
+		xpText.TextXAlignment = Enum.TextXAlignment.Left
+		xpText.Text = ""
+		xpText.Parent = xpRow
+		local levelText = Instance.new("TextLabel")
+		levelText.BackgroundTransparency = 1
+		levelText.AnchorPoint = Vector2.new(1, 0)
+		levelText.Position = UDim2.fromScale(1, 0)
+		levelText.Size = UDim2.new(0.38, 0, 0, 22)
+		levelText.Font = Enum.Font.GothamBold
+		levelText.TextSize = 15
+		levelText.TextColor3 = Color3.new(1, 1, 1)
+		levelText.TextXAlignment = Enum.TextXAlignment.Right
+		levelText.Text = ""
+		levelText.Parent = xpRow
+		local xpBack = Instance.new("Frame")
+		xpBack.Position = UDim2.fromOffset(0, 28)
+		xpBack.Size = UDim2.new(1, 0, 0, 8)
+		xpBack.BackgroundColor3 = Color3.fromRGB(40, 36, 34)
+		xpBack.BorderSizePixel = 0
+		xpBack.Parent = xpRow
+		Instance.new("UICorner", xpBack).CornerRadius = UDim.new(1, 0)
+		local xpFill = Instance.new("Frame")
+		xpFill.Size = UDim2.fromScale(0, 1)
+		xpFill.BackgroundColor3 = palette.accent
+		xpFill.BorderSizePixel = 0
+		xpFill.Parent = xpBack
+		Instance.new("UICorner", xpFill).CornerRadius = UDim.new(1, 0)
+
+		local function applyXp(gained, _parts, before, after)
+			local levelBefore, intoBefore, needBefore = Progress.fromTotal(before)
+			local levelAfter, intoAfter, needAfter = Progress.fromTotal(after)
+			xpRow.Visible = true
+			xpText.Text = `+{gained} XP`
+			levelText.Text = `NIVEL {levelBefore}`
+			xpFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
+			task.spawn(function()
+				task.wait(0.9) -- primero se leen las estadísticas
+				local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+				if levelAfter > levelBefore then
+					TweenService:Create(xpFill, info, { Size = UDim2.fromScale(1, 1) }):Play()
+					task.wait(0.8)
+					if not xpFill.Parent then
+						return
+					end
+					levelText.Text = `¡NIVEL {levelAfter}!`
+					xpFill.Size = UDim2.fromScale(0, 1)
+				end
+				TweenService:Create(xpFill, info, { Size = UDim2.fromScale(needAfter > 0 and intoAfter / needAfter or 1, 1) }):Play()
+			end)
+		end
+
 		-- Dos botones en una fila: OTRA PARTIDA (con la cuenta atrás hasta la siguiente; si todos lo piden se adelanta) y VOLVER AL MENÚ
 		-- (teletransporta al lugar del Menú)
 		local buttons = Instance.new("Frame")
-		buttons.LayoutOrder = 5
+		buttons.LayoutOrder = 6
 		buttons.BackgroundTransparency = 1
 		buttons.Size = UDim2.new(1, 0, 0, 46)
 		buttons.Parent = content
@@ -400,10 +467,21 @@ function ResultHud.start()
 			title.TextStrokeTransparency = 0.7 - 0.25 * pulse
 		end)
 
-		current = { holder = holder, connection = connection }
+		current = { holder = holder, connection = connection, applyXp = applyXp }
+		if pendingXp then
+			applyXp(table.unpack(pendingXp))
+			pendingXp = nil
+		end
 	end
 
 	Remotes.Results.OnClientEvent:Connect(show)
+	Remotes.XpGain.OnClientEvent:Connect(function(...)
+		if current then
+			current.applyXp(...)
+		else
+			pendingXp = { ... }
+		end
+	end)
 
 	-- Al salir de la etapa de resultados (vuelve al lobby), se quita la pantalla
 	workspace:GetAttributeChangedSignal("Stage"):Connect(function()

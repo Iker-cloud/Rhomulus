@@ -13,6 +13,9 @@
         },
         "HelpContent": {
           "$path": "src/shared/HelpContent.luau"
+        },
+        "Progress": {
+          "$path": "src/shared/Progress.luau"
         }
       }
     },

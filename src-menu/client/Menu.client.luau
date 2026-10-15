@@ -39,6 +39,7 @@ end
 
 local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Difficulties"))
 local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent")).get(TOUCH)
+local Progress = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Progress"))
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
 local roomState -- última foto de la sala en la que estamos (nil = ninguna)
@@ -335,6 +336,29 @@ local status = text(main, DEFAULT_STATUS, OSW_BOLD, 34, Vector2.new(120, 960), {
 local function setStatus(msg)
 	status.Text = msg and spaced(string.upper(msg), 2) or DEFAULT_STATUS
 end
+
+-- Nivel del jugador (arriba a la derecha): lo guarda la partida; aquí solo se muestra. Sin datos (Studio sin publicar) no sale.
+local levelText = text(main, "", ANTON, 78, Vector2.new(1800, 250), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600 })
+local levelBack = make("Frame", {
+	BackgroundColor3 = BLACK, BackgroundTransparency = 0.7, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.fromOffset(1800, 318), Size = UDim2.fromOffset(460, 14),
+}, main)
+local levelFill = make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Size = UDim2.fromScale(0, 1) }, levelBack)
+local levelXp = text(main, "", OSW_BOLD, 30, Vector2.new(1800, 356), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600 })
+local function refreshLevel()
+	local total = player:GetAttribute("ProgXP")
+	local show = typeof(total) == "number"
+	levelText.Visible, levelBack.Visible, levelXp.Visible = show, show, show
+	if not show then
+		return
+	end
+	local level, into, need = Progress.fromTotal(total)
+	levelText.Text = `NIVEL {level}`
+	levelFill.Size = UDim2.fromScale(need > 0 and into / need or 1, 1)
+	levelXp.Text = need > 0 and spaced(`{into} / {need} XP`, 1) or spaced("NIVEL MÁXIMO", 1)
+end
+player:GetAttributeChangedSignal("ProgXP"):Connect(refreshLevel)
+refreshLevel()
 rule(main, 120, 912, 1680)
 local DESCRIPTIONS = {
 	"Mira las salas abiertas y entra a una. Las privadas llevan candado y piden su código.",

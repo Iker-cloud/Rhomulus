@@ -16,6 +16,11 @@ function Stats.add(player, key, amount)
 	entry[key] += amount or 1
 end
 
+-- Las estadísticas de un jugador (ceros si todavía no hizo nada)
+function Stats.get(player)
+	return data[player] or { Kills = 0, Revives = 0, DamageTaken = 0 }
+end
+
 function Stats.all()
 	local list = {}
 	for _, entry in data do
