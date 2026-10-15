@@ -119,13 +119,18 @@ function DifficultyVote.start()
 	tag.TextStrokeTransparency = 0.5
 	tag.Parent = gui
 
+	local function hidesTag(state)
+		return state == "Downed" or state == "Dead"
+	end
 	local function update()
 		local voting = workspace:GetAttribute("Stage") == "Vote"
 		panel.Visible = voting
 		local d = Difficulties.get(workspace:GetAttribute("Difficulty"))
 		tag.Text = `DIFICULTAD · {d.Upper}`
 		tag.TextColor3 = d.Color
-		tag.Visible = not voting and workspace:GetAttribute("Stage") ~= nil
+		-- La etiqueta se esconde con la tarjeta de caído y la del espectador (arriba al centro) y con la pantalla de resultados
+		local stage = workspace:GetAttribute("Stage")
+		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State"))
 		if voting then
 			refreshVotes()
 			-- Con el panel abierto, las teclas 1 a 4 votan (y no cambian de arma)
@@ -145,6 +150,7 @@ function DifficultyVote.start()
 	end
 	workspace:GetAttributeChangedSignal("Stage"):Connect(update)
 	workspace:GetAttributeChangedSignal("Difficulty"):Connect(update)
+	player:GetAttributeChangedSignal("State"):Connect(update)
 	update()
 end
 

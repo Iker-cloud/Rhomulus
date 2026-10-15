@@ -203,6 +203,7 @@ function Inventory.start()
 
 	local drawnPrimary = nil
 	RunService.RenderStepped:Connect(function()
+		gui.Enabled = workspace:GetAttribute("Stage") ~= "Result" -- no tapa el botón de la pantalla de resultados
 		layout()
 		local weaponKey = player:GetAttribute("WeaponKey")
 		local primaryKey = player:GetAttribute("PrimaryKey")

@@ -10,7 +10,7 @@ local Content = {
 	},
 
 	Steps = {
-		{ "VOTEN Y PREPÁRENSE", "Voten mapa y dificultad; practiquen y pulsen Y para empezar." },
+		{ "VOTEN Y PREPÁRENSE", "Voten la dificultad; practiquen y pulsen Y para empezar." },
 		{ "CRUCEN EL BARRIO", "Tres tramos, tres rutas cada uno y dos puntos seguros." },
 		{ "ABRAN LA IGLESIA", "Lleven las garrafas al generador de la plaza." },
 		{ "LLEGUEN AL ESTADIO", "Crucen la terminal hasta el Refugio Remo." },
@@ -88,7 +88,7 @@ Content.Touch = {
 		},
 	},
 }
-Content.Touch.Steps[1] = { "VOTEN Y PREPÁRENSE", "Voten mapa y dificultad; practiquen y toquen LISTO para empezar." }
+Content.Touch.Steps[1] = { "VOTEN Y PREPÁRENSE", "Voten la dificultad; practiquen y toquen LISTO para empezar." }
 Content.Touch.Tips[2] = { "REVIVAN RÁPIDO", "Mantén el botón E junto al caído y toca el botón al acertar. Aguanta unos 30 s antes de morir." }
 
 -- Los textos que corresponden al dispositivo: HelpContent.get(true) en celular, HelpContent.get(false) en PC
