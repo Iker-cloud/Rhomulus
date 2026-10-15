@@ -1,6 +1,6 @@
 -- Mapa 1, Morro Esperanza (barrio de Rhomulus), en bloques de colores generados por código.
 -- Diseño: docs/mapa-1-barrio.md y docs/prompts-mapa-claude-design.md (Prompt 0 = escala y reglas; partes 2 a 14).
--- Se elige en la votación del lobby (server/VoteRoom, Config.Maps); el mapa de siempre es "Prueba" (MapBuilder).
+-- Se elige en la votación del lobby (server/VoteRoom, Config.Maps).
 --
 -- Hecho hasta ahora: lobby (la cochera, z -400..-350) -> tramo 1, rutas Calle (roja, z -350..-130) y Callejón
 -- (amarilla, x -120..-60) y Escalera (azul, x 60..120) -> punto seguro 1

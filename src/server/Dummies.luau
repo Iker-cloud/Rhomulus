@@ -44,12 +44,11 @@ local function spawnDummy(position)
 	end)
 end
 
--- Pone los maniquíes del lobby del mapa elegido ("Morro" = el barrio; cualquier otro = el mapa de siempre)
+-- Pone los maniquíes del lobby del mapa elegido
 function Dummies.setLayout(mapId)
 	layout += 1
 	folder:ClearAllChildren()
-	local positions = mapId == "Morro" and Config.Dummy.PositionsNewMap or Config.Dummy.Positions
-	for _, position in positions do
+	for _, position in Config.Dummy.Positions do
 		spawnDummy(position)
 	end
 end

@@ -26,7 +26,6 @@ local OSW = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Re
 local OSW_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Light)
 
 local MAPS = {
-	{ id = "Prueba", name = "PRUEBA" },
 	{ id = "Morro", name = "MORRO ESPERANZA" },
 }
 local function mapName(id)
@@ -857,7 +856,7 @@ builders.setup = function()
 	describeVisibility()
 
 	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(120, 548), { width = 500 })
-	choiceRow(s, 120, 578, 80, { { "Prueba", "PRUEBA", 260 }, { "Morro", "MORRO ESPERANZA", 520 } }, 52, function(id)
+	choiceRow(s, 120, 578, 80, { { "Morro", "MORRO ESPERANZA", 520 } }, 52, function(id)
 		return setupState.map == id
 	end, function(id)
 		setupState.map = id
@@ -990,7 +989,7 @@ builders.create = function()
 	end)
 
 	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(876, 714), { width = 400 })
-	choiceRow(s, 876, 748, 87, { { "Prueba", "PRUEBA", 211 }, { "Morro", "MORRO ESPERANZA", 433 } }, 56, function(id)
+	choiceRow(s, 876, 748, 87, { { "Morro", "MORRO ESPERANZA", 433 } }, 56, function(id)
 		return st.map == id
 	end, function(id)
 		st.map = id

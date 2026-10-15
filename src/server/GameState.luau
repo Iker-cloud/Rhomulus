@@ -20,7 +20,7 @@ local GasCans = require(script.Parent.GasCans)
 local Medkits = require(script.Parent.Medkits)
 local VoteRoom = require(script.Parent.VoteRoom)
 local Items = require(script.Parent.Items)
-local MapBuilder = require(script.Parent.MapBuilder)
+local VanBuilder = require(script.Parent.VanBuilder)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
@@ -32,7 +32,7 @@ local Zombies = require(script.Parent.Zombies)
 local GameState = {}
 
 -- Constructor de cada mapa votable (las claves son los id de Config.Maps)
-local BUILDERS = { Prueba = MapBuilder, Morro = MapBuilderBarrio }
+local BUILDERS = { Morro = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
@@ -243,7 +243,6 @@ local function loadMap(id)
 	CanPiles.init(map.canPiles)
 	Medkits.init(map.medkits)
 	GasCans.init(map.gas)
-	-- El mapa de siempre llama "portón" a lo que abre el generador; el nuevo lo define (la iglesia)
 	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
 	workspace:SetAttribute("MapId", id)
 	Dummies.setLayout(id)
@@ -297,7 +296,7 @@ local function vote()
 	end
 
 	PlayerState.setSafePoint(VoteRoom.build().spawn)
-	setStage("Vote", "Voten el mapa en los podios con E", "Vote")
+	setStage("Vote", "Voten la dificultad con 1 a 4", "Vote")
 	respawn(false)
 
 	local winner, difficulty = VoteRoom.run(function(text)
@@ -472,7 +471,7 @@ local function extraction()
 
 	-- La van entra por el fondo de la calle
 	-- El servidor solo dice de dónde a dónde y cuándo: cada cliente anima la entrada (VanAnimator), así se ve fluida
-	local van = MapBuilder.makeVan(map.vanStart.Position)
+	local van = VanBuilder.makeVan(map.vanStart.Position)
 	local arrivalTime = Config.Game.VanArriveTime
 	van:SetAttribute("From", map.vanStart)
 	van:SetAttribute("To", map.vanStop)

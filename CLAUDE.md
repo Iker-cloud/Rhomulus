@@ -12,11 +12,11 @@
 
 ## Estado actual del proyecto (actualizado el 9 de octubre de 2026)
 
-**Dónde vamos:** fase 7 (pulido y prueba con amigos). El MVP ya se juega de inicio a fin con 1 jugador (probado en Studio de lobby a victoria y derrota), y el **mapa 1 (Morro Esperanza) está terminado**: al entrar se vota el mapa (Prueba o Morro Esperanza). **Hoy, viernes 9 de octubre, toca la prueba con Isaac** (balance, bugs y rendimiento). Regla: solo arreglar y balancear.
+**Dónde vamos:** fase 7 (pulido y prueba con amigos). El MVP ya se juega de inicio a fin con 1 jugador (probado en Studio de lobby a victoria y derrota), y el **mapa 1 (Morro Esperanza) está terminado**: al entrar se vota la dificultad (Morro Esperanza es el único mapa; el de prueba se retiró el 14 de octubre). **Hoy, viernes 9 de octubre, toca la prueba con Isaac** (balance, bugs y rendimiento). Regla: solo arreglar y balancear.
 
 **Hecho (fases 2 a 6 y casi toda la 7):**
 - **Mapa 1 "Morro Esperanza"** (barrio de Rhomulus, `server/MapBuilderBarrio`), completo: lobby (la cochera), 3 tramos con 3 rutas cada uno (Calle roja, Callejón amarilla, Escalera azul), 2 puntos seguros (la tienda y la iglesia), eventos (generador que abre la iglesia, "Las garrafas" del mercado que le dan gas, emboscadas, Tanque en la terminal) y extracción en el estadio con la furgoneta. Azoteas de 10 de alto en la ruta Escalera, pase de arte y sonido por zona. Detalles en "Mapa de código".
-- **Votación del mapa** al inicio de cada ronda (`server/VoteRoom`: sala aparte con un podio por mapa, se vota con `E`, 20 s, empate al azar).
+- **Votación de dificultad** al inicio de cada ronda (`server/VoteRoom`: sala aparte, 20 s, teclas 1 a 4; con un solo mapa ya no se vota el mapa, pero la sala conserva el cartel de Morro Esperanza).
 - **Ambiente de terror** en los dos mapas (`server/Atmosphere`, `client/NightLights`, `client/NightSounds`): noche con luna y niebla, linterna, faroles que parpadean y se apagan, ruidos, latido.
 - **Botiquín** (`server/Medkits`, tecla `4`): solo en el mapa nuevo.
 - Disparo con raycast validado en el servidor, 4 armas (pistola, rifle, escopeta, subfusil), zoom con clic derecho, cámara sobre el hombro y primera persona (`V`).
@@ -44,17 +44,17 @@
 - **Lección:** en los animadores del cliente (`PoseAnimator`, `WeaponAnimator`) esperar `HasAppearanceLoaded` y comprobar las articulaciones por nombre (un campo `nil` no existe en la tabla, un `for` no lo ve).
 
 **Pendiente (en orden):**
-1. **Probar con 2 o más jugadores, con Isaac, hoy viernes 9 de octubre** (ya se probó una vez con Isaac en el juego publicado; falta ver las poses nuevas, la furgoneta, el Tanque, la noche y el botiquín; el mapa nuevo se elige en la votación del lobby (`Config.Maps`: Prueba o Morro Esperanza) y conviene medir antes los FPS): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
+1. **Probar con 2 o más jugadores, con Isaac, hoy viernes 9 de octubre** (ya se probó una vez con Isaac en el juego publicado; falta ver las poses nuevas, la furgoneta, el Tanque, la noche y el botiquín; el mapa es Morro Esperanza (`Config.Maps`) y conviene medir antes los FPS): revivir con `E`, cargar con `F` y soltar con `G`, muertos que reaparecen en el siguiente punto seguro, derrota con varios jugadores.
 2. Balance (precios, zombies, horda, tiempos) y bugs que salgan de esa prueba.
 3. Revisar rendimiento: el mapa nuevo tiene unas 4800 piezas (ya se recortaron ventanas y luces lejanas); el zombie común tiene 86. Meta: 30 FPS en celular. Ya está la calidad gráfica del cliente y el panel de rendimiento (AJUSTES → RENDIMIENTO); si no llega, seguir `docs/rendimiento-celular.md` (streaming a mano en Studio, `Config.Zombie.Common.ModelDetail = "light"`, menos zombies vivos). Falta medir en un celular real.
 4. Probar las animaciones de sobrevivientes (paquete Antiguo): requiere que Rojo cargue `src/character`.
-5. ~~Botiquín~~ (hecho para el mapa nuevo: `server/Medkits`; el mapa de siempre no tiene botiquines).
+5. ~~Botiquín~~ (hecho para el mapa nuevo: `server/Medkits`).
 6. Dificultad elegible por el jugador (Iker lo mencionó): ahora los números salen de `Config.Director.ByPlayers`.
 7. Publicar el juego para los amigos (el lugar existe, falta dejarlo accesible).
 
 **Mapa de código** (`src/`):
 - `shared/Config.luau`: **todos** los valores de balance, sonidos, animaciones y textos de precios. `shared/Remotes.luau`: único canal cliente-servidor.
-- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponRig`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `MapBuilder` (mapa gris por código), `MapBuilderBarrio` (mapa 1 Morro Esperanza, ya se juega de principio a fin con 1 jugador: de momento lobby + tramo 1 completo (Calle, Callejón y Escalera) + punto seguro 1 + tramo 2 completo: rutas Calle (plaza con el generador, que abre la iglesia), Callejón (mercado con las garrafas que le dan gas al generador) y Escalera (cementerio y atrio detrás de la iglesia) + punto seguro 2 (la iglesia) + tramo 3 completo: rutas Calle (terminal con emboscada y Tanque), Callejón (avenida lateral) y Escalera (andenes), que salen de la explanada tras la iglesia + estadio con la radio y la furgoneta (entra por el portón norte). La ruta Escalera de cada tramo tiene una azotea de 10 de alto (rampas de cuña, latas de 75 y botiquín arriba); tiene un pase de arte (unas 500 piezas de detalle: basura, maleza, cables, grafitis, carteles pintados, sangre estilizada; franjas blancas en las rampas; sonido por zona en `Config.Sounds.Night.Zones`); se elige en la votación), `VoteRoom` (sala aparte, a 800 de altura, con un podio por mapa: se vota con E, 20 s, empate al azar; `Config.Maps` y `Config.Vote`), `Ambushes` (mini-hordas al entrar en las plazoletas), `CanPiles` (latas sueltas con E), `Medkits` (botiquín: se recoge con E, se usa con 4, cura 80 en 5 s; `Config.Medkit`), `GasCans` (garrafas: se cargan como a un compañero y se llevan al generador; `Config.Gas`), `Atmosphere` (noche de terror en los dos mapas: luz de luna y niebla, linterna, faroles con etiqueta `NightLamp`, apagones; se apaga con `Config.Atmosphere.Enabled`), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
+- `server/`: `GameState` (etapas), `Director` + `Zombies` (+ `ZombieModel`), `Weapons`, `WeaponRig`, `WeaponBox`, `PlayerState` + `Revive`, `Points` (latas), `Stats`, `VanBuilder` (la furgoneta), `MapBuilderBarrio` (mapa 1 Morro Esperanza, ya se juega de principio a fin con 1 jugador: de momento lobby + tramo 1 completo (Calle, Callejón y Escalera) + punto seguro 1 + tramo 2 completo: rutas Calle (plaza con el generador, que abre la iglesia), Callejón (mercado con las garrafas que le dan gas al generador) y Escalera (cementerio y atrio detrás de la iglesia) + punto seguro 2 (la iglesia) + tramo 3 completo: rutas Calle (terminal con emboscada y Tanque), Callejón (avenida lateral) y Escalera (andenes), que salen de la explanada tras la iglesia + estadio con la radio y la furgoneta (entra por el portón norte). La ruta Escalera de cada tramo tiene una azotea de 10 de alto (rampas de cuña, latas de 75 y botiquín arriba); tiene un pase de arte (unas 500 piezas de detalle: basura, maleza, cables, grafitis, carteles pintados, sangre estilizada; franjas blancas en las rampas; sonido por zona en `Config.Sounds.Night.Zones`); se elige en la votación), `VoteRoom` (sala aparte, a 800 de altura, con un podio por mapa: se vota con E, 20 s, empate al azar; `Config.Maps` y `Config.Vote`), `Ambushes` (mini-hordas al entrar en las plazoletas), `CanPiles` (latas sueltas con E), `Medkits` (botiquín: se recoge con E, se usa con 4, cura 80 en 5 s; `Config.Medkit`), `GasCans` (garrafas: se cargan como a un compañero y se llevan al generador; `Config.Gas`), `Atmosphere` (noche de terror en los dos mapas: luz de luna y niebla, linterna, faroles con etiqueta `NightLamp`, apagones; se apaga con `Config.Atmosphere.Enabled`), `Dummies`, `PropModel` (cajas, generador, radio, maniquíes) y `ZombieData/*.luau` (**generados**, no se editan a mano).
 - `client/`: HUDs (`AmmoHud`, `HealthHud`, `LatasHud`, `TeamHud`, `RadioHud`, `GameHud`, `ResultHud`, `DownedHud`, `EnemyBars`, `Plates`, `PromptUi`), `ZombieAnimator`, `DummyAnimator`, `PropAnimator`, `SoundController`, `CameraController`, `Shooting`, `WeaponAnimator`, `ArmIK`, `Icons`, `Slant`, `NightLights` (faroles que parpadean, apagones con chispas, linterna que sigue la cámara), `NightSounds` (ambiente, ruidos sueltos, latido), `MedkitHud` (tecla del botiquín, insignia y barra de curación). Celular: `Controls`, `TouchControls`, `SettingsPanel`, `UiFit`, `Performance` (ver "Celular").
 - `character/Animate.client.luau`: animación de los sobrevivientes (reemplaza el script de Roblox).
 - `assets/*.glb` + `tools/glb_to_lua.py`: modelos 3D de origen y su conversor. Uso: `python tools/glb_to_lua.py <archivo-sin-.glb> <Modulo> [escala] [articulaciones]` (para cajas: articulación `tapa`). Los modelos se construyen con bloques nativos de Roblox, no se suben mallas.
@@ -141,7 +141,6 @@ El juego tiene tres mapas previstos, cada uno con su propio vehículo de extracc
 | Mapa | Ambiente | Extracción final | Estado |
 | --- | --- | --- | --- |
 | **Morro Esperanza** (barrio de la ciudad Rhomulus) | Favela latina de noche: callejones, escaleras, azoteas, tienda, iglesia, mercado, terminal y estadio | La furgoneta del Refugio Remo, que entra por el portón norte del estadio | **Hecho** (3 tramos, 2 puntos seguros) |
-| Prueba | Mapa gris del MVP: una calle larga, un generador y la extracción | Una van | Hecho, se mantiene para probar |
 | Centro comercial | Pasillos, tiendas, escaleras eléctricas, estacionamiento | Un auto deportivo en el estacionamiento | Después |
 | Aeropuerto | Terminal, bandas de equipaje, hangar y pista | Un avión que hay que alcanzar en la pista | Después |
 
@@ -150,7 +149,7 @@ Los mapas nuevos reutilizan todos los sistemas. El diseño del mapa 1 está en `
 Estructura de cada partida:
 
 1. **Menú de entrada** (otro lugar de la experiencia): título, y desde ahí *Jugar* (la **lista de salas** abiertas de todos los servidores: con jugadores x/4, mapa y dificultad; las **públicas** se entran con un toque y las **privadas** salen con candado y piden su código de 4 letras; las que ya empezaron no salen), *Crear partida* (pantalla de nueva sala: pública o privada, mapa y dificultad, con vista previa de cómo saldrá en la lista) y *Cómo jugar*. El anfitrión puede cambiar la sala entre pública y privada, el mapa y la dificultad hasta que pulsa Empezar; en una privada el código lo genera el juego. Con Empezar, cada sala va a su propio servidor reservado con el mapa y la dificultad elegidos (se salta la votación).
-2. **Votación** (solo si se entra a la partida sin sala: sala aparte con un podio por mapa, 20 s, empate al azar): se vota el mapa con `E` y la dificultad con 1 a 4 (o tocando el panel en celular). Las salas del menú ya traen mapa y dificultad.
+2. **Votación** (solo si se entra a la partida sin sala: sala aparte, 20 s, empate al azar): se vota la dificultad con 1 a 4 (o tocando el panel en celular). Las salas del menú ya traen mapa y dificultad.
 3. **Lobby** (la cochera): maniquíes para practicar, tarjeta de bienvenida la primera vez, y *Listo* (`Y` o botón) para empezar.
 4. **Tramo 1:** tres rutas (Calle, Callejón, Escalera) que se juntan en el primer punto seguro. Zombies sueltos, pocos recursos.
 5. **Punto seguro 1 (la tienda):** sin zombies; estación de suministros y recarga gratis. Se avanza cuando todos están dentro.
@@ -319,7 +318,7 @@ El MVP es una partida completa y jugable de principio a fin con 1 a 4 amigos. To
 
 | Hecho (entró al MVP o antes de tiempo) | Después del MVP |
 | --- | --- |
-| Mapa 1 Morro Esperanza completo (3 tramos, 2 puntos seguros, extracción en furgoneta) y el mapa de prueba | Centro comercial (auto deportivo) y aeropuerto (avión) |
+| Mapa 1 Morro Esperanza completo (3 tramos, 2 puntos seguros, extracción en furgoneta) | Centro comercial (auto deportivo) y aeropuerto (avión) |
 | Pistola inicial, caja de armas con rifle, escopeta y subfusil, críticos, bloom y brazos animados | Más armas en la caja (francotirador, ametralladora), arma épica por mapa, cuerpo a cuerpo |
 | Zombie común, rápido y Tanque | Zombies especiales (el que atrapa a un jugador) |
 | Caída, revivir con frases y prueba de acción, cargar al compañero, levantarse solo, espectador y reaparición | Fuego amigo |
@@ -370,7 +369,7 @@ Cada fase termina con algo que se puede probar en Studio; no se pasa a la siguie
 3. ~~**Un zombie:**~~ IA que persigue y ataca.
 4. ~~**Muchos zombies:**~~ puntos de aparición y director simple con límite.
 5. ~~**Cooperativo:**~~ caída, revivir con frases, cargar al compañero, reaparición y UI de equipo.
-6. ~~**El mapa:**~~ partida completa de inicio a fin (primero el mapa de prueba, después Morro Esperanza).
+6. ~~**El mapa:**~~ partida completa de inicio a fin (primero un mapa gris de prueba, ya retirado; después Morro Esperanza).
 7. **Pulido y prueba con amigos** (fase actual): sonidos, balance, bugs, rendimiento y celular. Listo cuando: 3 amigos terminan una partida y quieren otra. Después se construyen el centro comercial y el aeropuerto con los mismos sistemas.
 
 Pendiente de la fase 7: probar con Isaac y más jugadores (revivir, cargar, derrota con varios), balance, medir los FPS en un celular real y probar los controles táctiles con un dedo, publicar el juego para los amigos.

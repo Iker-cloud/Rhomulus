@@ -13,13 +13,6 @@ local Atmosphere = {}
 
 local A = Config.Atmosphere
 
--- Farol del mapa de siempre (MapBuilder no los tiene): poste en la acera con el foco hacia la calle
-local OLD_MAP_LAMPS = { -- { x, z }
-	{ -22.5, -200 }, { 22.5, -160 }, { -22.5, -120 },
-	{ 22.5, -40 }, { -22.5, 0 }, { 22.5, 40 },
-	{ -22.5, 100 }, { 22.5, 140 }, { -22.5, 180 }, { 22.5, 220 },
-}
-
 local function lampPart(parent, name, size, position, color, material)
 	local part = Instance.new("Part")
 	part.Name = name
@@ -43,34 +36,10 @@ function Atmosphere.bulb(parent, position)
 	return bulb
 end
 
-local function oldMapLamps(map)
-	for _, spot in OLD_MAP_LAMPS do
-		local x, z = spot[1], spot[2]
-		local side = x > 0 and 1 or -1
-		local post = lampPart(map, "Poste", Vector3.new(16, 0.7, 0.7), Vector3.new(x, 8, z), Color3.fromRGB(110, 110, 115), Enum.Material.Metal)
-		post.Shape = Enum.PartType.Cylinder
-		post.CFrame = CFrame.new(x, 8, z) * CFrame.Angles(0, 0, math.pi / 2)
-		lampPart(map, "PosteBrazo", Vector3.new(3, 0.3, 0.3), Vector3.new(x - side * 1.5, 15.8, z), Color3.fromRGB(110, 110, 115), Enum.Material.Metal)
-		Atmosphere.bulb(map, Vector3.new(x - side * 3, 15.5, z))
-	end
-	-- Lobby (parpadea) y punto seguro (luz estable y cálida: ahí se respira)
-	local lobby = Atmosphere.bulb(map, Vector3.new(0, 16, -229))
-	lobby:SetAttribute("Flicker", true)
-	local safe = lampPart(map, "LuzRefugio", Vector3.new(4, 0.4, 1), Vector3.new(0, 19.5, -75), Color3.fromRGB(255, 225, 170), Enum.Material.Neon)
-	local light = Instance.new("PointLight")
-	light.Color = Color3.fromRGB(255, 210, 150)
-	light.Range = 30
-	light.Brightness = 2
-	light.Parent = safe
-end
-
 -- Da luz a los faroles del mapa y elige cuáles parpadean o están rotos. `map` son las referencias del constructor.
 function Atmosphere.decorate(map)
 	if not A.Enabled then
 		return
-	end
-	if not map.medkits then -- el mapa de siempre (MapBuilder) no trae faroles
-		oldMapLamps(workspace.Map)
 	end
 	local rng = Random.new(Config.Game.Seed)
 	for _, bulb in CollectionService:GetTagged("NightLamp") do

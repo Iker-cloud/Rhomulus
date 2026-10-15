@@ -69,17 +69,14 @@ local function addLight(part, color, range, brightness)
 	light.Parent = part
 end
 
--- Cartel de un mapa: votos, descripción y nombre, negro con letras rojas.
+-- Cartel del mapa: descripción y nombre, negro con letras rojas.
 -- Devuelve el texto donde se muestran los votos.
 local function mapBoard(part, map)
 	local main, soft = RED, PALE
 	local gui = face(part, 60, Color3.fromRGB(14, 14, 14))
 	rect(gui, UDim2.fromScale(0.92, 0.012), UDim2.fromScale(0.04, 0.05), main)
 	rect(gui, UDim2.fromScale(0.92, 0.012), UDim2.fromScale(0.04, 0.94), main)
-	local count = label(gui, "0", UDim2.fromScale(0.3, 0.24), UDim2.fromScale(0.08, 0.06), Enum.Font.Oswald, main)
-	count.TextXAlignment = Enum.TextXAlignment.Right
-	local unit = label(gui, "VOTOS", UDim2.fromScale(0.3, 0.09), UDim2.fromScale(0.42, 0.14), Enum.Font.Oswald, main)
-	unit.TextXAlignment = Enum.TextXAlignment.Left
+	local count = Instance.new("TextLabel") -- ya no se vota el mapa (solo hay uno): el texto no se muestra
 	local desc = label(gui, map.desc, UDim2.fromScale(0.84, 0.22), UDim2.fromScale(0.08, 0.34), Enum.Font.GothamBold, soft)
 	desc.TextWrapped = true
 	rect(gui, UDim2.fromScale(0.78, 0.008), UDim2.fromScale(0.11, 0.6), main)
@@ -124,11 +121,17 @@ function VoteRoom.build()
 		named[d.name] = p
 	end
 
-	-- El podio de Morro Esperanza se ve igual que el de Prueba: negro con neón rojo tenue
+	-- Solo hay un mapa: el podio de Morro Esperanza (negro con neón rojo tenue, como era el de Prueba) queda de cartel
 	for name, part in named do
 		local twin = name:match("^morro_(base)$") or name:match("^morro_(franja_%d+)$") or name:match("^morro_(neon_%a)$")
 		if twin and named["prueba_" .. twin] then
 			part.Color = named["prueba_" .. twin].Color
+		end
+	end
+	for name, part in named do
+		if name:find("^prueba_") then
+			part:Destroy()
+			named[name] = nil
 		end
 	end
 
@@ -161,9 +164,9 @@ function VoteRoom.build()
 	local title = face(named.letrero_cara, 40)
 	rect(title, UDim2.fromScale(1, 0.03), UDim2.fromScale(0, 0), RED)
 	rect(title, UDim2.fromScale(1, 0.03), UDim2.fromScale(0, 0.97), RED)
-	label(title, "ACÉRCATE A UN PODIO Y PRESIONA E · PUEDES CAMBIAR TU VOTO", UDim2.fromScale(0.78, 0.13), UDim2.fromScale(0.11, 0.06), Enum.Font.Oswald, PALE)
+	label(title, "ELIGE CON LAS TECLAS 1 A 4 · PUEDES CAMBIAR TU VOTO", UDim2.fromScale(0.78, 0.13), UDim2.fromScale(0.11, 0.06), Enum.Font.Oswald, PALE)
 	rect(title, UDim2.fromScale(0.78, 0.012), UDim2.fromScale(0.11, 0.22), RED)
-	label(title, "VOTEN EL MAPA", UDim2.fromScale(0.82, 0.46), UDim2.fromScale(0.09, 0.27), Enum.Font.Oswald, RED)
+	label(title, "VOTEN LA DIFICULTAD", UDim2.fromScale(0.82, 0.46), UDim2.fromScale(0.09, 0.27), Enum.Font.Oswald, RED)
 	label(title, "DÍA 01  ·  ZONA SEGURA", UDim2.fromScale(0.4, 0.1), UDim2.fromScale(0.3, 0.8), Enum.Font.Oswald, RED)
 
 	-- Pantalla del tótem, agrandada, con el tiempo en números rojos grandes para que todos lo vean
@@ -276,12 +279,6 @@ function VoteRoom.run(onTick)
 			difficultyVotes[player] = id
 		end
 	end))
-	for _, option in room.options do
-		option.prompt.Enabled = true
-		table.insert(connections, option.prompt.Triggered:Connect(function(player)
-			votes[player] = option.map.id
-		end))
-	end
 
 	local startedAt = os.clock()
 	local allVotedAt = nil
@@ -295,7 +292,7 @@ function VoteRoom.run(onTick)
 		local list = Players:GetPlayers()
 		local voted = 0
 		for _, player in list do
-			if votes[player] then
+			if difficultyVotes[player] then
 				voted += 1
 			end
 		end
@@ -305,7 +302,7 @@ function VoteRoom.run(onTick)
 			timeLabel.Text = tostring(left)
 			timeLabel.TextColor3 = urgent and PALE or RED
 		end
-		onTick(`Voten el mapa en los podios con E y la dificultad con 1 a 4 ({voted}/{#list})`)
+		onTick(`Voten la dificultad con 1 a 4 ({voted}/{#list})`)
 
 		if #list > 0 and voted == #list then
 			allVotedAt = allVotedAt or os.clock()

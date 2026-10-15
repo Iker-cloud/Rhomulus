@@ -557,7 +557,6 @@ return {
 
 	-- Mapas que se pueden votar al inicio de cada ronda (server/VoteRoom). id = clave que usa GameState para elegir el constructor.
 	Maps = {
-		{ id = "Prueba", name = "Prueba", desc = "El mapa de siempre: una calle larga, un generador y la extracción.", color = Color3.fromRGB(95, 100, 110) },
 		{ id = "Morro", name = "Morro Esperanza", desc = "El barrio de Rhomulus: 3 rutas, 3 tramos, iglesia, estadio y furgoneta.", color = Color3.fromRGB(190, 70, 50) },
 	},
 	Vote = {
@@ -594,12 +593,7 @@ return {
 	Dummy = {
 		Health = 100,
 		RespawnTime = 3,
-		Positions = {
-			Vector3.new(-8, 0, -243),
-			Vector3.new(0, 0, -243),
-			Vector3.new(8, 0, -243),
-		},
-		PositionsNewMap = { -- lobby de Morro Esperanza (la cochera)
+		Positions = { -- lobby de Morro Esperanza (la cochera)
 			Vector3.new(-8, 0, -388),
 			Vector3.new(0, 0, -388),
 			Vector3.new(8, 0, -388),

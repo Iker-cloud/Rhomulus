@@ -22,7 +22,7 @@ local ROOM_TTL = 3600
 local INDEX_TTL = 10 -- una entrada de la lista caduca si ningún servidor la refresca en este tiempo
 local LIST_CACHE = 2 -- la lista se lee de MemoryStore como mucho cada tantos segundos por servidor
 local MAX_LIST = 40
-local MAPS = { Prueba = true, Morro = true }
+local MAPS = { Morro = true }
 local LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 Players.CharacterAutoLoads = false
@@ -616,6 +616,6 @@ if usingFakeStore then
 	end
 	-- (ids de cuentas públicas de Roblox, solo para ver los avatares en las pruebas)
 	fake("DEMOA", "Sala de Isaac", "Morro", "Tension", { 156, 261 }, true)
-	fake("DEMOB", "Sala de Lucía", "Prueba", "Crisis", { 1 }, false)
+	fake("DEMOB", "Sala de Lucía", "Morro", "Crisis", { 1 }, false)
 	fake("DEMOC", "Sala de Mateo", "Morro", "Calma", { 156, 261, 1, 2 }, true)
 end
