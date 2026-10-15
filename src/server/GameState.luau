@@ -25,6 +25,7 @@ local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
+local Telemetry = require(script.Parent.Telemetry)
 local WeaponBox = require(script.Parent.WeaponBox)
 local Weapons = require(script.Parent.Weapons)
 local Zombies = require(script.Parent.Zombies)
@@ -78,6 +79,7 @@ local OBJECTIVES = {
 -- `tone` es la clave de la orden en RadioHud.luau (define su color y quién la dice por radio)
 local function setStage(name, message, tone)
 	stage = name
+	Telemetry.stage(name)
 	local objective = map and OBJECTIVES[tone]
 	if objective then
 		local position, label = objective()
@@ -532,6 +534,7 @@ local function result(won)
 	WeaponBox.clear()
 	setStage("Result", won and "¡Victoria!" or "Derrota", won and "Victory" or "Defeat")
 	Remotes.Results:FireAllClients(won, Stats.all())
+	Telemetry.result(won)
 	task.wait(Config.Game.ResultTime)
 end
 

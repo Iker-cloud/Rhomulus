@@ -9,6 +9,7 @@ local RateLimit = require(script.Parent.RateLimit)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
+local Telemetry = require(script.Parent.Telemetry)
 
 local PlayerState = {}
 
@@ -68,6 +69,7 @@ end
 local function down(player, humanoid)
 	humanoid.Health = 1
 	setState(player, "Downed")
+	Telemetry.downed(player)
 	PlayerState.refreshSpeed(player)
 
 	local token = (bleedTokens[player] or 0) + 1
@@ -181,6 +183,7 @@ local function onCharacter(player, character)
 		bleedTokens[player] = (bleedTokens[player] or 0) + 1
 		player:SetAttribute("BleedEnd", nil)
 		setState(player, "Dead")
+		Telemetry.died(player)
 	end)
 
 	local base = spawnOverride[player] or safePoint
