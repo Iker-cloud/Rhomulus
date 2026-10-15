@@ -535,7 +535,33 @@ local function result(won)
 	setStage("Result", won and "¡Victoria!" or "Derrota", won and "Victory" or "Defeat")
 	Remotes.Results:FireAllClients(won, Stats.all())
 	Telemetry.result(won)
-	task.wait(Config.Game.ResultTime)
+
+	-- Cuenta atrás hasta la siguiente partida (la pantalla de resultados la muestra). Si todos los que quedan pulsan OTRA PARTIDA
+	-- (tras unos segundos para leer), se adelanta.
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("PlayAgain", false)
+	end
+	local startedAt = os.clock()
+	workspace:SetAttribute("ResultEnd", workspace:GetServerTimeNow() + Config.Game.ResultTime)
+	local function everyoneAgain()
+		local list = Players:GetPlayers()
+		for _, player in list do
+			if not player:GetAttribute("PlayAgain") then
+				return false
+			end
+		end
+		return #list > 0
+	end
+	while os.clock() - startedAt < Config.Game.ResultTime do
+		task.wait(0.25)
+		if os.clock() - startedAt >= Config.Game.ResultMinTime and everyoneAgain() then
+			break
+		end
+	end
+	workspace:SetAttribute("ResultEnd", nil)
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("PlayAgain", nil)
+	end
 end
 
 function GameState.start()
@@ -567,6 +593,12 @@ function GameState.start()
 			task.spawn(onJoin, player)
 		end
 	end
+
+	Remotes.PlayAgain.OnServerEvent:Connect(function(player)
+		if stage == "Result" and RateLimit.check(player, "PlayAgain", 0.5) then
+			player:SetAttribute("PlayAgain", true)
+		end
+	end)
 
 	Remotes.Ready.OnServerEvent:Connect(function(player)
 		if not RateLimit.check(player, "Ready", 0.5) then

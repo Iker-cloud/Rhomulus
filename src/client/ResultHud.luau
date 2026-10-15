@@ -278,19 +278,55 @@ function ResultHud.start()
 			table.insert(rows, row)
 		end
 
-		-- Botón para volver al menú (teletransporta al lugar del Menú)
+		-- Dos botones en una fila: OTRA PARTIDA (con la cuenta atrás hasta la siguiente; si todos lo piden se adelanta) y VOLVER AL MENÚ
+		-- (teletransporta al lugar del Menú)
+		local buttons = Instance.new("Frame")
+		buttons.LayoutOrder = 5
+		buttons.BackgroundTransparency = 1
+		buttons.Size = UDim2.new(1, 0, 0, 46)
+		buttons.Parent = content
+		local row = Instance.new("UIListLayout")
+		row.FillDirection = Enum.FillDirection.Horizontal
+		row.Padding = UDim.new(0, 10)
+		row.SortOrder = Enum.SortOrder.LayoutOrder
+		row.Parent = buttons
+
+		local again = Instance.new("TextButton")
+		again.LayoutOrder = 1
+		again.Size = UDim2.new(0.58, -5, 1, 0)
+		again.BackgroundColor3 = palette.accent
+		again.AutoButtonColor = true
+		again.BorderSizePixel = 0
+		again.Font = Enum.Font.GothamBlack
+		again.TextSize = 17
+		again.TextColor3 = Color3.fromRGB(14, 13, 13)
+		again.Text = "OTRA PARTIDA"
+		again.Parent = buttons
+		Instance.new("UICorner", again).CornerRadius = UDim.new(0, 6)
+		again.Activated:Connect(function()
+			if not player:GetAttribute("PlayAgain") then
+				player:SetAttribute("PlayAgain", true) -- se ve al instante; el servidor lo confirma
+				Remotes.PlayAgain:FireServer()
+			end
+		end)
+
 		local back = Instance.new("TextButton")
-		back.LayoutOrder = 5
-		back.Size = UDim2.new(1, 0, 0, 46)
-		back.BackgroundColor3 = palette.accent
+		back.LayoutOrder = 2
+		back.Size = UDim2.new(0.42, -5, 1, 0)
+		back.BackgroundColor3 = Color3.fromRGB(14, 13, 13)
 		back.AutoButtonColor = true
 		back.BorderSizePixel = 0
-		back.Font = Enum.Font.GothamBlack
-		back.TextSize = 18
-		back.TextColor3 = Color3.fromRGB(14, 13, 13)
+		back.Font = Enum.Font.GothamBold
+		back.TextSize = 14
+		back.TextColor3 = palette.accent
 		back.Text = "VOLVER AL MENÚ"
-		back.Parent = content
+		back.Parent = buttons
 		Instance.new("UICorner", back).CornerRadius = UDim.new(0, 6)
+		local backStroke = Instance.new("UIStroke")
+		backStroke.Color = palette.accent
+		backStroke.Thickness = 1.5
+		backStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		backStroke.Parent = back
 		local leaving = false
 		back.Activated:Connect(function()
 			if leaving then
@@ -307,6 +343,27 @@ function ResultHud.start()
 				leaving = false
 			end
 		end)
+
+		-- El texto de OTRA PARTIDA lleva los segundos que faltan y, tras pulsarlo, cuántos del equipo ya lo pidieron
+		local function refreshAgain()
+			local ends = workspace:GetAttribute("ResultEnd")
+			local seconds = ends and math.max(0, math.ceil(ends - workspace:GetServerTimeNow())) or nil
+			if player:GetAttribute("PlayAgain") then
+				local ready, total = 0, 0
+				for _, other in Players:GetPlayers() do
+					total += 1
+					if other:GetAttribute("PlayAgain") then
+						ready += 1
+					end
+				end
+				again.Text = `LISTO {ready}/{total}` .. (seconds and ` · {seconds}` or "")
+				again.BackgroundColor3 = Color3.fromRGB(70, 66, 60)
+				again.TextColor3 = Color3.new(1, 1, 1)
+			else
+				again.Text = "OTRA PARTIDA" .. (seconds and ` · {seconds}` or "")
+			end
+		end
+		refreshAgain()
 
 		-- Animación de entrada: aparece creciendo, las filas se encienden una a una y las gotas bajan
 		TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 0 }):Play()
@@ -339,6 +396,7 @@ function ResultHud.start()
 		local connection = RunService.Heartbeat:Connect(function()
 			local pulse = 0.5 + 0.5 * math.sin(os.clock() * 2.2)
 			glow.BackgroundTransparency = 0.9 - 0.06 * pulse
+			refreshAgain()
 			title.TextStrokeTransparency = 0.7 - 0.25 * pulse
 		end)
 

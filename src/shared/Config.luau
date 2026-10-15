@@ -621,7 +621,8 @@ return {
 		VanScale = 1.3, -- tamaño de la furgoneta respecto al modelo original (para que cuadre con los avatares)
 		VanArriveTime = 7, -- segundos que tarda la furgoneta en entrar por la calle y frenar
 		VanGrace = 15, -- margen para que suban los demás tras el primero (la furgoneta sale al subir todos o al acabarse)
-		ResultTime = 15,
+		ResultTime = 15, -- segundos que se ve el resultado antes de empezar otra partida
+		ResultMinTime = 3, -- aunque todos pidan "otra partida", se espera esto para poder leer las estadísticas
 	},
 
 	-- Subir a la furgoneta (server/Boarding, client/BoardingAnimator): se mantiene E en la puerta lateral y el sobreviviente (con el
