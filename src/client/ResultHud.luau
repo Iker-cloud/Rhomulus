@@ -82,7 +82,7 @@ function ResultHud.start()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local current = nil -- { holder, connection, applyXp }
-	local pendingXp = nil -- XpGain que llegó antes de que la tarjeta estuviera lista
+	local pendingXp = nil -- lista de XpGain que llegó antes de que la tarjeta estuviera lista
 
 	local function clear()
 		pendingXp = nil
@@ -266,83 +266,115 @@ function ResultHud.start()
 			return a.kills > b.kills
 		end)
 		local rows = {}
+		local byUser = {} -- [userId] = { applyXp } para poner el XP cuando llegue
 		for _, entry in stats do
 			local white = Color3.new(1, 1, 1)
 			local row = tableRow(
 				board,
-				40,
+				64,
 				{ entry.name, tostring(entry.kills), tostring(entry.revives), tostring(entry.damage) },
 				{ white, palette.killsColor, white, palette.damageColor },
-				20,
+				18,
 				Enum.Font.GothamBold,
 				palette.rowTint
 			)
 			row.BackgroundTransparency = 1
+			-- Los textos van arriba; debajo del nombre quedan el nivel y la barra de XP
+			for _, cell in row:GetChildren() do
+				if cell:IsA("TextLabel") then
+					cell.Size = UDim2.new(cell.Size.X.Scale, cell.Size.X.Offset, 0, 30)
+					cell.Position = UDim2.new(cell.Position.X.Scale, cell.Position.X.Offset, 0, 4)
+				end
+			end
+			local nameCell = row:FindFirstChildWhichIsA("TextLabel")
+			nameCell.Position = UDim2.new(0, 60, 0, 4)
+			nameCell.Size = UDim2.new(0.4, -60, 0, 30)
+
+			-- Avatar del jugador (su cara de Roblox)
+			local avatar = Instance.new("ImageLabel")
+			avatar.Position = UDim2.fromOffset(10, 10)
+			avatar.Size = UDim2.fromOffset(42, 42)
+			avatar.BackgroundColor3 = Color3.fromRGB(30, 26, 24)
+			avatar.BorderSizePixel = 0
+			avatar.ScaleType = Enum.ScaleType.Crop
+			avatar.Parent = row
+			Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
+			local ring = Instance.new("UIStroke")
+			ring.Color = palette.accent
+			ring.Thickness = 2
+			ring.Parent = avatar
+			if entry.userId then
+				task.spawn(function()
+					local ok, content = pcall(function()
+						return Players:GetUserThumbnailAsync(entry.userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+					end)
+					if ok and content and avatar.Parent then
+						avatar.Image = content
+					end
+				end)
+			end
+
+			-- Nivel y XP ganado, y la barra del nivel (se llenan cuando llega Remotes.XpGain)
+			local levelText = label(row, "", 14, Color3.fromRGB(190, 184, 176))
+			levelText.Position = UDim2.fromOffset(60, 33)
+			levelText.Size = UDim2.new(0.5, -60, 0, 16)
+			levelText.TextXAlignment = Enum.TextXAlignment.Left
+			local xpText = label(row, "", 14, palette.accent, Enum.Font.GothamBlack)
+			xpText.AnchorPoint = Vector2.new(1, 0)
+			xpText.Position = UDim2.new(1, -14, 0, 33)
+			xpText.Size = UDim2.new(0.5, 0, 0, 16)
+			xpText.TextXAlignment = Enum.TextXAlignment.Right
+			local barBack = Instance.new("Frame")
+			barBack.Position = UDim2.fromOffset(60, 54)
+			barBack.Size = UDim2.new(1, -74, 0, 6)
+			barBack.BackgroundColor3 = Color3.fromRGB(40, 36, 34)
+			barBack.BorderSizePixel = 0
+			barBack.Visible = false
+			barBack.Parent = row
+			Instance.new("UICorner", barBack).CornerRadius = UDim.new(1, 0)
+			local barFill = Instance.new("Frame")
+			barFill.Size = UDim2.fromScale(0, 1)
+			barFill.BackgroundColor3 = palette.accent
+			barFill.BorderSizePixel = 0
+			barFill.Parent = barBack
+			Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
+			local function applyXp(info)
+				local levelBefore, intoBefore, needBefore = Progress.fromTotal(info.before)
+				local levelAfter, intoAfter, needAfter = Progress.fromTotal(info.after)
+				barBack.Visible = true
+				xpText.Text = `+{info.gained} XP`
+				levelText.Text = `NIVEL {levelBefore}`
+				barFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
+				task.spawn(function()
+					task.wait(0.9) -- primero se leen las estadísticas
+					local tween = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+					if levelAfter > levelBefore then
+						TweenService:Create(barFill, tween, { Size = UDim2.fromScale(1, 1) }):Play()
+						task.wait(0.8)
+						if not barFill.Parent then
+							return
+						end
+						levelText.Text = `¡NIVEL {levelAfter}!`
+						levelText.TextColor3 = palette.accent
+						barFill.Size = UDim2.fromScale(0, 1)
+					end
+					TweenService:Create(barFill, tween, { Size = UDim2.fromScale(needAfter > 0 and intoAfter / needAfter or 1, 1) }):Play()
+				end)
+			end
+			if entry.userId then
+				byUser[entry.userId] = applyXp
+			end
 			table.insert(rows, row)
 		end
 
-		-- XP de la partida: "+640 XP" y la barra del nivel llenándose (la manda el servidor con Remotes.XpGain al terminar)
-		local xpRow = Instance.new("Frame")
-		xpRow.LayoutOrder = 5
-		xpRow.BackgroundTransparency = 1
-		xpRow.Size = UDim2.new(1, 0, 0, 40)
-		xpRow.Visible = false
-		xpRow.Parent = content
-		local xpText = Instance.new("TextLabel")
-		xpText.BackgroundTransparency = 1
-		xpText.Size = UDim2.new(0.62, 0, 0, 22)
-		xpText.Font = Enum.Font.GothamBlack
-		xpText.TextSize = 17
-		xpText.TextColor3 = palette.accent
-		xpText.TextXAlignment = Enum.TextXAlignment.Left
-		xpText.Text = ""
-		xpText.Parent = xpRow
-		local levelText = Instance.new("TextLabel")
-		levelText.BackgroundTransparency = 1
-		levelText.AnchorPoint = Vector2.new(1, 0)
-		levelText.Position = UDim2.fromScale(1, 0)
-		levelText.Size = UDim2.new(0.38, 0, 0, 22)
-		levelText.Font = Enum.Font.GothamBold
-		levelText.TextSize = 15
-		levelText.TextColor3 = Color3.new(1, 1, 1)
-		levelText.TextXAlignment = Enum.TextXAlignment.Right
-		levelText.Text = ""
-		levelText.Parent = xpRow
-		local xpBack = Instance.new("Frame")
-		xpBack.Position = UDim2.fromOffset(0, 28)
-		xpBack.Size = UDim2.new(1, 0, 0, 8)
-		xpBack.BackgroundColor3 = Color3.fromRGB(40, 36, 34)
-		xpBack.BorderSizePixel = 0
-		xpBack.Parent = xpRow
-		Instance.new("UICorner", xpBack).CornerRadius = UDim.new(1, 0)
-		local xpFill = Instance.new("Frame")
-		xpFill.Size = UDim2.fromScale(0, 1)
-		xpFill.BackgroundColor3 = palette.accent
-		xpFill.BorderSizePixel = 0
-		xpFill.Parent = xpBack
-		Instance.new("UICorner", xpFill).CornerRadius = UDim.new(1, 0)
-
-		local function applyXp(gained, _parts, before, after)
-			local levelBefore, intoBefore, needBefore = Progress.fromTotal(before)
-			local levelAfter, intoAfter, needAfter = Progress.fromTotal(after)
-			xpRow.Visible = true
-			xpText.Text = `+{gained} XP`
-			levelText.Text = `NIVEL {levelBefore}`
-			xpFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
-			task.spawn(function()
-				task.wait(0.9) -- primero se leen las estadísticas
-				local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-				if levelAfter > levelBefore then
-					TweenService:Create(xpFill, info, { Size = UDim2.fromScale(1, 1) }):Play()
-					task.wait(0.8)
-					if not xpFill.Parent then
-						return
-					end
-					levelText.Text = `¡NIVEL {levelAfter}!`
-					xpFill.Size = UDim2.fromScale(0, 1)
+		local function applyXpList(list)
+			for _, info in list do
+				local apply = byUser[info.userId]
+				if apply then
+					apply(info)
 				end
-				TweenService:Create(xpFill, info, { Size = UDim2.fromScale(needAfter > 0 and intoAfter / needAfter or 1, 1) }):Play()
-			end)
+			end
 		end
 
 		-- Dos botones en una fila: OTRA PARTIDA (con la cuenta atrás hasta la siguiente; si todos lo piden se adelanta) y VOLVER AL MENÚ
@@ -467,19 +499,19 @@ function ResultHud.start()
 			title.TextStrokeTransparency = 0.7 - 0.25 * pulse
 		end)
 
-		current = { holder = holder, connection = connection, applyXp = applyXp }
+		current = { holder = holder, connection = connection, applyXp = applyXpList }
 		if pendingXp then
-			applyXp(table.unpack(pendingXp))
+			applyXpList(pendingXp)
 			pendingXp = nil
 		end
 	end
 
 	Remotes.Results.OnClientEvent:Connect(show)
-	Remotes.XpGain.OnClientEvent:Connect(function(...)
+	Remotes.XpGain.OnClientEvent:Connect(function(list)
 		if current then
-			current.applyXp(...)
+			current.applyXp(list)
 		else
-			pendingXp = { ... }
+			pendingXp = list
 		end
 	end)
 

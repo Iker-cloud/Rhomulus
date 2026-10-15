@@ -27,7 +27,7 @@ local NAMES = {
 	"VoteDifficulty", -- cliente -> servidor: (id) vota la dificultad en la sala de votación
 	"GroundReady", -- cliente -> servidor: ya tiene suelo cargado bajo los pies (suelta al personaje recién aparecido)
 	"SkillCheck", -- servidor -> cliente: ("start", id, horaInicio, periodo, zonaInicio, zonaTamaño) | ("result", acertó) | ("cancel")
-	"XpGain", -- servidor -> cliente: (xpGanado, desglose, xpAntes, xpDespués) al terminar la partida
+	"XpGain", -- servidor -> todos: (lista de { userId, gained, before, after }) el XP de cada jugador al terminar la partida
 	"PlayAgain", -- cliente -> servidor: en la pantalla de resultados, quiere empezar otra partida ya (si todos lo piden se adelanta)
 	"SaveSettings", -- cliente -> servidor: (sensibilidad, modo de calidad) guarda los ajustes del jugador
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba

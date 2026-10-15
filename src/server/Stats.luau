@@ -10,7 +10,7 @@ end
 function Stats.add(player, key, amount)
 	local entry = data[player]
 	if not entry then
-		entry = { name = player.DisplayName, Kills = 0, Revives = 0, DamageTaken = 0 }
+		entry = { name = player.DisplayName, userId = player.UserId, Kills = 0, Revives = 0, DamageTaken = 0 }
 		data[player] = entry
 	end
 	entry[key] += amount or 1
@@ -26,6 +26,7 @@ function Stats.all()
 	for _, entry in data do
 		table.insert(list, {
 			name = entry.name,
+			userId = entry.userId,
 			kills = entry.Kills,
 			revives = entry.Revives,
 			damage = math.floor(entry.DamageTaken),

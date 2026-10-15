@@ -67,18 +67,21 @@ local function save(userId, gained, stats, won, finished)
 	end)
 end
 
--- Fin de la partida: reparte el XP a todos los que siguen en el servidor y se lo cuenta a cada uno (Remotes.XpGain).
+-- Fin de la partida: reparte el XP a todos los que siguen en el servidor y le cuenta a todos lo de todos (Remotes.XpGain), para que la
+-- pantalla de resultados muestre la barra de cada superviviente.
 function PlayerProgress.award(won)
 	local difficultyId = Difficulty.id()
+	local list = {}
 	for _, player in Players:GetPlayers() do
 		local stats = Stats.get(player)
-		local gained, parts = Progress.roundXp(stats, won, true, difficultyId)
+		local gained = Progress.roundXp(stats, won, true, difficultyId)
 		local before = totals[player] or 0
 		totals[player] = before + gained
 		publish(player)
-		Remotes.XpGain:FireClient(player, gained, parts, before, totals[player])
+		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player] })
 		task.spawn(save, player.UserId, gained, stats, won, true)
 	end
+	Remotes.XpGain:FireAllClients(list)
 end
 
 function PlayerProgress.start()

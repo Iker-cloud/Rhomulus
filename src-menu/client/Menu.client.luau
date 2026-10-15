@@ -337,14 +337,35 @@ local function setStatus(msg)
 	status.Text = msg and spaced(string.upper(msg), 2) or DEFAULT_STATUS
 end
 
--- Nivel del jugador (arriba a la derecha): lo guarda la partida; aquí solo se muestra. Sin datos (Studio sin publicar) no sale.
-local levelText = text(main, "", ANTON, 78, Vector2.new(1800, 250), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600 })
+-- Perfil del jugador (arriba a la derecha): su avatar, su nombre y su nivel con la barra de lo que le falta para el siguiente.
+-- El nivel lo guarda la partida; aquí solo se muestra. Sin datos (Studio sin publicar) se ve el avatar y el nombre sin nivel.
+local PROFILE_RIGHT = 1800
+local profileAvatar = make("Frame", {
+	BackgroundColor3 = BLACK, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.fromOffset(PROFILE_RIGHT, 190), Size = UDim2.fromOffset(150, 150), ClipsDescendants = true,
+}, main)
+make("UICorner", { CornerRadius = UDim.new(1, 0) }, profileAvatar)
+make("UIStroke", { Color = BLACK, Thickness = 5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, profileAvatar)
+local profileImage = make("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Crop }, profileAvatar)
+make("UICorner", { CornerRadius = UDim.new(1, 0) }, profileImage)
+task.spawn(function()
+	local ok, content = pcall(function()
+		return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+	end)
+	if ok and content then
+		profileImage.Image = content
+	end
+end)
+local TEXT_RIGHT = PROFILE_RIGHT - 150 - 30 -- los textos terminan a la izquierda del avatar
+local profileName = text(main, upperEs and upperEs(player.DisplayName) or string.upper(player.DisplayName), ANTON, 54,
+	Vector2.new(TEXT_RIGHT, 222), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 640 })
+local levelText = text(main, "", OSW_BOLD, 40, Vector2.new(TEXT_RIGHT, 276), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500 })
 local levelBack = make("Frame", {
 	BackgroundColor3 = BLACK, BackgroundTransparency = 0.7, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5),
-	Position = UDim2.fromOffset(1800, 318), Size = UDim2.fromOffset(460, 14),
+	Position = UDim2.fromOffset(TEXT_RIGHT, 314), Size = UDim2.fromOffset(420, 14),
 }, main)
 local levelFill = make("Frame", { BackgroundColor3 = BLACK, BorderSizePixel = 0, Size = UDim2.fromScale(0, 1) }, levelBack)
-local levelXp = text(main, "", OSW_BOLD, 30, Vector2.new(1800, 356), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600 })
+local levelXp = text(main, "", OSW_BOLD, 28, Vector2.new(TEXT_RIGHT, 346), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500 })
 local function refreshLevel()
 	local total = player:GetAttribute("ProgXP")
 	local show = typeof(total) == "number"
@@ -353,9 +374,9 @@ local function refreshLevel()
 		return
 	end
 	local level, into, need = Progress.fromTotal(total)
-	levelText.Text = `NIVEL {level}`
+	levelText.Text = spaced(`NIVEL {level}`, 2)
 	levelFill.Size = UDim2.fromScale(need > 0 and into / need or 1, 1)
-	levelXp.Text = need > 0 and spaced(`{into} / {need} XP`, 1) or spaced("NIVEL MÁXIMO", 1)
+	levelXp.Text = need > 0 and spaced(`{into} / {need} XP PARA EL NIVEL {level + 1}`, 1) or spaced("NIVEL MÁXIMO", 1)
 end
 player:GetAttributeChangedSignal("ProgXP"):Connect(refreshLevel)
 refreshLevel()
