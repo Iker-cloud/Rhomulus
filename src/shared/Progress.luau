@@ -13,6 +13,22 @@ Progress.Xp = {
 }
 Progress.DifficultyMult = { Calma = 0.8, Tension = 1, Crisis = 1.3, Colapso = 1.6 }
 
+-- Nivel que hace falta para elegir cada dificultad (Calma y Tensión desde el principio). En una sala basta con que el anfitrión la tenga:
+-- los demás juegan la que él eligió.
+Progress.UnlockLevel = { Calma = 1, Tension = 1, Crisis = 5, Colapso = 10 }
+
+function Progress.requiredLevel(difficultyId)
+	return Progress.UnlockLevel[difficultyId] or 1
+end
+
+-- ¿Puede elegir esta dificultad quien lleva `totalXp`? Sin datos (nil: guardado no disponible) se deja elegir cualquiera.
+function Progress.isUnlocked(difficultyId, totalXp)
+	if totalXp == nil then
+		return true
+	end
+	return (Progress.fromTotal(totalXp)) >= Progress.requiredLevel(difficultyId)
+end
+
 -- XP que hace falta para subir de `level` al siguiente
 function Progress.needed(level)
 	return 250 + 75 * (level - 1)

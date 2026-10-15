@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Progress = require(ReplicatedStorage.Shared.Progress)
 local Controls = require(script.Parent.Controls)
 local Sfx = require(script.Parent.Sfx)
 
@@ -84,29 +85,39 @@ function DifficultyVote.start()
 		stroke.Transparency = 1
 		stroke.Parent = row
 		label(row, `{i}`, UDim2.fromOffset(20, 24), UDim2.fromOffset(8, 4), 20, Color3.fromRGB(150, 146, 140))
-		label(row, d.Upper, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, d.Color)
-		local count = label(row, "0", UDim2.fromOffset(40, 26), UDim2.new(1, -48, 0, 3), 22, Color3.new(1, 1, 1), Enum.TextXAlignment.Right)
+		local nameLabel = label(row, d.Upper, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, d.Color)
+		local count = label(row, "0", UDim2.fromOffset(90, 26), UDim2.new(1, -98, 0, 3), 22, Color3.new(1, 1, 1), Enum.TextXAlignment.Right)
 		local desc = label(row, d.Description, UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 30), 13, PALE, nil, OSWALD_LIGHT)
 		desc.TextWrapped = true
 		desc.Visible = not compact
 		row.Activated:Connect(function()
+			if not Progress.isUnlocked(id, player:GetAttribute("ProgXP")) then
+				Sfx.play("SkillFail", 0.3) -- bloqueada: el "NIVEL N" de la fila dice cuándo se desbloquea
+				return
+			end
 			Sfx.play("Select", 0.1)
 			Remotes.VoteDifficulty:FireServer(id)
 		end)
-		rows[id] = { stroke = stroke, count = count }
+		rows[id] = { stroke = stroke, count = count, nameLabel = nameLabel, desc = desc, row = row }
 	end
 
 	local function refreshVotes()
 		local mine = player:GetAttribute("DifficultyVote")
 		for id, row in rows do
-			row.count.Text = tostring(workspace:GetAttribute("DiffVotes_" .. id) or 0)
+			local locked = not Progress.isUnlocked(id, player:GetAttribute("ProgXP"))
+			row.count.Text = locked and `NIVEL {Progress.requiredLevel(id)}` or tostring(workspace:GetAttribute("DiffVotes_" .. id) or 0)
+			row.count.TextSize = locked and 15 or 22
 			row.stroke.Transparency = (id == mine) and 0 or 1
+			row.nameLabel.TextTransparency = locked and 0.6 or 0
+			row.desc.TextTransparency = locked and 0.6 or 0
+			row.row.BackgroundTransparency = locked and 0.5 or 0
 		end
 	end
 	for _, id in Difficulties.Order do
 		workspace:GetAttributeChangedSignal("DiffVotes_" .. id):Connect(refreshVotes)
 	end
 	player:GetAttributeChangedSignal("DifficultyVote"):Connect(refreshVotes)
+	player:GetAttributeChangedSignal("ProgXP"):Connect(refreshVotes)
 
 	-- Etiqueta de la dificultad en curso (arriba al centro)
 	local tag = Instance.new("TextLabel")
@@ -137,9 +148,14 @@ function DifficultyVote.start()
 			ContextActionService:BindActionAtPriority(ACTION, function(_, state, input)
 				if state == Enum.UserInputState.Begin then
 					local index = table.find(KEYS, input.KeyCode)
-					if index then
-						Sfx.play("Select", 0.1)
-						Remotes.VoteDifficulty:FireServer(Difficulties.Order[index])
+					local id = index and Difficulties.Order[index]
+					if id then
+						if Progress.isUnlocked(id, player:GetAttribute("ProgXP")) then
+							Sfx.play("Select", 0.1)
+							Remotes.VoteDifficulty:FireServer(id)
+						else
+							Sfx.play("SkillFail", 0.3)
+						end
 					end
 				end
 				return Enum.ContextActionResult.Sink

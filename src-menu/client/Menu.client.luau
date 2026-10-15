@@ -617,13 +617,23 @@ local function enterRoom(st)
 end
 
 -- Casillas de elección: la elegida se rellena de negro. items = { { id, etiqueta, ancho }, ... }. Devuelve la función que las repinta.
-local function choiceRow(s, x, y, h, items, textSize, isOn, onPick)
+-- `lockedLevel` (opcional): función(id) que devuelve el nivel que falta para poder elegir esa casilla (nil = libre). Las bloqueadas salen
+-- atenuadas con "NIVEL N" debajo y no se pueden pulsar.
+local function choiceRow(s, x, y, h, items, textSize, isOn, onPick, lockedLevel)
 	local boxes = {}
 	local function paint()
 		for _, b in boxes do
-			local on = isOn(b.id)
+			local need = lockedLevel and lockedLevel(b.id)
+			local on = not need and isOn(b.id)
 			b.box.BackgroundTransparency = on and 0 or 1
 			b.label.TextColor3 = on and RED or BLACK
+			b.label.TextTransparency = need and 0.6 or 0
+			b.box.UIStroke.Transparency = need and 0.6 or 0
+			b.label.Position = need and UDim2.fromOffset(b.cx, b.y + h * 0.36) or UDim2.fromOffset(b.cx, b.y + h / 2)
+			b.lock.Visible = need ~= nil
+			if need then
+				b.lock.Text = spaced(`NIVEL {need}`, 1)
+			end
 		end
 	end
 	for _, item in items do
@@ -632,11 +642,18 @@ local function choiceRow(s, x, y, h, items, textSize, isOn, onPick)
 		make("UIStroke", { Color = BLACK, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
 		local label = text(s, item[2], ANTON, textSize, Vector2.new(x + w / 2, y + h / 2),
 			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
+		local lock = text(s, "", OSW_BOLD, math.max(22, math.floor(h * 0.3)), Vector2.new(x + w / 2, y + h * 0.78),
+			{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = w })
+		lock.Visible = false
+		local itemX = x
 		button(s, x, y, w, h, function()
+			if lockedLevel and lockedLevel(item[1]) then
+				return -- bloqueada: el "NIVEL N" de la casilla dice cuándo se desbloquea
+			end
 			onPick(item[1])
 			paint()
 		end).Name = `Opcion{y}_{tostring(item[1])}`
-		table.insert(boxes, { id = item[1], box = box, label = label })
+		table.insert(boxes, { id = item[1], box = box, label = label, lock = lock, cx = itemX + w / 2, y = y })
 		x += w + 16
 	end
 	paint()
@@ -662,6 +679,15 @@ end
 
 local function difficultyName(id)
 	return Difficulties.get(id).Upper
+end
+
+-- Nivel que le falta al jugador para elegir esa dificultad (nil = ya puede). Sin datos de nivel se dejan todas.
+local function difficultyLock(id)
+	local total = player:GetAttribute("ProgXP")
+	if Progress.isUnlocked(id, total) then
+		return nil
+	end
+	return Progress.requiredLevel(id)
 end
 
 -- 2) Lista de salas ----------------------------------------------------------------------------------------------------------
@@ -955,7 +981,7 @@ builders.setup = function()
 		setupState.difficulty = id
 		describeDifficulty()
 		drawPreview()
-	end)
+	end, difficultyLock)
 	describeDifficulty()
 
 	rule(s, 120, 857, 1680)
@@ -1096,7 +1122,7 @@ builders.create = function()
 		st.difficulty = id
 		describeDifficulty()
 		hostRequest("setDifficulty", id)
-	end)
+	end, difficultyLock)
 	describeDifficulty()
 
 	rule(s, 120, 857, 1680)

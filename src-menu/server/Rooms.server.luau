@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 
 local Places = require(ReplicatedStorage.Shared.Places)
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
+local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local MAX_PLAYERS = 4
 local POLL = 2 -- segundos entre refrescos
@@ -301,6 +302,9 @@ function actions.create(player, options)
 	end
 	local map = MAPS[options.map] and options.map or "Morro"
 	local difficulty = Difficulties.isValid(options.difficulty) and options.difficulty or Difficulties.Default
+	if not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
+		return { error = `{Difficulties.get(difficulty).Name} se desbloquea en el nivel {Progress.requiredLevel(difficulty)}` }
+	end
 	local isPublic = options.public ~= false
 	-- En Studio no se puede reservar servidor ni teletransportar: se usa un código falso para probar las salas
 	local ok, access = true, "studio"
@@ -461,6 +465,9 @@ end
 function actions.setDifficulty(player, difficulty)
 	if not Difficulties.isValid(difficulty) then
 		return { error = "Dificultad no válida" }
+	end
+	if not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
+		return { error = `{Difficulties.get(difficulty).Name} se desbloquea en el nivel {Progress.requiredLevel(difficulty)}` }
 	end
 	return hostChange(player, function(r)
 		r.difficulty = difficulty

@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Progress = require(ReplicatedStorage.Shared.Progress)
 local RateLimit = require(script.Parent.RateLimit)
 
 local VoteRoom = {}
@@ -275,7 +276,8 @@ function VoteRoom.run(onTick)
 	local difficultyVotes = {}
 	local connections = {}
 	table.insert(connections, Remotes.VoteDifficulty.OnServerEvent:Connect(function(player, id)
-		if Difficulties.isValid(id) and RateLimit.check(player, "VoteDifficulty", 0.2) then
+		-- Solo se puede votar una dificultad que el jugador ya tenga desbloqueada (por nivel)
+		if Difficulties.isValid(id) and Progress.isUnlocked(id, player:GetAttribute("ProgXP")) and RateLimit.check(player, "VoteDifficulty", 0.2) then
 			difficultyVotes[player] = id
 		end
 	end))
