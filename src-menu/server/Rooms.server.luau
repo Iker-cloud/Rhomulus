@@ -164,10 +164,11 @@ end
 
 -- Lo que ve un miembro de la sala (el código solo existe en las privadas y no incluye el acceso al servidor reservado)
 local function view(room, id, userId)
-	local names = {}
+	local names, ids = {}, {}
 	local hostIndex, youIndex = 0, 0
 	for i, m in room.members do
 		names[i] = m.name
+		ids[i] = m.id
 		if m.id == room.host then
 			hostIndex = i
 		end
@@ -183,6 +184,7 @@ local function view(room, id, userId)
 		map = room.map,
 		difficulty = room.difficulty or Difficulties.Default,
 		names = names,
+		ids = ids, -- para dibujar el avatar de cada jugador
 		hostIndex = hostIndex,
 		youIndex = youIndex,
 		isHost = room.host == userId,
@@ -192,7 +194,12 @@ end
 
 -- Lo que ve cualquiera en la lista de salas (sin código de acceso)
 local function summary(room, id)
+	local ids = {}
+	for i, m in room.members do
+		ids[i] = m.id
+	end
 	return {
+		ids = ids,
 		id = id,
 		name = roomName(room),
 		public = room.public,
@@ -602,12 +609,13 @@ end)
 
 -- (para probar en Studio) Salas de ejemplo en la lista cuando se usa el almacén en memoria
 if usingFakeStore then
-	local function fake(id, name, map, difficulty, count, public)
+	local function fake(id, name, map, difficulty, ids, public)
 		pcall(function()
-			index:SetAsync(id, { id = id, name = name, public = public, map = map, difficulty = difficulty, count = count, max = MAX_PLAYERS }, 3600)
+			index:SetAsync(id, { id = id, name = name, public = public, map = map, difficulty = difficulty, ids = ids, count = #ids, max = MAX_PLAYERS }, 3600)
 		end)
 	end
-	fake("DEMOA", "Sala de Isaac", "Morro", "Tension", 2, true)
-	fake("DEMOB", "Sala de Lucía", "Prueba", "Crisis", 1, false)
-	fake("DEMOC", "Sala de Mateo", "Morro", "Calma", 4, true)
+	-- (ids de cuentas públicas de Roblox, solo para ver los avatares en las pruebas)
+	fake("DEMOA", "Sala de Isaac", "Morro", "Tension", { 156, 261 }, true)
+	fake("DEMOB", "Sala de Lucía", "Prueba", "Crisis", { 1 }, false)
+	fake("DEMOC", "Sala de Mateo", "Morro", "Calma", { 156, 261, 1, 2 }, true)
 end

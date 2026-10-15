@@ -491,8 +491,51 @@ builders.help = function()
 end
 
 -- Salas -----------------------------------------------------------------------------------------------------------------------
+-- Avatares: la cara de cada jugador (miniatura de Roblox), con una caché para no pedirla dos veces
+local avatarCache = {} -- [userId] = imagen
+local shownAvatars = {} -- [userId] = true: ya salieron en la sala actual (los nuevos aparecen con una animación)
+
+local function loadAvatar(image, userId)
+	if avatarCache[userId] then
+		image.Image = avatarCache[userId]
+		return
+	end
+	task.spawn(function()
+		local ok, content = pcall(function()
+			return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+		end)
+		if ok and content then
+			avatarCache[userId] = content
+			if image.Parent then
+				image.Image = content
+			end
+		end
+	end)
+end
+
+-- Círculo con la cara de `userId` (centro en x, y). animate: que aparezca creciendo si es nuevo en la sala.
+local function avatarCircle(parent, x, y, size, userId, animate)
+	local frame = make("Frame", {
+		BackgroundColor3 = BLACK, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size), ClipsDescendants = true,
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, frame)
+	make("UIStroke", { Color = BLACK, Thickness = math.max(3, size * 0.07), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, frame)
+	local image = make("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Crop }, frame)
+	loadAvatar(image, userId)
+	if animate and not shownAvatars[userId] then
+		local scale = make("UIScale", { Scale = 0.1 }, frame)
+		TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end
+	if animate then
+		shownAvatars[userId] = true
+	end
+	return frame
+end
+
 -- Entrar a una sala (devuelta por el servidor): el anfitrión va a su sala y los demás a la sala de espera
 local function enterRoom(st)
+	shownAvatars = {}
 	roomState = st
 	setStatus(nil)
 	show(st.isHost and "create" or "joined")
@@ -706,13 +749,22 @@ builders.list = function()
 				nameX = 106
 			end
 			text(row, upperEs(item.name), ANTON, 54, Vector2.new(nameX, 50), { width = 800, transparency = alpha })
-			text(row, spaced(string.upper(mapName(item.map)), 1), OSW_BOLD, 34, Vector2.new(930, 30), { width = 520, transparency = alpha })
-			text(row, spaced(difficultyName(item.difficulty), 1), OSW, 32, Vector2.new(930, 72), { width = 520, transparency = alpha })
-			text(row, `{item.count}/{item.max}`, ANTON, 70, Vector2.new(1600, 50),
+			text(row, string.upper(mapName(item.map)), OSW_BOLD, 32, Vector2.new(930, 30), { width = 300, transparency = alpha })
+			text(row, difficultyName(item.difficulty), OSW, 32, Vector2.new(930, 72), { width = 300, transparency = alpha })
+			text(row, `{item.count}/{item.max}`, ANTON, 64, Vector2.new(1600, 40),
 				{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, transparency = alpha })
 			if full then
-				text(row, spaced("LLENA", 2), OSW_BOLD, 30, Vector2.new(1370, 50),
+				text(row, spaced("LLENA", 2), OSW_BOLD, 26, Vector2.new(1600, 84),
 					{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
+			end
+			-- caras de quienes ya están dentro
+			for k, userId in item.ids or {} do
+				if k <= 4 then
+					local face = avatarCircle(row, 1262 + (k - 1) * 58, 50, 52, userId, false)
+					if full then
+						face.BackgroundTransparency = 0.45
+					end
+				end
 			end
 			local click = make("TextButton", {
 				BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), ZIndex = 5,
@@ -868,13 +920,16 @@ local function codeText(s, st)
 	end
 end
 
-local function playerList(s, names, hostIdx, youIdx)
+local function playerList(s, names, hostIdx, youIdx, ids)
 	text(s, spaced("JUGADORES " .. #names .. "/4", 3), OSW_BOLD, 36, Vector2.new(876, 342), { width = 700 })
 	for i = 1, 4 do
 		local y = 407 + 72 * (i - 1)
 		text(s, string.format("%02d", i), OSW_BOLD, 34, Vector2.new(876, y + 2), { width = 60 })
 		if names[i] then
-			text(s, upperEs(names[i]), ANTON, 62, Vector2.new(935, y), { width = 600 })
+			if ids and ids[i] then
+				avatarCircle(s, 970, y, 58, ids[i], true)
+			end
+			text(s, upperEs(names[i]), ANTON, 62, Vector2.new(1022, y), { width = 600 })
 			rule(s, 876, y + 36, 924)
 			if i == hostIdx then
 				outline(s, 1634, y - 22, 166, 44, 2)
@@ -887,7 +942,12 @@ local function playerList(s, names, hostIdx, youIdx)
 					{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 62, color = RED })
 			end
 		else
-			text(s, spaced("ESPERANDO…", 2), OSW_LIGHT, 38, Vector2.new(938, y), { width = 600 })
+			-- hueco libre: círculo vacío
+			local empty = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromOffset(970, y), Size = UDim2.fromOffset(58, 58) }, s)
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }, empty)
+			make("UIStroke", { Color = BLACK, Thickness = 2, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, empty)
+			text(s, spaced("ESPERANDO…", 2), OSW_LIGHT, 38, Vector2.new(1022, y), { width = 600 })
 			rule(s, 876, y + 36, 924, true)
 		end
 	end
@@ -904,7 +964,7 @@ builders.create = function()
 	end
 	header(s, upperEs(st.name or "TU SALA"))
 	codeText(s, st)
-	playerList(s, st.names, st.hostIndex, nil)
+	playerList(s, st.names, st.hostIndex, nil, st.ids)
 
 	-- Quién puede entrar (arriba a la derecha)
 	local function hostRequest(action, arg, rebuild)
@@ -990,7 +1050,7 @@ builders.joined = function()
 	end
 	header(s, upperEs(st.name or "SALA"))
 	codeText(s, st)
-	playerList(s, st.names, st.hostIndex, st.youIndex)
+	playerList(s, st.names, st.hostIndex, st.youIndex, st.ids)
 	text(s, spaced("MAPA: " .. mapName(st.map), 3), OSW_BOLD, 44, Vector2.new(876, 728), { width = 900 })
 	text(s, spaced("DIFICULTAD: " .. Difficulties.get(st.difficulty).Upper, 3), OSW_BOLD, 44,
 		Vector2.new(876, 790), { width = 900 })
@@ -1012,7 +1072,7 @@ roomUpdate.OnClientEvent:Connect(function(st)
 		end
 		return
 	end
-	local key = table.concat({ st.id, st.name or "", tostring(st.public), st.code or "", st.map, st.difficulty or "", table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
+	local key = table.concat({ st.id, st.name or "", table.concat(st.ids or {}, ","), tostring(st.public), st.code or "", st.map, st.difficulty or "", table.concat(st.names, ","), st.hostIndex, st.youIndex, tostring(st.started) }, "|")
 	if key == lastKey then
 		return
 	end
