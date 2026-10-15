@@ -1,5 +1,6 @@
 require(script.UiFit).start()
 require(script.Performance).start()
+require(script.SettingsSave).start()
 require(script.CameraController).start()
 require(script.Shooting).start()
 require(script.Hud).start()

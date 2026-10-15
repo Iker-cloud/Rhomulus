@@ -282,7 +282,7 @@ El joystick y el salto los pone Roblox; el giro es arrastrar el dedo por la pant
 
 ### Guardado de datos
 
-El MVP no guarda nada entre partidas (ni siquiera la sensibilidad). Después se usa `DataStoreService` para monedas, desbloqueos, estadísticas totales y ajustes del jugador.
+Se guardan con `DataStoreService` (por jugador) la sensibilidad y la calidad gráfica (`server/SettingsState` + `client/SettingsSave`) y si ya vio la bienvenida (`server/HelpState`). Monedas, desbloqueos y estadísticas totales vienen después.
 
 ### Estilo visual
 
@@ -328,7 +328,7 @@ El MVP es una partida completa y jugable de principio a fin con 1 a 4 amigos. To
 | Interfaz propia completa, ayuda "Cómo jugar" y ajustes de sensibilidad | Voces en español, más frases de revivir |
 | Noche de terror, pase de arte del mapa 1 y sonido ambiente | Pase de arte de más mapas |
 | PC y celular (controles táctiles, interfaz adaptada, calidad gráfica con bajada automática) | Consola, y probar el celular con un dedo y un dispositivo reales |
-| Sin guardado de datos | Monedas, desbloqueos, estadísticas y ajustes con DataStore |
+| Ajustes guardados (sensibilidad y calidad) | Monedas, desbloqueos y estadísticas con DataStore |
 
 ## Identidad del juego (después del MVP)
 
@@ -386,5 +386,5 @@ Pendiente de la fase 7: probar con Isaac y más jugadores (revivir, cargar, derr
 - [x] Plataforma móvil: controles táctiles, interfaz en pantallas bajas y calidad gráfica adaptable
 - [ ] Lista final de frases para revivir
 - [ ] Nombre final del juego, confirmado con Isaac
-- [ ] Guardar los ajustes del jugador (sensibilidad, calidad) entre partidas
+- [x] Guardar los ajustes del jugador (sensibilidad, calidad) entre partidas (hecho; sin probar con el juego publicado)
 - [ ] Consola: controles y pruebas
