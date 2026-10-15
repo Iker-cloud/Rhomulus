@@ -192,12 +192,43 @@ local function fade(obj, t, goal)
 	TweenService:Create(obj, TweenInfo.new(t), goal):Play()
 end
 
+-- Sonidos de la interfaz (clic al pulsar y un tic suave al pasar el ratón). Mismos sonidos que usa la partida para sus ajustes.
+local SoundService = game:GetService("SoundService")
+local UI_SOUNDS = {
+	Click = { "rbxassetid://110948579458469", 0.5, 1 },
+	Hover = { "rbxassetid://106984966606682", 0.25, 1.6 },
+}
+local lastUiSound = {}
+local function uiSound(kind)
+	local now = os.clock()
+	if now - (lastUiSound[kind] or -math.huge) < 0.06 then
+		return
+	end
+	lastUiSound[kind] = now
+	local def = UI_SOUNDS[kind]
+	local sound = Instance.new("Sound")
+	sound.SoundId = def[1]
+	sound.Volume = def[2]
+	sound.PlaybackSpeed = def[3]
+	sound.Parent = SoundService
+	sound:Play()
+	game:GetService("Debris"):AddItem(sound, 3)
+end
+
 local function button(parent, x, y, w, h, onClick)
 	local b = make("TextButton", {
 		BackgroundTransparency = 1, Text = "", AutoButtonColor = false,
 		Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), ZIndex = 5,
 	}, parent)
-	b.Activated:Connect(onClick)
+	b.Activated:Connect(function(...)
+		uiSound("Click")
+		onClick(...)
+	end)
+	if not TOUCH then
+		b.MouseEnter:Connect(function()
+			uiSound("Hover")
+		end)
+	end
 	return b
 end
 
@@ -770,6 +801,7 @@ builders.list = function()
 			}, row)
 			click.Name = "Sala" .. i
 			click.Activated:Connect(function()
+				uiSound("Click")
 				if full then
 					note.Text = spaced("ESA SALA ESTÁ LLENA", 2)
 				elseif item.public then

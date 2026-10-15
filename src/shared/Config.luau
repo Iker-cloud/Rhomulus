@@ -196,6 +196,51 @@ return {
 			MedkitOpen = { "rbxassetid://117629133235583", 0.6, 0.7 }, -- cierre del botiquín: clic grave
 			MedkitRip = { "rbxassetid://9113836102", 0.6, 0.9 }, -- cinta / venda del botiquín
 		},
+		-- Sonidos de juego del cliente (client/Sfx): combate, equipo, mundo e interfaz. Cada uno es { id, volumen, tono } o una lista de
+		-- esos (suena uno al azar); con `clip` solo suenan esos segundos. Los que llevan 3D salen desde donde pasa. Los ids vienen del
+		-- Creator Store (Pro Sound Effects, Daily Sounds y otros gratuitos): se probó que cargan, pero no se ha oído cómo suenan en la
+		-- partida, así que si alguno no convence se cambia el id aquí.
+		Fx = {
+			-- Interfaz y menú
+			Click = { "rbxassetid://110948579458469", 0.5, 1 },
+			Hover = { "rbxassetid://106984966606682", 0.25, 1.6 },
+			Select = { "rbxassetid://9118138365", 0.45, 1.2 }, -- votar dificultad, cambiar ajuste
+			Confirm = { "rbxassetid://99980076888596", 0.5, 1 }, -- LISTO, entrar a una sala
+			-- Latas y tienda (suben o bajan las latas del equipo)
+			Coin = { "rbxassetid://130378474223829", 0.45, 1 },
+			Buy = { "rbxassetid://138309872562566", 0.5, 0.85 },
+			-- Combate
+			ZombieHit = { "rbxassetid://75492070005287", 0.5, 1 }, -- 3D, al herir a un zombie
+			ZombieDeath = { "rbxassetid://138338177111300", 0.6, 0.85 }, -- 3D
+			TankRoar = { "rbxassetid://9113980319", 0.9, 0.55 }, -- 3D, al aparecer un Tanque
+			TankDeath = { "rbxassetid://94978851787238", 1, 1 }, -- 3D, al caer un Tanque
+			Hurt = { -- el jugador recibe un golpe
+				{ "rbxassetid://9120417632", 0.7, 1 },
+				{ "rbxassetid://9120417141", 0.7, 1 },
+				{ "rbxassetid://9120417581", 0.7, 1 },
+				{ "rbxassetid://9120417872", 0.7, 1 },
+			},
+			-- Equipo
+			Down = { "rbxassetid://96795857757261", 0.7, 0.8 }, -- el jugador cae
+			Revived = { "rbxassetid://129388074782199", 0.7, 1 }, -- el jugador se levanta
+			SkillOk = { "rbxassetid://138309872562566", 0.45, 1.5 }, -- prueba de acción acertada
+			SkillFail = { "rbxassetid://9120094547", 0.6, 0.7 }, -- prueba de acción fallada
+			Carry = { "rbxassetid://9113836270", 0.6, 0.8 }, -- se carga al compañero (o una garrafa)
+			Drop = { "rbxassetid://75492070005287", 0.6, 0.7 }, -- se suelta
+			-- Mundo
+			Generator = { "rbxassetid://9125345489", 0.45, 0.75 }, -- el generador arranca
+			Radio = { "rbxassetid://9113405790", 0.5, 1, clip = 2.4 }, -- se llama a la radio (solo el principio: estática y pitidos)
+			Countdown = { "rbxassetid://136924498052589", 0.6, 1 }, -- últimos segundos antes de que llegue la furgoneta
+			-- Final de la partida (suenan juntos)
+			Victory = {
+				{ "rbxassetid://71587723216424", 0.8, 1 },
+				{ "rbxassetid://129388074782199", 0.6, 1 },
+			},
+			Defeat = {
+				{ "rbxassetid://96795857757261", 0.8, 0.6 },
+				{ "rbxassetid://130018094603454", 0.5, 0.8 },
+			},
+		},
 		Music = {
 			Calm = "rbxassetid://9046799798", -- lobby, punto seguro y resultados
 			Tension = "rbxassetid://131562091269894", -- explorando

@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Controls = require(script.Parent.Controls)
 local Performance = require(script.Parent.Performance)
+local Sfx = require(script.Parent.Sfx)
 
 local player = Players.LocalPlayer
 local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
@@ -124,9 +125,11 @@ function SettingsPanel.start()
 	refreshQuality()
 	Performance.changed:Connect(refreshQuality)
 	qualityPrev.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		Performance.cycleMode(-1)
 	end)
 	qualityNext.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		Performance.cycleMode(1)
 	end)
 
@@ -139,15 +142,18 @@ function SettingsPanel.start()
 	end
 	refreshPerf()
 	perf.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		Performance.setOverlay(not Performance.isOverlayShown())
 		refreshPerf()
 	end)
 
 	local T = Config.Touch
 	minus.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		Controls.setSensitivity(Controls.getSensitivity() - T.SensitivityStep)
 	end)
 	plus.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		Controls.setSensitivity(Controls.getSensitivity() + T.SensitivityStep)
 	end)
 
@@ -163,6 +169,7 @@ function SettingsPanel.start()
 		player:SetAttribute("UiOpen", open or nil)
 	end
 	close.Activated:Connect(function()
+		Sfx.play("Click", 0.05)
 		setOpen(false)
 	end)
 

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Controls)
+local Sfx = require(script.Parent.Sfx)
 
 local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
@@ -89,6 +90,7 @@ function DifficultyVote.start()
 		desc.TextWrapped = true
 		desc.Visible = not compact
 		row.Activated:Connect(function()
+			Sfx.play("Select", 0.1)
 			Remotes.VoteDifficulty:FireServer(id)
 		end)
 		rows[id] = { stroke = stroke, count = count }
@@ -131,6 +133,7 @@ function DifficultyVote.start()
 				if state == Enum.UserInputState.Begin then
 					local index = table.find(KEYS, input.KeyCode)
 					if index then
+						Sfx.play("Select", 0.1)
 						Remotes.VoteDifficulty:FireServer(Difficulties.Order[index])
 					end
 				end

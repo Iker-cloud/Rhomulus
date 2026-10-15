@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Controls)
+local Sfx = require(script.Parent.Sfx)
 
 local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
@@ -13,6 +14,7 @@ local GameHud = {}
 
 -- Listo en el lobby (tecla Y o botón del celular)
 function GameHud.ready()
+	Sfx.play("Confirm")
 	Remotes.Ready:FireServer()
 end
 
