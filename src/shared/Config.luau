@@ -303,6 +303,45 @@ return {
 		Pool = { "Rifle", "Shotgun", "SMG" },
 	},
 
+	-- Farmacia de Doña Rosa (server/Pharmacy): una vitrina por tramo donde, por latas, una ruleta de jeringas sortea un efecto temporal
+	-- (como la caja de armas). Quien se inyecta recibe el efecto un rato y luego un "bajón" más corto. Solo hay un efecto activo a la vez
+	-- (la nueva jeringa reemplaza a la anterior) y se pierde al caer o morir.
+	Pharmacy = {
+		Cost = 250, -- latas por probar suerte (la dificultad lo multiplica)
+		SpinTime = 3.2, -- segundos girando la ruleta
+		TakeTime = 8, -- segundos para tomar la jeringa antes de que se pierda
+		Cooldown = 3, -- pausa tras tomar o perder una jeringa
+		Duration = 75, -- segundos de efecto
+		CrashDuration = 10, -- segundos de bajón
+		-- Lugares de las vitrinas: { posición del suelo, giro en grados (el frente del modelo mira a -Z) }
+		Spots = {
+			{ Vector3.new(-20.5, 0, -94.6), 0 }, -- la tienda: contra la pared norte, a la izquierda de la salida
+			{ Vector3.new(25.5, 0, 177), 90 }, -- la iglesia: contra la pared este, mirando a la nave
+			{ Vector3.new(-55.5, 0, 283), -90 }, -- la terminal: contra la pared oeste (la estación de munición está más al sur)
+		},
+		-- Efectos. Mods: Damage, Speed y Reload multiplican; MaxHealth suma vida máxima (y cura lo mismo al inyectarse).
+		-- Crash: lo que queda al acabar el efecto, durante CrashDuration.
+		Order = { "Furia", "Impulso", "Adrenalina", "Pulso" },
+		Effects = {
+			Furia = {
+				Name = "Furia", Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
+				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25 % de daño",
+			},
+			Impulso = {
+				Name = "Impulso", Upper = "IMPULSO", Color = Color3.fromRGB(80, 220, 110), Desc = "+25 % de velocidad",
+				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25 % de velocidad",
+			},
+			Adrenalina = {
+				Name = "Adrenalina", Upper = "ADRENALINA", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 de vida máxima",
+				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15 % de velocidad",
+			},
+			Pulso = {
+				Name = "Pulso", Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
+				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "recarga más lenta",
+			},
+		},
+	},
+
 	-- Latas del equipo (la moneda compartida; el módulo se llama Points)
 	Points = {
 		Kill = { Common = 25, Fast = 40, Tank = 150 },

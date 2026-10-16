@@ -50,6 +50,9 @@ function PlayerState.refreshSpeed(player)
 	else
 		humanoid.WalkSpeed = Config.Player.WalkSpeed
 	end
+	if state ~= "Downed" then
+		humanoid.WalkSpeed *= player:GetAttribute("FxSpeed") or 1 -- jeringa Impulso (server/Pharmacy)
+	end
 end
 
 function PlayerState.setSprinting(player, on)

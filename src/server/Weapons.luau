@@ -90,10 +90,11 @@ local function startReload(player)
 	state.reloading = true
 	state.token += 1
 	local token = state.token
-	setReloadAttributes(player, cfg.ReloadTime)
+	local reloadTime = cfg.ReloadTime * (player:GetAttribute("FxReload") or 1) -- jeringa Pulso (server/Pharmacy)
+	setReloadAttributes(player, reloadTime)
 	sendAmmo(player)
 
-	task.delay(cfg.ReloadTime, function()
+	task.delay(reloadTime, function()
 		if states[player] ~= state or state.token ~= token then
 			return
 		end
@@ -220,7 +221,8 @@ local function onFire(player, origin, direction)
 					hits[target] = hit
 				end
 				local crit = isHeadshot(model, origin, dir, (result.Position - origin).Magnitude)
-				hit.damage += crit and cfg.Damage * Config.Headshot.Multiplier or cfg.Damage
+				local damage = cfg.Damage * (player:GetAttribute("FxDamage") or 1) -- jeringa Furia (server/Pharmacy)
+				hit.damage += crit and damage * Config.Headshot.Multiplier or damage
 				hit.crit = hit.crit or crit
 			end
 		end
