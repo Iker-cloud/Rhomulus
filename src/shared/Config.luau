@@ -321,7 +321,11 @@ return {
 		},
 		-- Efectos. Mods: Damage, Speed y Reload multiplican; MaxHealth suma vida máxima (y cura lo mismo al inyectarse).
 		-- Crash: lo que queda al acabar el efecto, durante CrashDuration.
-		Order = { "Furia", "Impulso", "Adrenalina", "Pulso" },
+		-- Mods extra: Defense (multiplica el daño recibido), Stealth (alcance en studs a partir del cual los zombies no te notan),
+		-- Regen (vida por segundo; negativa = sangrado) y Vision (los zombies se ven a través de las paredes).
+		-- Weight: peso en el sorteo (1 por defecto; el Suero malo sale en ~10 %). MaxUses: jeringas por vitrina y ronda.
+		MaxUses = 2,
+		Order = { "Furia", "Impulso", "Adrenalina", "Pulso", "PielDura", "Regeneracion", "Vision", "Sigilo", "SueroMalo" },
 		Effects = {
 			Furia = {
 				Name = "Furia", Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
@@ -339,6 +343,26 @@ return {
 				Name = "Pulso", Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
 				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "recarga más lenta",
 			},
+			PielDura = {
+				Name = "Piel dura", Upper = "PIEL DURA", Color = Color3.fromRGB(190, 150, 110), Desc = "-30 % de daño recibido",
+				Mods = { Defense = 0.7 }, Crash = { Defense = 1.2 }, CrashDesc = "+20 % de daño recibido",
+			},
+			Regeneracion = {
+				Name = "Regeneración", Upper = "REGENERACIÓN", Color = Color3.fromRGB(120, 230, 170), Desc = "recuperas 2 de vida por segundo",
+				Mods = { Regen = 2 }, Crash = { Regen = -1 }, CrashDesc = "pierdes 1 de vida por segundo",
+			},
+			Vision = {
+				Name = "Visión", Upper = "VISIÓN", Color = Color3.fromRGB(190, 120, 255), Desc = "ves a los zombies a través de las paredes",
+				Mods = { Vision = true }, Crash = { Reload = 1.3 }, CrashDesc = "manos temblorosas: recarga más lenta",
+			},
+			Sigilo = {
+				Name = "Sigilo", Upper = "SIGILO", Color = Color3.fromRGB(110, 120, 140), Desc = "los zombies a más de 20 studs no te notan",
+				Mods = { Stealth = 20 }, Crash = { Speed = 0.9 }, CrashDesc = "-10 % de velocidad",
+			},
+			SueroMalo = {
+				Name = "Suero malo", Upper = "SUERO MALO", Color = Color3.fromRGB(150, 200, 60), Desc = "+60 % de daño, pero -30 de vida máxima",
+				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15 % de daño", Weight = 0.9,
+			},
 		},
 	},
 
@@ -353,6 +377,10 @@ return {
 	-- Tiro a la cabeza: cuenta si el rayo pasa a menos de (tamaño del cráneo * RadiusScale) del centro de la cabeza.
 	-- Depth = cuánto más allá del impacto en la caja del zombie se sigue buscando la cabeza.
 	-- Ojo: el servidor no ve las animaciones de los zombies (se animan en el cliente): la cabeza se toma en su pose base.
+	-- Mutadores con efecto propio (shared/Mutators): ruido de disparos (alcance en studs, segundos que dura, pausa entre ruidos por
+	-- jugador) y sangrado (vida por debajo de la cual sangra, vida por segundo)
+	MutatorRules = { Noise = { Range = 70, Duration = 5, Cooldown = 0.6 }, Bleed = { Below = 40, PerSecond = 1 } },
+
 	Headshot = { Multiplier = 2, RadiusScale = 0.4, Depth = 1.5, PartNames = { "Head", "saco_cabeza" } }, -- saco_cabeza = cabeza del maniquí
 
 	-- Guía de objetivo (client/ObjectiveGuide): columna de luz en el mundo, flecha en el borde de la pantalla y distancia.
@@ -459,6 +487,7 @@ return {
 	},
 
 	Zombie = {
+		Explosive = { Chance = 0.3, Fuse = 0.9, Radius = 10, Damage = 20 }, -- mutador "Explosivos" (nunca el Tanque)
 		ThinkInterval = 0.2, -- cada cuánto decide (ataque, objetivo)
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
 		CorpseTime = 3.6, -- segundos que el cadáver queda antes de borrarse (caída, espasmo y desvanecimiento; ver ZombieAnimator)
@@ -567,6 +596,7 @@ return {
 			Color = Color3.fromRGB(70, 80, 110),
 			Decay = Color3.fromRGB(25, 28, 40),
 		},
+		FogDense = { Density = 0.62, Haze = 3.2 }, -- mutador "Niebla densa"
 		ColorGrade = { Brightness = -0.02, Contrast = 0.15, Saturation = -0.15, Tint = Color3.fromRGB(210, 220, 255) },
 		Flashlight = { Brightness = 3, Range = 50, Angle = 45, Color = Color3.fromRGB(255, 240, 215), Shadows = true },
 		Lamps = {

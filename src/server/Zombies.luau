@@ -31,6 +31,11 @@ local function nearestTarget(fromPosition)
 		-- Los caídos no son objetivo: los zombies van por los que siguen de pie
 		if humanoid and root and humanoid.Health > 0 and PlayerState.get(player) == "Normal" and not player:GetAttribute("Boarded") and not player:GetAttribute("Boarding") then
 			local distance = (root.Position - fromPosition).Magnitude
+			-- Jeringa Sigilo: los zombies lejanos no la notan
+			local stealth = player:GetAttribute("FxStealth")
+			if stealth and distance > stealth then
+				continue
+			end
 			if not bestDistance or distance < bestDistance then
 				best, bestDistance = { player = player, root = root, character = character }, distance
 			end
@@ -39,20 +44,69 @@ local function nearestTarget(fromPosition)
 	return best, bestDistance
 end
 
--- La bengala más cercana dentro de su alcance (las pone server/Items en workspace.Flares)
-local function findLure(position)
-	local flares = workspace:FindFirstChild("Flares")
-	if not flares then
-		return nil
+-- Ruidos recientes (mutador "Ruidoso"): { Position, Range, Expires }
+local noises = {}
+
+-- Un ruido que atrae a los zombies cercanos unos segundos
+function Zombies.noise(position, range, duration)
+	local now = os.clock()
+	for i = #noises, 1, -1 do
+		if noises[i].Expires < now then
+			table.remove(noises, i)
+		end
 	end
+	if #noises < 12 then
+		table.insert(noises, { Position = position, Range = range, Expires = now + duration })
+	end
+end
+
+-- La bengala o el ruido más cercano dentro de su alcance (las bengalas las pone server/Items en workspace.Flares)
+local function findLure(position)
 	local best, bestDistance = nil, Config.Items.Flare.LureRange
-	for _, flare in flares:GetChildren() do
-		local distance = (flare.Position - position).Magnitude
-		if distance < bestDistance then
-			best, bestDistance = flare, distance
+	local flares = workspace:FindFirstChild("Flares")
+	if flares then
+		for _, flare in flares:GetChildren() do
+			local distance = (flare.Position - position).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = flare, distance
+			end
+		end
+	end
+	local now = os.clock()
+	for _, noise in noises do
+		local distance = (noise.Position - position).Magnitude
+		if noise.Expires >= now and distance < noise.Range and distance < bestDistance then
+			best, bestDistance = noise, distance
 		end
 	end
 	return best
+end
+
+-- Mutador "Explosivos": algunos zombies explotan un instante después de morir y hieren a quien esté cerca
+local function explode(model, root)
+	local position = root.Position
+	local E = Config.Zombie.Explosive
+	local highlight = Instance.new("Highlight")
+	highlight.FillColor = Color3.fromRGB(255, 70, 30)
+	highlight.OutlineColor = Color3.fromRGB(255, 190, 80)
+	highlight.FillTransparency = 0.25
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Parent = model
+	task.wait(E.Fuse)
+	local blast = Instance.new("Explosion")
+	blast.Position = position
+	blast.BlastRadius = E.Radius
+	blast.BlastPressure = 0
+	blast.DestroyJointRadiusPercent = 0
+	blast.ExplosionType = Enum.ExplosionType.NoCraters
+	blast.Parent = workspace
+	for _, player in Players:GetPlayers() do
+		local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if playerRoot and (playerRoot.Position - position).Magnitude <= E.Radius then
+			PlayerState.damage(player, E.Damage * Difficulty.get().Damage)
+		end
+	end
+	highlight:Destroy()
 end
 
 -- El autobús sobre cuyo techo está `position` (nil si no está sobre ninguno)
@@ -266,6 +320,9 @@ function Zombies.spawn(kind, position)
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()
+		if Difficulty.get().Flags.Explosive and kind ~= "Tank" and math.random() < Config.Zombie.Explosive.Chance then
+			task.spawn(explode, model, root)
+		end
 		-- Se queda quieto y deja de recibir balas; el cliente anima la caída, el espasmo y el desvanecimiento
 		root.Anchored = true
 		for _, part in model:GetDescendants() do

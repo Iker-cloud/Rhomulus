@@ -7,14 +7,23 @@
 --   Mul                                  multiplica campos de la dificultad (Speed, Horde, Reward, Cost, MedkitHeal, SpawnInterval, TankEvery…)
 --   Add                                  suma a campos de la dificultad (ExtraTanks)
 --   Set                                  fija un campo (FastChance)
---   Flags                                reglas que leen otros sistemas: AmmoMult (munición), PlayerHealth (vida máxima de los jugadores)
---                                        y Blackout (faroles apagados)
+--   Flags                                reglas que leen otros sistemas: AmmoMult (munición), PlayerHealth (vida máxima de los jugadores),
+--                                        Blackout (faroles apagados), Fog (niebla densa), Explosive (zombies que explotan),
+--                                        Noisy (los disparos atraen), Bleed (sangrado con poca vida) y HeadshotMult (crítico)
 --   Conflicts                            ids que no pueden salir en la misma ronda
 -- `Mutators.apply(dificultad, ids)` devuelve una copia de la tabla de la dificultad con todo aplicado: así los sistemas que ya leen
 -- `Difficulty.get()` notan los mutadores sin cambiar nada.
 local Mutators = {}
 
-Mutators.Order = { "MunicionEscasa", "ZombiesRapidos", "DobleTanque", "HordasGrandes", "EconomiaFloja", "Cristal", "Apagon", "Generoso" }
+Mutators.Order = {
+	"MunicionEscasa", "ZombiesRapidos", "DobleTanque", "HordasGrandes", "EconomiaFloja", "Cristal", "Apagon", "Generoso",
+	"NieblaDensa", "Explosivos", "Ruidoso", "Sangrado", "CabezasDuras",
+}
+
+-- Parejas que solo pueden salir juntas en ciertas dificultades (el resto de dificultades las descarta)
+Mutators.PairOnly = {
+	{ "ZombiesRapidos", "HordasGrandes", { "Crisis", "Colapso" } },
+}
 
 -- Cuántos mutadores salen según la dificultad: { probabilidad de 0, de 1, de 2 }
 Mutators.Count = {
@@ -31,7 +40,7 @@ Mutators.MunicionEscasa = {
 	Color = Color3.fromRGB(240, 170, 70),
 	Bonus = 0.2,
 	Flags = { AmmoMult = 0.5 },
-	Conflicts = { "Generoso" },
+	Conflicts = { "Generoso", "EconomiaFloja" },
 }
 Mutators.ZombiesRapidos = {
 	Name = "Zombies rápidos",
@@ -50,6 +59,7 @@ Mutators.DobleTanque = {
 	Bonus = 0.3,
 	Add = { ExtraTanks = 1 },
 	Mul = { TankEvery = 0.7 },
+	Conflicts = { "Cristal" },
 }
 Mutators.HordasGrandes = {
 	Name = "Hordas grandes",
@@ -65,8 +75,8 @@ Mutators.EconomiaFloja = {
 	Description = "Las latas que se ganan valen la mitad.",
 	Color = Color3.fromRGB(180, 160, 90),
 	Bonus = 0.25,
-	Mul = { Reward = 0.5 },
-	Conflicts = { "Generoso" },
+	Mul = { Reward = 0.5, Cost = 1.2 },
+	Conflicts = { "Generoso", "MunicionEscasa" },
 }
 Mutators.Cristal = {
 	Name = "Cristal",
@@ -75,7 +85,8 @@ Mutators.Cristal = {
 	Color = Color3.fromRGB(150, 200, 230),
 	Bonus = 0.25,
 	Mul = { MedkitHeal = 2 },
-	Flags = { PlayerHealth = 50 },
+	Flags = { PlayerHealth = 50, PlayerHealthCollapse = 60 }, -- en Colapso (golpes de 18 y 63) con 50 morirían de un Tanque
+	Conflicts = { "DobleTanque" },
 }
 Mutators.Apagon = {
 	Name = "Apagón total",
@@ -93,6 +104,48 @@ Mutators.Generoso = {
 	Bonus = 0,
 	Mul = { Cost = 0.6, Reward = 1.3, MedkitHeal = 1.5 },
 	Conflicts = { "MunicionEscasa", "EconomiaFloja" },
+}
+
+Mutators.NieblaDensa = {
+	Name = "Niebla densa",
+	Upper = "NIEBLA DENSA",
+	Description = "La niebla es tan espesa que apenas se ve a unos 60 studs.",
+	Color = Color3.fromRGB(170, 180, 190),
+	Bonus = 0.2,
+	Flags = { Fog = true },
+	Conflicts = { "Apagon" },
+}
+Mutators.Explosivos = {
+	Name = "Explosivos",
+	Upper = "EXPLOSIVOS",
+	Description = "Algunos zombies explotan al morir: aléjate unos segundos.",
+	Color = Color3.fromRGB(255, 120, 40),
+	Bonus = 0.25,
+	Flags = { Explosive = true },
+}
+Mutators.Ruidoso = {
+	Name = "Ruidoso",
+	Upper = "RUIDOSO",
+	Description = "Cada disparo atrae zombies cercanos. La pistola no hace ruido.",
+	Color = Color3.fromRGB(240, 210, 80),
+	Bonus = 0.25,
+	Flags = { Noisy = true },
+}
+Mutators.Sangrado = {
+	Name = "Sangrado",
+	Upper = "SANGRADO",
+	Description = "Con menos de 40 de vida pierdes 1 por segundo (sin llegar a caer). Véndate.",
+	Color = Color3.fromRGB(190, 40, 60),
+	Bonus = 0.25,
+	Flags = { Bleed = true },
+}
+Mutators.CabezasDuras = {
+	Name = "Cabezas duras",
+	Upper = "CABEZAS DURAS",
+	Description = "El tiro a la cabeza hace x1,5 en vez de x2.",
+	Color = Color3.fromRGB(150, 150, 160),
+	Bonus = 0.15,
+	Flags = { HeadshotMult = 1.5 },
 }
 
 function Mutators.isValid(id)
@@ -116,8 +169,18 @@ function Mutators.serialize(ids)
 	return table.concat(ids, ",")
 end
 
-local function conflict(a, b)
-	return table.find(Mutators[a].Conflicts or {}, b) ~= nil or table.find(Mutators[b].Conflicts or {}, a) ~= nil
+local function conflict(a, b, difficultyId)
+	if table.find(Mutators[a].Conflicts or {}, b) ~= nil or table.find(Mutators[b].Conflicts or {}, a) ~= nil then
+		return true
+	end
+	for _, pair in Mutators.PairOnly do
+		if (pair[1] == a and pair[2] == b) or (pair[1] == b and pair[2] == a) then
+			if not table.find(pair[3], difficultyId) then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 -- Sortea los mutadores de una ronda según la dificultad. `random` es un Random (o nil). Devuelve una lista de ids.
@@ -138,7 +201,7 @@ function Mutators.roll(difficultyId, random)
 		local id = table.remove(pool, random:NextInteger(1, #pool))
 		local ok = true
 		for _, other in picked do
-			if conflict(id, other) then
+			if conflict(id, other, difficultyId) then
 				ok = false
 			end
 		end

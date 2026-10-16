@@ -242,6 +242,7 @@ end
 local function rollMutators()
 	local ids = Mutators.roll(Difficulty.id())
 	Difficulty.setMutators(ids)
+	Atmosphere.refreshFog()
 	Telemetry.mutators(ids)
 end
 

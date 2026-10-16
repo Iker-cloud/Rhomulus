@@ -101,6 +101,7 @@ function PlayerState.damage(player, amount)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
+	amount *= player:GetAttribute("FxDefense") or 1 -- jeringa Piel dura (server/Pharmacy)
 	Stats.add(player, "DamageTaken", math.min(amount, humanoid.Health))
 	if humanoid.Health - amount <= 0 then
 		down(player, humanoid)
@@ -176,7 +177,11 @@ end
 
 local function onCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid")
-	local maxHealth = Difficulty.get().Flags.PlayerHealth -- mutador "Cristal"
+	local flags = Difficulty.get().Flags
+	local maxHealth = flags.PlayerHealth -- mutador "Cristal" (más vida en Colapso)
+	if maxHealth and Difficulty.id() == "Colapso" then
+		maxHealth = flags.PlayerHealthCollapse or maxHealth
+	end
 	if maxHealth then
 		humanoid.MaxHealth = maxHealth
 		humanoid.Health = maxHealth
@@ -236,6 +241,21 @@ local function rescue(player)
 end
 
 function PlayerState.start()
+	-- Mutador "Sangrado": con poca vida se pierde vida cada segundo, sin llegar a caer; las vendas y el botiquín lo frenan
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			if Difficulty.get().Flags.Bleed then
+				local rule = Config.MutatorRules.Bleed
+				for _, player in Players:GetPlayers() do
+					local humanoid = getHumanoid(player)
+					if humanoid and PlayerState.get(player) == "Normal" and humanoid.Health > 1 and humanoid.Health < rule.Below and not player:GetAttribute("HealingEnd") then
+						humanoid.Health = math.max(1, humanoid.Health - rule.PerSecond)
+					end
+				end
+			end
+		end
+	end)
 	task.spawn(function()
 		while true do
 			task.wait(0.5)

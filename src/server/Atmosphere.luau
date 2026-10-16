@@ -128,6 +128,17 @@ local function applyLighting()
 	grade.Parent = Lighting
 end
 
+-- Niebla normal o densa (mutador "Niebla densa"); se llama al sortear los mutadores de la ronda
+function Atmosphere.refreshFog()
+	local fog = Lighting:FindFirstChildOfClass("Atmosphere")
+	if not A.Enabled or not fog then
+		return
+	end
+	local dense = Difficulty.get().Flags.Fog == true
+	fog.Density = dense and A.FogDense.Density or A.Fog.Density
+	fog.Haze = dense and A.FogDense.Haze or A.Fog.Haze
+end
+
 function Atmosphere.start()
 	if not A.Enabled then
 		return

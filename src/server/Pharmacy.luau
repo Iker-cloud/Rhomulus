@@ -27,7 +27,7 @@ local machines = {} -- [máquina] = true
 local sessions = {} -- [Player] = número: invalida los temporizadores de un efecto anterior
 local baseMaxHealth = {} -- [Player] = vida máxima antes de inyectarse (para devolverla)
 
-local ATTRIBUTES = { Damage = "FxDamage", Speed = "FxSpeed", Reload = "FxReload" }
+local ATTRIBUTES = { Damage = "FxDamage", Speed = "FxSpeed", Reload = "FxReload", Defense = "FxDefense", Stealth = "FxStealth", Regen = "FxRegen", Vision = "FxVision" }
 local DISPLAY_SCALE = 1.9 -- la jeringa de la ruleta sale más grande que en la vitrina
 local HEIGHT = 10.6 -- altura sobre la base donde flota (por encima de la vitrina)
 
@@ -78,7 +78,7 @@ function Pharmacy.apply(player, id)
 	if def.Mods.MaxHealth and humanoid then
 		baseMaxHealth[player] = humanoid.MaxHealth
 		humanoid.MaxHealth += def.Mods.MaxHealth
-		humanoid.Health += def.Mods.MaxHealth
+		humanoid.Health = math.clamp(humanoid.Health + def.Mods.MaxHealth, 1, humanoid.MaxHealth)
 	end
 	local now = workspace:GetServerTimeNow()
 	player:SetAttribute("FxId", id)
@@ -106,6 +106,20 @@ function Pharmacy.apply(player, id)
 			end
 		end)
 	end)
+end
+
+-- Regeneración / sangrado de la jeringa: cada segundo suma FxRegen de vida (sin bajar de 1 ni pasar del máximo)
+local function regenLoop()
+	while true do
+		task.wait(1)
+		for _, player in Players:GetPlayers() do
+			local regen = player:GetAttribute("FxRegen")
+			local humanoid = regen and getHumanoid(player)
+			if humanoid and humanoid.Health > 0 and PlayerState.get(player) == "Normal" then
+				humanoid.Health = math.clamp(humanoid.Health + regen, 1, humanoid.MaxHealth)
+			end
+		end
+	end
 end
 
 -- Fin de partida o de ronda: nadie conserva efectos
@@ -168,6 +182,11 @@ local function buildSyringe(color)
 		local offset = (piece.cf.Position - center) * DISPLAY_SCALE
 		part.CFrame = upright * CFrame.new(offset) * (piece.cf - piece.cf.Position)
 		part.Color = piece.name:sub(-7) == "liquido" and color or piece.color
+		if piece.name:sub(-7) == "liquido" then
+			local sparkles = Instance.new("Sparkles")
+			sparkles.SparkleColor = color
+			sparkles.Parent = part
+		end
 		part.Material = piece.name:sub(-7) == "liquido" and Enum.Material.Neon or Enum.Material.SmoothPlastic
 		if piece.shape == "Cylinder" then
 			part.Shape = Enum.PartType.Cylinder
@@ -205,6 +224,22 @@ local function sound(machine, key, volumeScale)
 	Debris:AddItem(s, 4)
 end
 
+-- Un efecto al azar según el peso de cada uno (Weight, 1 por defecto)
+local function weightedPick()
+	local total = 0
+	for _, id in P.Order do
+		total += P.Effects[id].Weight or 1
+	end
+	local roll = math.random() * total
+	for _, id in P.Order do
+		roll -= P.Effects[id].Weight or 1
+		if roll <= 0 then
+			return id
+		end
+	end
+	return P.Order[1]
+end
+
 local function hideSyringe(machine)
 	if machine.shown then
 		machine.shown.Parent = nil
@@ -239,6 +274,11 @@ local function resetToIdle(machine)
 	machine.pick = nil
 	hideSyringe(machine)
 	machine.light.Enabled = false
+	if machine.uses >= P.MaxUses then
+		machine.prompt.Enabled = false
+		setLabel(machine, "Agotada", Color3.fromRGB(150, 146, 140))
+		return
+	end
 	machine.prompt.ActionText = "Probar suerte"
 	machine.prompt.ObjectText = `Farmacia · {Difficulty.price(P.Cost)} latas`
 	machine.prompt.HoldDuration = 0.5
@@ -273,13 +313,14 @@ local function onTriggered(machine, player)
 			return
 		end
 		machine.state = "spinning"
+		machine.uses += 1
 		machine.rollId += 1
 		local id = machine.rollId
 		machine.prompt.Enabled = false
 		Points.feed(`{player.DisplayName} probó suerte en la farmacia`)
 
 		-- La ruleta gira unos segundos y se detiene en un efecto al azar
-		local pick = P.Order[math.random(#P.Order)]
+		local pick = weightedPick()
 		local steps = math.floor(P.SpinTime / 0.12)
 		local last
 		for i = 1, steps do
@@ -358,7 +399,7 @@ local function build(position, yaw)
 	CollectionService:AddTag(base, "Plate")
 
 	model.Parent = workspace:FindFirstChild("Map") or workspace
-	return { model = model, base = base, light = light, syringes = syringes, angle = 0, state = "idle", prompt = prompt, rollId = 0 }
+	return { model = model, base = base, light = light, syringes = syringes, angle = 0, state = "idle", prompt = prompt, rollId = 0, uses = 0 }
 end
 
 -- Quita las máquinas (fin de ronda o cambio de mapa)
@@ -389,6 +430,7 @@ function Pharmacy.place()
 end
 
 function Pharmacy.start()
+	task.spawn(regenLoop)
 	-- Caer o morir hace perder el efecto
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state ~= "Normal" and player:GetAttribute("FxId") then

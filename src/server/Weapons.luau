@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
+local Zombies = require(script.Parent.Zombies)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -15,6 +16,8 @@ local WeaponRig = require(script.Parent.WeaponRig)
 local states = {} -- [Player] = { pistol, primary, current, reloading, lastShot, token }
 
 local Weapons = {}
+
+local lastNoise = {} -- [Player] = os.clock() del último ruido que hicieron (mutador "Ruidoso")
 
 -- Munición de reserva: el mutador "Munición escasa" la reduce (Flags.AmmoMult)
 local function ammoMult()
@@ -222,7 +225,7 @@ local function onFire(player, origin, direction)
 				end
 				local crit = isHeadshot(model, origin, dir, (result.Position - origin).Magnitude)
 				local damage = cfg.Damage * (player:GetAttribute("FxDamage") or 1) -- jeringa Furia (server/Pharmacy)
-				hit.damage += crit and damage * Config.Headshot.Multiplier or damage
+				hit.damage += crit and damage * (Difficulty.get().Flags.HeadshotMult or Config.Headshot.Multiplier) or damage
 				hit.crit = hit.crit or crit
 			end
 		end
@@ -240,6 +243,12 @@ local function onFire(player, origin, direction)
 	end
 
 	Remotes.Shot:FireAllClients(player, head.Position, endPoints, slot.name)
+
+	-- Mutador "Ruidoso": los disparos (menos los de la pistola) atraen a los zombies cercanos
+	if Difficulty.get().Flags.Noisy and slot.name ~= "pistol" and os.clock() - (lastNoise[player] or 0) >= Config.MutatorRules.Noise.Cooldown then
+		lastNoise[player] = os.clock()
+		Zombies.noise(head.Position, Config.MutatorRules.Noise.Range, Config.MutatorRules.Noise.Duration)
+	end
 
 	if slot.ammo <= 0 then
 		startReload(player)
