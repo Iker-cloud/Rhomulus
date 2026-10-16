@@ -122,9 +122,16 @@ local function resetToIdle(box)
 	setLabel(box, "Caja de armas")
 end
 
-local function build(position)
+local function build(spot)
 	-- La caja misteriosa (modelo de caja-misteriosa.glb). El Hitbox invisible hace de base: colisión, prompt y placa.
-	local model, base = PropModel.build(CajaMisteriosa, position, 0)
+	-- `spot` es un Vector3 (mira al sur) o un CFrame (posición y giro; las Tiendas la ponen mirando a la entrada)
+	local position, yaw = spot, 0
+	if typeof(spot) == "CFrame" then
+		position = spot.Position
+		local _, spotYaw = spot:ToOrientation()
+		yaw = spotYaw
+	end
+	local model, base = PropModel.build(CajaMisteriosa, position, yaw)
 	model.Name = "WeaponBox"
 	base.Name = "Base"
 

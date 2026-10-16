@@ -297,6 +297,74 @@ function BUILDERS.Medkit()
 	return model
 end
 
+-- Jeringa de mano (no viene en el kit): de pie, con la aguja hacia +Y. El émbolo y el líquido se mueven con ItemModel.setSyringe.
+local SK = 0.65 -- tamaño de la jeringa de mano respecto al dibujo base (se ve bien de lejos)
+local SYR = { barrel = 1.5 * SK, radius = 0.17 * SK, rod = 1.4 * SK, stopper = 0.09 * SK, margin = 0.1 * SK, travel = 1.15 * SK }
+function BUILDERS.Syringe(options)
+	local color = options and options.color or Color3.fromRGB(220, 50, 55)
+	local liquidColor = color:Lerp(Color3.new(0, 0, 0), 0.3) -- el neón se quema con la luz: un poco más oscuro
+	local model, root = newModel("Jeringa", 0.5)
+	local half = SYR.barrel / 2
+	local function cyl(name, y, length, radius, c, material, transparency)
+		return part(model, root, name, Enum.PartType.Cylinder, Vector3.new(length, radius * 2, radius * 2), CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.pi / 2), c, material, transparency)
+	end
+	local white = rgb(0.92, 0.94, 0.96)
+	-- Cuerpo de vidrio, con unas marcas de dosis, el cuello, la aguja y la aleta para los dedos
+	cyl("Cuerpo", 0, SYR.barrel, SYR.radius, white, Enum.Material.Glass, 0.6)
+	for i = 1, 4 do
+		part(model, root, "Marca", Enum.PartType.Block, Vector3.new(0.012 * SK, 0.02 * SK, SYR.radius * 2.05), CFrame.new(0, -half + i * SYR.barrel / 5, 0), rgb(0.1, 0.1, 0.12))
+	end
+	cyl("Cuello", half + 0.075 * SK, 0.15 * SK, 0.085 * SK, white, Enum.Material.SmoothPlastic)
+	cyl("Aguja", half + 0.4 * SK, 0.5 * SK, 0.022 * SK, rgb(0.78, 0.8, 0.84), Enum.Material.Metal)
+	part(model, root, "Aleta", Enum.PartType.Block, Vector3.new(0.78 * SK, 0.07 * SK, 0.22 * SK), CFrame.new(0, -half - 0.03 * SK, 0), white)
+	part(model, root, "Anillo", Enum.PartType.Cylinder, Vector3.new(0.07 * SK, 0.4 * SK, 0.4 * SK), CFrame.new(0, half - 0.05 * SK, 0) * CFrame.Angles(0, 0, math.pi / 2), liquidColor, Enum.Material.SmoothPlastic)
+
+	-- Piezas que se mueven: el líquido y el émbolo (con su tapón de goma y el disco para el pulgar)
+	local function moving(name, size, c, material, transparency)
+		local p = part(model, root, name, Enum.PartType.Cylinder, size, CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, math.pi / 2), c, material, transparency)
+		p:FindFirstChildOfClass("WeldConstraint"):Destroy()
+		local motor = Instance.new("Motor6D")
+		motor.Name = name .. "Motor"
+		motor.Part0 = root
+		motor.Part1 = p
+		motor.Parent = root
+		return p, motor
+	end
+	local rod = moving("Embolo", Vector3.new(SYR.rod, 0.14 * SK, 0.14 * SK), rgb(0.9, 0.91, 0.93), Enum.Material.SmoothPlastic)
+	moving("Liquido", Vector3.new(1, SYR.radius * 1.5, SYR.radius * 1.5), liquidColor, Enum.Material.Neon, 0.05)
+	local function addToRod(name, y, length, radius, c, material)
+		local p = part(model, root, name, Enum.PartType.Cylinder, Vector3.new(length, radius * 2, radius * 2), CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.pi / 2), c, material)
+		local weld = p:FindFirstChildOfClass("WeldConstraint")
+		weld.Part0 = rod
+		return p
+	end
+	addToRod("Tapon", SYR.rod / 2 - SYR.stopper, 0.18 * SK, SYR.radius * 0.98, rgb(0.12, 0.12, 0.14), Enum.Material.Rubber)
+	addToRod("Disco", -SYR.rod / 2, 0.06 * SK, 0.25 * SK, white, Enum.Material.SmoothPlastic)
+	ItemModel.setSyringe(model, 0)
+	return model
+end
+
+-- Posición del émbolo de la jeringa de mano: 0 = lleno, 1 = vaciado
+function ItemModel.setSyringe(model, f)
+	local root = model and model.PrimaryPart
+	local liquid = model and model:FindFirstChild("Liquido")
+	local rodMotor = root and root:FindFirstChild("EmboloMotor")
+	local liquidMotor = root and root:FindFirstChild("LiquidoMotor")
+	if not (rodMotor and liquidMotor and liquid) then
+		return
+	end
+	f = math.clamp(f, 0, 1)
+	local half = SYR.barrel / 2
+	local stopperY = -half + SYR.margin + f * SYR.travel -- centro del tapón
+	local up = CFrame.Angles(0, 0, math.pi / 2)
+	rodMotor.C0 = CFrame.new(0, stopperY - SYR.rod / 2 + SYR.stopper, 0) * up
+	rodMotor.Part1.CFrame = root.CFrame * rodMotor.C0
+	local length = math.max(0.05 * SK, half - (stopperY + SYR.stopper))
+	liquid.Size = Vector3.new(length, liquid.Size.Y, liquid.Size.Z)
+	liquidMotor.C0 = CFrame.new(0, (half + stopperY + SYR.stopper) / 2, 0) * up
+	liquid.CFrame = root.CFrame * liquidMotor.C0
+end
+
 function ItemModel.setLid(model, open, duration)
 	local lid = model and model:FindFirstChild("Tapa")
 	local hinge = lid and lid:FindFirstChild("Bisagra")
@@ -323,20 +391,21 @@ local GRIPS = {
 	FlareGun = { rot = FORWARD, point = Vector3.new(-0.48, -0.18, 0) }, -- por la empuñadura
 	Bandage = { rot = UPRIGHT, point = Vector3.zero },
 	Medkit = { rot = UPRIGHT, point = Vector3.new(0, 0.02, 0) }, -- por el canto de la base, con la tapa arriba
+	Syringe = { rot = CFrame.Angles(math.pi, 0, 0), point = Vector3.new(0, -0.1, 0) }, -- por la parte baja del cuerpo, la aguja hacia delante
 }
 
-local HELD = { Grenade = "Grenade", Molotov = "Molotov", Flare = "FlareGun", Bandage = "Bandage", Medkit = "Medkit" }
+local HELD = { Grenade = "Grenade", Molotov = "Molotov", Flare = "FlareGun", Bandage = "Bandage", Medkit = "Medkit", Syringe = "Syringe" }
 
 -- Muestra el objeto de `itemId` ("Grenade", "Molotov", "Flare", "Bandage", "Medkit") en la mano del jugador y esconde el arma activa.
 -- Devuelve (una función que lo quita y restaura el arma, el modelo). Nil si el personaje no está listo.
-function ItemModel.hold(player, itemId)
+function ItemModel.hold(player, itemId, options)
 	local character = player.Character
 	local hand = character and character:FindFirstChild("RightHand")
 	local kind = HELD[itemId]
 	if not (hand and kind) then
 		return nil
 	end
-	local model = BUILDERS[kind]()
+	local model = BUILDERS[kind](options)
 	model.Name = "HandItem"
 	local root = model.PrimaryPart
 	root.CanCollide = false

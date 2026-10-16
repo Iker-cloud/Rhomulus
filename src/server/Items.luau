@@ -402,6 +402,11 @@ local function clearGesture(character)
 	end
 end
 
+-- Bloquea sacar y usar objetos durante `seconds` (lo usa la jeringa de la farmacia mientras se inyecta)
+function Items.lock(player, seconds)
+	busyUntil[player] = math.max(busyUntil[player] or 0, os.clock() + seconds)
+end
+
 -- El objeto que lleva en la mano (id) o nil
 function Items.readyId(player)
 	local r = ready[player]

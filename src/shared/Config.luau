@@ -311,6 +311,8 @@ return {
 		SpinTime = 3.2, -- segundos girando la ruleta
 		TakeTime = 8, -- segundos para tomar la jeringa antes de que se pierda
 		Cooldown = 3, -- pausa tras tomar o perder una jeringa
+		-- Animación de inyectarse (fracciones de Duration; deben coincidir con las claves de client/ItemPoses.Syringe)
+		Anim = { Duration = 2.8, Prick = 0.44, PushStart = 0.50, PushEnd = 0.78, Apply = 0.80 },
 		Duration = 75, -- segundos de efecto
 		CrashDuration = 10, -- segundos de bajón
 		-- Lugares de las vitrinas: { posición del suelo, giro en grados (el frente del modelo mira a -Z) }

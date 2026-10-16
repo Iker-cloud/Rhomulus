@@ -102,6 +102,35 @@ local POSES = {
 			return V(0.28 * math.sin(angle), 0.20 * math.cos(angle), 0.12 * math.sin(angle * 0.5)) * envelope
 		end,
 	},
+	-- Jeringa de la farmacia (Config.Pharmacy.Anim, 2,8 s): la sube al pecho, extiende el brazo izquierdo con la palma arriba, apoya
+	-- la aguja en el antebrazo (0,42), la clava (0,50), empuja el émbolo (0,50 a 0,78), la retira y baja el brazo.
+	Syringe = {
+		ready = { r = V(0.28, -0.35, -0.90), rt = 0.1, l = V(-0.30, -0.40, -0.95), lt = 0 },
+		right = {
+			key(0, START),
+			key(0.14, V(0.15, 0.05, -0.95), 0.3), -- la sube y mira la aguja
+			key(0.30, V(-0.12, 0.38, -0.75), -0.55), -- la lleva sobre el antebrazo
+			key(0.42, V(-0.53, 0.43, -0.38), -1.2), -- la aguja toca la piel
+			key(0.50, V(-0.53, 0.36, -0.36), -1.2), -- clava
+			key(0.78, V(-0.53, 0.36, -0.36), -1.2), -- empuja el émbolo
+			key(0.88, V(-0.50, 0.52, -0.42), -1.1), -- la retira
+			key(1, V(0.24, -0.38, -0.88), 0.1),
+		},
+		left = {
+			key(0, START),
+			key(0.14, V(-0.30, -0.40, -1.00), 0),
+			key(0.28, V(-0.40, -0.52, -1.14), 0.05), -- extiende el antebrazo
+			key(0.88, V(-0.40, -0.52, -1.14), 0.05),
+			key(1, V(-0.30, -0.45, -0.95), 0),
+		},
+		wobbleL = function(t) -- el brazo aprieta el puño al notar el pinchazo
+			if t < 0.5 or t > 0.82 then
+				return Vector3.zero
+			end
+			local phase = (t - 0.5) / 0.32
+			return V(0.015 * math.sin(phase * 40), 0.01 * math.sin(phase * 33), 0) * math.min(phase / 0.15, 1)
+		end,
+	},
 	-- Botiquín (5 s): lo sube al pecho con la derecha, la izquierda abre la tapa, saca gasa y cura (la mano entra y sale del
 	-- maletín), y al final cierra la tapa y lo baja.
 	Medkit = {

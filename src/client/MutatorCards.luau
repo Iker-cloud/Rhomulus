@@ -63,7 +63,7 @@ function MutatorCards.start()
 
 	local row = Instance.new("Frame")
 	row.AnchorPoint = Vector2.new(0.5, 0)
-	row.Position = UDim2.fromScale(0.5, 0.2)
+	row.Position = UDim2.fromScale(0.5, 0.33)
 	row.Size = UDim2.fromOffset(0, 0)
 	row.AutomaticSize = Enum.AutomaticSize.XY
 	row.BackgroundTransparency = 1
@@ -78,11 +78,19 @@ function MutatorCards.start()
 	local shownFor = nil -- los mutadores para los que ya salieron las tarjetas
 	local token = 0
 
+	-- Quita las tarjetas (no el UIListLayout, que se destruiría con ClearAllChildren y no se podría volver a poner)
+	local function clearCards()
+		for _, child in row:GetChildren() do
+			if child:IsA("CanvasGroup") then
+				child:Destroy()
+			end
+		end
+	end
+
 	local function show(ids)
 		token += 1
 		local mine = token
-		row:ClearAllChildren()
-		layout.Parent = row
+		clearCards()
 		Sfx.play("Select", 0.2)
 		for index, id in ids do
 			local m = Mutators[id]
@@ -121,8 +129,7 @@ function MutatorCards.start()
 			end
 			task.wait(0.7)
 			if mine == token then
-				row:ClearAllChildren()
-				layout.Parent = row
+				clearCards()
 			end
 		end)
 	end
@@ -133,8 +140,7 @@ function MutatorCards.start()
 		if stage ~= "Lobby" then
 			if stage ~= nil and stage ~= "Vote" then
 				token += 1
-				row:ClearAllChildren()
-				layout.Parent = row
+				clearCards()
 			end
 			if stage == "Vote" then
 				shownFor = nil

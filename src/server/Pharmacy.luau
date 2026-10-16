@@ -14,6 +14,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
 local PlayerState = require(script.Parent.PlayerState)
+local Items = require(script.Parent.Items)
+local ItemModel = require(script.Parent.ItemModel)
 local Points = require(script.Parent.Points)
 local PropModel = require(script.Parent.PropModel)
 local Vitrina = require(script.Parent.ZombieData.VitrinaMostrador)
@@ -120,6 +122,127 @@ local function regenLoop()
 			end
 		end
 	end
+end
+
+-- Animación de inyectarse -----------------------------------------------------------------------------------------------------------
+-- La jeringa sale en la mano derecha, el brazo izquierdo se extiende, la aguja se clava en el antebrazo, el émbolo empuja el líquido (que
+-- brilla del color del efecto) y al terminar la inyección el efecto empieza. Los brazos los mueve client/ItemPoses.Syringe en todos los
+-- clientes (atributos del personaje ItemReady, ItemId, ItemStart y ItemEnd); aquí se mueve el émbolo y se ponen luces, chispas y sonido.
+
+local function smoothstep(x)
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
+
+local function playAt(parent, key, volumeScale, speed)
+	local def = FX[key]
+	if not def or not parent then
+		return
+	end
+	local s = Instance.new("Sound")
+	s.SoundId = def[1]
+	s.Volume = def[2] * (volumeScale or 1)
+	s.PlaybackSpeed = (def[3] or 1) * (speed or 1)
+	s.RollOffMaxDistance = 60
+	s.Parent = parent
+	s:Play()
+	Debris:AddItem(s, 4)
+end
+
+-- Destellos del color del efecto sobre `parent`; `count` partículas de golpe. Devuelve el emisor (se puede dejar con Rate).
+local function burst(parent, color, count, speed, lifetime)
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Color = ColorSequence.new(color)
+	emitter.LightEmission = 1
+	emitter.Rate = 0
+	emitter.Lifetime = NumberRange.new(lifetime * 0.6, lifetime)
+	emitter.Speed = NumberRange.new(speed * 0.5, speed)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
+	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	emitter.Parent = parent
+	if count > 0 then
+		emitter:Emit(count)
+	end
+	Debris:AddItem(emitter, lifetime + 4)
+	return emitter
+end
+
+local function inject(player, id)
+	local def = P.Effects[id]
+	local character = player.Character
+	local humanoid = getHumanoid(player)
+	local A = P.Anim
+	if not (character and humanoid and humanoid.Health > 0 and player:HasAppearanceLoaded() and character:FindFirstChild("RightHand")) then
+		Pharmacy.apply(player, id)
+		return
+	end
+	Items.unequip(player, true) -- guarda lo que tenga en la mano
+	local restore, model = ItemModel.hold(player, "Syringe", { color = def.Color })
+	if not model then
+		Pharmacy.apply(player, id)
+		return
+	end
+	Items.lock(player, A.Duration + 0.3)
+	player:SetAttribute("Injecting", true)
+	character:SetAttribute("ItemReady", "Syringe") -- solo en el personaje: el inventario del jugador no conoce este objeto
+	Items.announce(character, "Syringe", A.Duration)
+
+	local forearm = character:FindFirstChild("LeftLowerArm") or character:FindFirstChild("LeftHand")
+	local hand = character:FindFirstChild("LeftHand") or forearm
+	local glow = Instance.new("PointLight")
+	glow.Color = def.Color
+	glow.Range = 9
+	glow.Brightness = 0
+	glow.Parent = hand
+	local veins -- destellos continuos mientras el líquido entra
+	local pricked, pushing, applied = false, false, false
+
+	local start = os.clock()
+	while true do
+		local t = (os.clock() - start) / A.Duration
+		if t >= 1 or not character.Parent or humanoid.Health <= 0 or PlayerState.get(player) ~= "Normal" then
+			break
+		end
+		ItemModel.setSyringe(model, smoothstep((t - A.PushStart) / (A.PushEnd - A.PushStart)))
+		if not pricked and t >= A.Prick then
+			pricked = true
+			playAt(hand, "Select", 1.2, 1.8)
+			burst(forearm, Color3.fromRGB(255, 70, 70), 4, 4, 0.5) -- una gotita de sangre
+		end
+		if not pushing and t >= A.PushStart then
+			pushing = true
+			veins = burst(forearm, def.Color, 0, 3, 0.9)
+			veins.Rate = 30
+			playAt(hand, "Buy", 0.5, 1.4)
+		end
+		if pushing and t < A.PushEnd + 0.1 then
+			local k = math.sin(math.clamp((t - A.PushStart) / (A.PushEnd - A.PushStart), 0, 1) * math.pi)
+			glow.Brightness = 2.5 * k
+		end
+		if not applied and t >= A.Apply then
+			applied = true
+			if veins then
+				veins.Rate = 0
+			end
+			glow.Brightness = 0
+			Pharmacy.apply(player, id)
+			local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart")
+			burst(torso, def.Color, 40, 14, 1.1)
+			playAt(torso, "Revived", 0.7, 1.15)
+		end
+		task.wait()
+	end
+	if veins then
+		veins.Rate = 0
+	end
+	glow:Destroy()
+	restore()
+	if character.Parent then
+		character:SetAttribute("ItemReady", nil)
+	end
+	player:SetAttribute("Injecting", nil)
 end
 
 -- Fin de partida o de ronda: nadie conserva efectos
@@ -361,17 +484,94 @@ local function onTriggered(machine, player)
 			end
 		end)
 	elseif machine.state == "ready" then
+		if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
+			Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
+			return
+		end
 		local pick = machine.pick
 		machine.rollId += 1
 		cooldown(machine)
-		Pharmacy.apply(player, pick)
 		sound(machine, "Buy", 0.8)
 		Points.feed(`{player.DisplayName} se inyectó {P.Effects[pick].Name}`)
+		task.spawn(inject, player, pick)
+	end
+end
+
+-- El modelo de la vitrina trae sus piezas en blanco (PropModel no usa las texturas del .glb): aquí se pintan. Los vidrios se vuelven
+-- transparentes para que se vean las jeringas, el mostrador y el rótulo toman color y el rótulo dice FARMACIA.
+local COUNTER_GREEN = Color3.fromRGB(44, 112, 92)
+local COUNTER_CREAM = Color3.fromRGB(238, 232, 214)
+local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
+
+local function boardGui(part, face)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 60
+	gui.LightInfluence = 0.2
+	gui.Parent = part
+	return gui
+end
+
+local function dress(model)
+	for _, piece in model:GetChildren() do
+		local name = piece.Name
+		if not piece:IsA("BasePart") then
+			continue
+		end
+		if name:sub(1, 6) == "vidrio" then
+			piece.Material = Enum.Material.Glass
+			piece.Color = Color3.fromRGB(190, 225, 235)
+			piece.Transparency = 0.8
+			piece.CanQuery = false
+		elseif name == "impacto_vidrio" then
+			piece.Transparency = 1
+		elseif name == "base" then
+			piece.Color = COUNTER_GREEN
+		elseif name == "base_frente" then
+			piece.Color = COUNTER_GREEN
+			local gui = boardGui(piece, Enum.NormalId.Back) -- el frente del modelo mira a -Z y las piezas vienen giradas 180°
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.fromScale(1, 0.4)
+			label.Position = UDim2.fromScale(0, 0.3)
+			label.FontFace = OSWALD
+			label.TextScaled = true
+			label.TextColor3 = COUNTER_CREAM
+			label.Text = "FARMACIA · DOÑA ROSA"
+			label.Parent = gui
+		elseif name:sub(1, 15) == "etiqueta_precio" then
+			piece.Color = COUNTER_CREAM
+		elseif name == "rotulo" then
+			piece.Color = COUNTER_CREAM
+			local gui = boardGui(piece, Enum.NormalId.Back)
+			local cross = Instance.new("Frame")
+			cross.BackgroundColor3 = COUNTER_GREEN
+			cross.BorderSizePixel = 0
+			cross.AnchorPoint = Vector2.new(0.5, 0.5)
+			cross.Position = UDim2.fromScale(0.09, 0.5)
+			cross.Size = UDim2.fromScale(0.09, 0.17)
+			cross.Parent = gui
+			local cross2 = cross:Clone()
+			cross2.Size = UDim2.fromScale(0.03, 0.5)
+			cross2.Parent = gui
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			label.Size = UDim2.fromScale(0.78, 0.8)
+			label.Position = UDim2.fromScale(0.19, 0.1)
+			label.FontFace = OSWALD
+			label.TextScaled = true
+			label.TextColor3 = COUNTER_GREEN
+			label.Text = "FARMACIA"
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = gui
+		end
 	end
 end
 
 local function build(position, yaw)
 	local model, base = PropModel.build(Vitrina, position, yaw)
+	dress(model)
 	model.Name = "Farmacia"
 	base.Name = "Base"
 
@@ -411,10 +611,10 @@ function Pharmacy.clear()
 	table.clear(machines)
 end
 
--- Pone una vitrina en cada lugar de Config.Pharmacy.Spots
-function Pharmacy.place()
+-- Pone una vitrina en cada lugar de `spots` (las Tiendas del mapa: { posición, giro en grados }); sin lista, Config.Pharmacy.Spots
+function Pharmacy.place(spots)
 	Pharmacy.clear()
-	for _, spot in P.Spots do
+	for _, spot in spots or P.Spots do
 		local machine = build(spot[1], math.rad(spot[2]))
 		resetToIdle(machine)
 		machine.prompt.Triggered:Connect(function(player)
