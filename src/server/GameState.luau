@@ -263,6 +263,7 @@ end
 -- así que no hay votación. Solo aplica en servidores reservados; en los públicos devuelve nil.
 local privateChoice
 local privateDifficulty
+local privateMutators = true -- el anfitrión puede apagar los mutadores en el menú
 local function privateMap()
 	if privateChoice then
 		return privateChoice
@@ -280,6 +281,7 @@ local function privateMap()
 			if id and BUILDERS[id] then
 				privateChoice = id
 				privateDifficulty = Difficulties.isValid(joinData.TeleportData.difficulty) and joinData.TeleportData.difficulty or nil
+				privateMutators = joinData.TeleportData.mutators ~= false
 				return id
 			end
 		end
@@ -302,7 +304,11 @@ local function vote()
 	local fixed = privateMap()
 	if fixed then
 		Difficulty.set(privateDifficulty) -- la eligió el anfitrión en el menú (nil = la de por defecto)
-		rollMutators()
+		if privateMutators then
+			rollMutators()
+		else
+			Telemetry.mutators({})
+		end
 		loadMap(fixed)
 		return
 	end

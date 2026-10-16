@@ -184,6 +184,7 @@ local function view(room, id, userId)
 		code = (not room.public) and room.pass or nil,
 		map = room.map,
 		difficulty = room.difficulty or Difficulties.Default,
+		mutators = room.mutators ~= false,
 		names = names,
 		ids = ids, -- para dibujar el avatar de cada jugador
 		hostIndex = hostIndex,
@@ -333,6 +334,7 @@ function actions.create(player, options)
 					host = player.UserId,
 					map = map,
 					difficulty = difficulty,
+					mutators = options.mutators ~= false,
 					public = isPublic,
 					pass = (not isPublic) and randomCode(4) or nil,
 					access = access,
@@ -462,6 +464,14 @@ function actions.setMap(player, map)
 	end)
 end
 
+-- Mutadores de la partida (reglas especiales al azar): el anfitrión puede apagarlos
+function actions.setMutators(player, on)
+	return hostChange(player, function(r)
+		r.mutators = on ~= false
+		return true
+	end)
+end
+
 function actions.setDifficulty(player, difficulty)
 	if not Difficulties.isValid(difficulty) then
 		return { error = "Dificultad no válida" }
@@ -558,7 +568,7 @@ local function launch(id, room)
 	local ok, err = pcall(function()
 		local options = Instance.new("TeleportOptions")
 		options.ReservedServerAccessCode = room.access
-		options:SetTeleportData({ private = true, map = room.map, difficulty = room.difficulty or Difficulties.Default, public = room.public })
+		options:SetTeleportData({ private = true, map = room.map, difficulty = room.difficulty or Difficulties.Default, public = room.public, mutators = room.mutators ~= false })
 		TeleportService:TeleportAsync(Places.Game, list, options)
 	end)
 	if not ok then

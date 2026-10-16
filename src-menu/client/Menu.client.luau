@@ -912,7 +912,7 @@ end
 
 -- 3) Nueva sala: pública o privada, mapa y dificultad ----------------------------------------------------------------------------
 local setup = newScreen("setup")
-local setupState = { public = true, map = "Morro", difficulty = Difficulties.Default }
+local setupState = { public = true, map = "Morro", difficulty = Difficulties.Default, mutators = true }
 
 builders.setup = function()
 	local s = setup
@@ -966,6 +966,15 @@ builders.setup = function()
 		drawPreview()
 	end)
 
+	-- Mutadores (reglas especiales al azar): se pueden apagar
+	text(s, spaced("MUTADORES", 3), OSW_BOLD, 36, Vector2.new(997, 598), { width = 500 })
+	choiceRow(s, 997, 628, 80, { { true, "ACTIVADOS", 330 }, { false, "APAGADOS", 330 } }, 44, function(id)
+		return setupState.mutators == id
+	end, function(id)
+		setupState.mutators = id
+	end)
+	text(s, "Cada partida puede traer reglas especiales al azar, con XP extra.", OSW_LIGHT, 26, Vector2.new(997, 742), { width = 800 })
+
 	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 700), { width = 500 })
 	local difficultyDesc = text(s, "", OSW_LIGHT, 28, Vector2.new(120, 822), { width = 1680 })
 	local function describeDifficulty()
@@ -997,7 +1006,7 @@ builders.setup = function()
 		busy = true
 		errorText.Text = spaced("CREANDO LA SALA…", 2)
 		local ok, r = pcall(function()
-			return request:InvokeServer("create", { map = setupState.map, difficulty = setupState.difficulty, public = setupState.public })
+			return request:InvokeServer("create", { map = setupState.map, difficulty = setupState.difficulty, public = setupState.public, mutators = setupState.mutators })
 		end)
 		busy = false
 		if ok and r and r.room then
@@ -1091,6 +1100,14 @@ builders.create = function()
 		end
 	end)
 
+	text(s, spaced("MUTADORES", 3), OSW_BOLD, 36, Vector2.new(1340, 714), { width = 400 })
+	choiceRow(s, 1340, 748, 87, { { true, "SÍ", 110 }, { false, "NO", 110 } }, 56, function(id)
+		return st.mutators ~= false == id
+	end, function(id)
+		st.mutators = id
+		hostRequest("setMutators", id)
+	end)
+
 	text(s, spaced("MAPA", 3), OSW_BOLD, 36, Vector2.new(876, 714), { width = 400 })
 	choiceRow(s, 876, 748, 87, { { "Morro", "MORRO ESPERANZA", 433 } }, 56, function(id)
 		return st.map == id
@@ -1156,6 +1173,7 @@ builders.joined = function()
 	text(s, spaced("MAPA: " .. mapName(st.map), 3), OSW_BOLD, 44, Vector2.new(876, 728), { width = 900 })
 	text(s, spaced("DIFICULTAD: " .. Difficulties.get(st.difficulty).Upper, 3), OSW_BOLD, 44,
 		Vector2.new(876, 790), { width = 900 })
+	text(s, spaced("MUTADORES: " .. (st.mutators ~= false and "SÍ" or "NO"), 3), OSW_BOLD, 36, Vector2.new(876, 838), { width = 900 })
 	rule(s, 120, 872, 1680)
 	backButton(s, "main", true)
 	text(s, spaced(st.started and "EMPEZANDO…" or "ESPERANDO AL ANFITRIÓN", 2), ANTON, 66, Vector2.new(1800, 940),
