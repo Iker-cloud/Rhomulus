@@ -173,6 +173,11 @@ end
 
 local function onCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid")
+	local maxHealth = Difficulty.get().Flags.PlayerHealth -- mutador "Cristal"
+	if maxHealth then
+		humanoid.MaxHealth = maxHealth
+		humanoid.Health = maxHealth
+	end
 	bleedTokens[player] = (bleedTokens[player] or 0) + 1
 	player:SetAttribute("BleedEnd", nil)
 	player:SetAttribute("Carrying", nil)

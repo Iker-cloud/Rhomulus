@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Difficulty = require(script.Parent.Difficulty)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -15,12 +16,21 @@ local states = {} -- [Player] = { pistol, primary, current, reloading, lastShot,
 
 local Weapons = {}
 
+-- Munición de reserva: el mutador "Munición escasa" la reduce (Flags.AmmoMult)
+local function ammoMult()
+	return Difficulty.get().Flags.AmmoMult or 1
+end
+
+local function maxReserve(cfg)
+	return math.floor(cfg.MaxReserve * ammoMult())
+end
+
 local function newSlot(name)
 	local cfg = Config.Weapons[name]
 	return {
 		name = name,
 		ammo = cfg.MagSize,
-		reserve = cfg.InfiniteReserve and math.huge or cfg.ReserveStart,
+		reserve = cfg.InfiniteReserve and math.huge or math.floor(cfg.ReserveStart * ammoMult()),
 	}
 end
 
@@ -268,7 +278,7 @@ function Weapons.ammoDenied(player)
 	if not state or not state.primary then
 		return "Necesitas un arma principal"
 	end
-	if state.primary.reserve >= Config.Weapons[state.primary.name].MaxReserve then
+	if state.primary.reserve >= maxReserve(Config.Weapons[state.primary.name]) then
 		return "Ya tienes toda la munición"
 	end
 	return nil
@@ -277,7 +287,7 @@ end
 function Weapons.refillReserve(player)
 	local state = states[player]
 	if state and state.primary then
-		state.primary.reserve = Config.Weapons[state.primary.name].MaxReserve
+		state.primary.reserve = maxReserve(Config.Weapons[state.primary.name])
 		sendAmmo(player)
 	end
 end
@@ -289,7 +299,7 @@ function Weapons.refillAll()
 		if state.primary then
 			local cfg = Config.Weapons[state.primary.name]
 			state.primary.ammo = cfg.MagSize
-			state.primary.reserve = cfg.MaxReserve
+			state.primary.reserve = maxReserve(cfg)
 		end
 		cancelReload(state)
 		sendAmmo(player)

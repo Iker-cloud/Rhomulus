@@ -26,6 +26,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
 local Telemetry = require(script.Parent.Telemetry)
+local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local PlayerProgress = require(script.Parent.PlayerProgress)
 local WeaponBox = require(script.Parent.WeaponBox)
 local Weapons = require(script.Parent.Weapons)
@@ -236,6 +237,13 @@ local function resetMap()
 	workspace:SetAttribute("ExtractionEnd", nil)
 end
 
+-- Sortea los mutadores de la ronda (según la dificultad ya elegida) y los deja aplicados antes de construir el mapa
+local function rollMutators()
+	local ids = Mutators.roll(Difficulty.id())
+	Difficulty.setMutators(ids)
+	Telemetry.mutators(ids)
+end
+
 -- Construye el mapa elegido (destruye el anterior) y conecta los sistemas que dependen de él
 local function loadMap(id)
 	WeaponBox.clear()
@@ -294,6 +302,7 @@ local function vote()
 	local fixed = privateMap()
 	if fixed then
 		Difficulty.set(privateDifficulty) -- la eligió el anfitrión en el menú (nil = la de por defecto)
+		rollMutators()
 		loadMap(fixed)
 		return
 	end
@@ -306,6 +315,7 @@ local function vote()
 		setStage("Vote", text, "Vote")
 	end)
 	Difficulty.set(difficulty)
+	rollMutators()
 	local name = winner
 	for _, option in Config.Maps do
 		if option.id == winner then
@@ -336,7 +346,18 @@ local function lobby()
 	end
 
 	PlayerState.setSafePoint(map.lobbySpawn)
-	setStage("Lobby", `Dificultad {Difficulties.get(Difficulty.id()).Name}. Practiquen en los maniquíes. Presionen Y cuando estén listos`, "Lobby")
+	-- Los mutadores de la ronda se anuncian aquí, antes de salir del lobby
+	local mutatorText = ""
+	local ids = Difficulty.mutators()
+	if #ids > 0 then
+		local names = {}
+		for _, id in ids do
+			table.insert(names, Mutators[id].Name)
+		end
+		local bonus = math.floor(Mutators.xpBonus(ids) * 100 + 0.5)
+		mutatorText = ` Mutadores: {table.concat(names, " y ")}{bonus > 0 and ` (+{bonus} % XP)` or ""}.`
+	end
+	setStage("Lobby", `Dificultad {Difficulties.get(Difficulty.id()).Name}.{mutatorText} Practiquen en los maniquíes. Presionen Y cuando estén listos`, "Lobby")
 	respawn(false)
 
 	waitUntil(function()

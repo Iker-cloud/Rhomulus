@@ -39,6 +39,14 @@ function Telemetry.stage(name)
 	end
 end
 
+-- Los mutadores que salieron en la ronda (campo 1 = ids separados por comas, o "ninguno")
+function Telemetry.mutators(ids)
+	local text = #ids > 0 and table.concat(ids, ",") or "ninguno"
+	for _, player in Players:GetPlayers() do
+		log(player, "round_mutators", 1, text)
+	end
+end
+
 function Telemetry.downed(player)
 	log(player, "player_downed", 1, tostring(workspace:GetAttribute("Stage")))
 end

@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Difficulty = require(script.Parent.Difficulty)
 
 local Atmosphere = {}
 
@@ -42,6 +43,7 @@ function Atmosphere.decorate(map)
 		return
 	end
 	local rng = Random.new(Config.Game.Seed)
+	local blackout = Difficulty.get().Flags.Blackout == true
 	for _, bulb in CollectionService:GetTagged("NightLamp") do
 		if not bulb:FindFirstChildWhichIsA("Light") then
 			local light = Instance.new("SpotLight")
@@ -54,7 +56,10 @@ function Atmosphere.decorate(map)
 			light.Shadows = false -- muchas luces con sombra bajan los FPS en celular
 			light.Parent = bulb
 		end
-		if bulb:GetAttribute("Flicker") == nil then
+		if blackout then
+			bulb:SetAttribute("Broken", true) -- mutador "Apagón total": ningún farol enciende
+			bulb:SetAttribute("Flicker", false)
+		elseif bulb:GetAttribute("Flicker") == nil then
 			local roll = rng:NextNumber()
 			bulb:SetAttribute("Broken", roll < A.Lamps.BrokenChance)
 			bulb:SetAttribute("Flicker", roll >= A.Lamps.BrokenChance and roll < A.Lamps.BrokenChance + A.Lamps.FlickerChance)

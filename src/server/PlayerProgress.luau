@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Progress = require(ReplicatedStorage.Shared.Progress)
+local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
 local Stats = require(script.Parent.Stats)
@@ -71,10 +72,11 @@ end
 -- pantalla de resultados muestre la barra de cada superviviente.
 function PlayerProgress.award(won)
 	local difficultyId = Difficulty.id()
+	local bonus = Mutators.xpBonus(Difficulty.mutators())
 	local list = {}
 	for _, player in Players:GetPlayers() do
 		local stats = Stats.get(player)
-		local gained = Progress.roundXp(stats, won, true, difficultyId)
+		local gained = Progress.roundXp(stats, won, true, difficultyId, bonus)
 		local before = totals[player] or 0
 		totals[player] = before + gained
 		publish(player)
@@ -99,7 +101,7 @@ function PlayerProgress.start()
 			return
 		end
 		local stats = Stats.get(player)
-		local gained = Progress.roundXp(stats, false, false, Difficulty.id())
+		local gained = Progress.roundXp(stats, false, false, Difficulty.id(), Mutators.xpBonus(Difficulty.mutators()))
 		if gained > 0 then
 			task.spawn(save, player.UserId, gained, stats, false, false)
 		end

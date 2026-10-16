@@ -50,9 +50,10 @@ function Progress.fromTotal(total)
 end
 
 -- XP de una partida a partir de las estadísticas del jugador (Stats: Kills, Revives). `finished` es si llegó hasta el final.
--- Devuelve (xp, desglose) con el desglose { kills, revives, win, finish } ya multiplicado por la dificultad.
-function Progress.roundXp(stats, won, finished, difficultyId)
-	local mult = Progress.DifficultyMult[difficultyId] or 1
+-- `mutatorBonus` es el XP extra de los mutadores de la ronda (0.45 = +45 %, ver shared/Mutators).
+-- Devuelve (xp, desglose) con el desglose { kills, revives, win, finish } ya multiplicado por la dificultad y los mutadores.
+function Progress.roundXp(stats, won, finished, difficultyId, mutatorBonus)
+	local mult = (Progress.DifficultyMult[difficultyId] or 1) * (1 + (mutatorBonus or 0))
 	local parts = {
 		kills = math.floor((stats.Kills or 0) * Progress.Xp.Kill * mult + 0.5),
 		revives = math.floor((stats.Revives or 0) * Progress.Xp.Revive * mult + 0.5),

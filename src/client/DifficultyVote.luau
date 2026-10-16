@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Progress = require(ReplicatedStorage.Shared.Progress)
+local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local Controls = require(script.Parent.Controls)
 local Sfx = require(script.Parent.Sfx)
 
@@ -130,6 +131,18 @@ function DifficultyVote.start()
 	tag.TextStrokeTransparency = 0.5
 	tag.Parent = gui
 
+	-- Mutadores de la ronda, bajo la etiqueta de dificultad: "MUTADORES · APAGÓN TOTAL · +25 % XP"
+	local mutatorTag = Instance.new("TextLabel")
+	mutatorTag.AnchorPoint = Vector2.new(0.5, 0)
+	mutatorTag.Position = UDim2.new(0.5, 0, 0, 30)
+	mutatorTag.Size = UDim2.fromOffset(420, 20)
+	mutatorTag.BackgroundTransparency = 1
+	mutatorTag.FontFace = OSWALD
+	mutatorTag.TextSize = 15
+	mutatorTag.TextStrokeTransparency = 0.5
+	mutatorTag.Visible = false
+	mutatorTag.Parent = gui
+
 	local function hidesTag(state)
 		return state == "Downed" or state == "Dead"
 	end
@@ -142,6 +155,17 @@ function DifficultyVote.start()
 		-- La etiqueta se esconde con la tarjeta de caído y la del espectador (arriba al centro) y con la pantalla de resultados
 		local stage = workspace:GetAttribute("Stage")
 		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State"))
+		local ids = Mutators.parse(workspace:GetAttribute("Mutators"))
+		mutatorTag.Visible = tag.Visible and #ids > 0
+		if #ids > 0 then
+			local names = {}
+			for _, id in ids do
+				table.insert(names, Mutators[id].Upper)
+			end
+			local bonus = math.floor(Mutators.xpBonus(ids) * 100 + 0.5)
+			mutatorTag.Text = `{table.concat(names, " · ")}{bonus > 0 and ` · +{bonus} % XP` or ""}`
+			mutatorTag.TextColor3 = Mutators[ids[1]].Color
+		end
 		if voting then
 			refreshVotes()
 			-- Con el panel abierto, las teclas 1 a 4 votan (y no cambian de arma)
@@ -166,6 +190,7 @@ function DifficultyVote.start()
 	end
 	workspace:GetAttributeChangedSignal("Stage"):Connect(update)
 	workspace:GetAttributeChangedSignal("Difficulty"):Connect(update)
+	workspace:GetAttributeChangedSignal("Mutators"):Connect(update)
 	player:GetAttributeChangedSignal("State"):Connect(update)
 	update()
 end
