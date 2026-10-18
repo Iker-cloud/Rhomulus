@@ -27,9 +27,10 @@ Mutators.PairOnly = {
 
 -- Cuántos mutadores salen según la dificultad: { probabilidad de 0, de 1, de 2 }
 Mutators.Count = {
-	Calma = { 0.6, 0.4, 0 },
-	Tension = { 0.25, 0.75, 0 },
-	Crisis = { 0.1, 0.6, 0.3 },
+	-- Con los mutadores encendidos siempre sale al menos uno (antes en Calma y Tensión a veces salían 0 y no se veía la ruleta)
+	Calma = { 0, 1, 0 },
+	Tension = { 0, 1, 0 },
+	Crisis = { 0, 0.7, 0.3 },
 	Colapso = { 0, 0.5, 0.5 },
 }
 
