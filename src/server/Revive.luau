@@ -12,6 +12,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local RateLimit = require(script.Parent.RateLimit)
 local SkillCheck = require(script.Parent.SkillCheck)
 local Points = require(script.Parent.Points)
+local Stats = require(script.Parent.Stats)
 
 local Revive = {}
 
@@ -134,6 +135,7 @@ local function carry(carrier, target)
 	carrying[carrier] = target
 	carriedBy[target] = carrier
 	Points.add(Config.Points.Carry, carrier)
+	Stats.add(carrier, "Carries")
 	carrier:SetAttribute("Carrying", target.Name)
 	PlayerState.refreshSpeed(carrier)
 

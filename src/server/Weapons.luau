@@ -234,6 +234,7 @@ local function onFire(player, origin, direction)
 	for target, hit in hits do
 		target:TakeDamage(hit.damage)
 		if hit.crit then
+			Stats.add(player, "Headshots")
 			Remotes.Crit:FireClient(player, target.Health <= 0)
 		end
 		if target.Health <= 0 and hit.model.Parent == workspace.Zombies then

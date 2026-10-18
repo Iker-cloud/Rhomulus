@@ -72,6 +72,7 @@ end
 local function down(player, humanoid)
 	humanoid.Health = 1
 	setState(player, "Downed")
+	Stats.add(player, "Downs")
 	Telemetry.downed(player)
 	PlayerState.refreshSpeed(player)
 
@@ -196,6 +197,7 @@ local function onCharacter(player, character)
 		bleedTokens[player] = (bleedTokens[player] or 0) + 1
 		player:SetAttribute("BleedEnd", nil)
 		setState(player, "Dead")
+		Stats.add(player, "Deaths")
 		Telemetry.died(player)
 	end)
 

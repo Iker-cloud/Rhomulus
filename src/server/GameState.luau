@@ -29,6 +29,8 @@ local Telemetry = require(script.Parent.Telemetry)
 local Pharmacy = require(script.Parent.Pharmacy)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local PlayerProgress = require(script.Parent.PlayerProgress)
+local Awards = require(script.Parent.Awards)
+local Records = require(script.Parent.Records)
 local WeaponBox = require(script.Parent.WeaponBox)
 local Weapons = require(script.Parent.Weapons)
 local Zombies = require(script.Parent.Zombies)
@@ -40,6 +42,7 @@ local BUILDERS = { Morro = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
+local runStart = nil -- os.clock() al salir del lobby: el récord de extracción mide hasta la victoria
 
 -- Hacia dónde debe ir el equipo en cada orden (clave = `tone`): devuelve la posición y el nombre que muestra la guía
 -- (client/ObjectiveGuide). Las órdenes que no están aquí no tienen objetivo.
@@ -390,6 +393,7 @@ local function lobby()
 	end, false)
 
 	setStage("Lobby", "¡Empezamos!", "Start")
+	runStart = os.clock()
 	task.wait(2)
 	setLobbyDoors(true)
 end
@@ -571,7 +575,20 @@ local function result(won)
 	Zombies.clear()
 	WeaponBox.clear()
 	setStage("Result", won and "¡Victoria!" or "Derrota", won and "Victory" or "Defeat")
-	Remotes.Results:FireAllClients(won, Stats.all())
+	local stats = Stats.all()
+	Remotes.Results:FireAllClients(won, stats, Awards.compute(stats))
+	-- Récord de extracción rápida: solo cuenta ganar; el DataStore tarda, así que se avisa aparte cuando contesta
+	if won and runStart then
+		local seconds = os.clock() - runStart
+		local names = {}
+		for _, entry in stats do
+			table.insert(names, entry.name)
+		end
+		local difficultyId = Difficulty.id()
+		task.spawn(function()
+			Remotes.Record:FireAllClients(Records.submit(difficultyId, seconds, names))
+		end)
+	end
 	PlayerProgress.award(won)
 	Telemetry.result(won)
 

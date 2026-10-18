@@ -9,6 +9,7 @@ local TeleportService = game:GetService("TeleportService")
 local Icons = require(script.Parent.Icons)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Places = require(ReplicatedStorage.Shared.Places)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local player = Players.LocalPlayer
@@ -93,7 +94,10 @@ function ResultHud.start()
 		end
 	end
 
-	local function show(won, stats)
+	local recordSink = nil -- recibe el récord de extracción cuando el servidor lo manda (Remotes.Record)
+
+	local function show(won, stats, awards)
+		recordSink = nil
 		clear()
 		local palette = won and PALETTES.Victory or PALETTES.Defeat
 
@@ -377,6 +381,111 @@ function ResultHud.start()
 			end
 		end
 
+		-- Récord de extracción y reconocimientos ("el que más mató", "el que más murió"…): van juntos entre la tabla y los botones
+		local extras = Instance.new("Frame")
+		extras.BackgroundTransparency = 1
+		extras.Size = UDim2.new(1, 0, 0, 0)
+		extras.AutomaticSize = Enum.AutomaticSize.Y
+		extras.LayoutOrder = 5
+		extras.Parent = content
+		local extrasLayout = Instance.new("UIListLayout")
+		extrasLayout.Padding = UDim.new(0, 8)
+		extrasLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		extrasLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		extrasLayout.Parent = extras
+
+		local function clock(seconds)
+			seconds = math.max(0, math.floor(seconds + 0.5))
+			return string.format("%d:%02d", seconds // 60, seconds % 60)
+		end
+		if won then
+			recordSink = function(info)
+				if not extras.Parent or extras:FindFirstChild("RecordLine") then
+					return
+				end
+				local difficulty = Difficulties.get(info.difficulty)
+				local line = Instance.new("TextLabel")
+				line.Name = "RecordLine"
+				line.LayoutOrder = 1
+				line.BackgroundTransparency = 1
+				line.Size = UDim2.new(1, 0, 0, 26)
+				line.Font = Enum.Font.GothamBold
+				line.TextSize = 15
+				line.RichText = true
+				line.TextColor3 = Color3.fromRGB(190, 184, 176)
+				local accent = string.format("#%02X%02X%02X", palette.accent.R * 255, palette.accent.G * 255, palette.accent.B * 255)
+				if info.isRecord then
+					line.Text = `TIEMPO {clock(info.time)}  ·  <font color="{accent}">¡NUEVO RÉCORD DE {difficulty.Upper}!</font>`
+				elseif info.best then
+					line.Text = `TIEMPO {clock(info.time)}  ·  RÉCORD {difficulty.Upper}: <font color="{accent}">{clock(info.best)}</font>`
+				else
+					line.Text = `TIEMPO {clock(info.time)}`
+				end
+				line.Parent = extras
+			end
+		end
+
+		if awards and #awards > 0 then
+			local heading = Instance.new("TextLabel")
+			heading.LayoutOrder = 2
+			heading.BackgroundTransparency = 1
+			heading.Size = UDim2.new(1, 0, 0, 22)
+			heading.Font = Enum.Font.GothamBold
+			heading.TextSize = 12
+			heading.TextColor3 = Color3.fromRGB(150, 146, 140)
+			heading.Text = "R E C O N O C I M I E N T O S"
+			heading.Parent = extras
+			local grid = Instance.new("Frame")
+			grid.LayoutOrder = 3
+			grid.BackgroundTransparency = 1
+			grid.Size = UDim2.new(1, 0, 0, 0)
+			grid.AutomaticSize = Enum.AutomaticSize.Y
+			grid.Parent = extras
+			local cells = Instance.new("UIGridLayout")
+			cells.CellSize = UDim2.fromOffset(176, 76)
+			cells.CellPadding = UDim2.fromOffset(8, 8)
+			cells.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			cells.SortOrder = Enum.SortOrder.LayoutOrder
+			cells.Parent = grid
+			for index, award in awards do
+				local chip = Instance.new("Frame")
+				chip.LayoutOrder = index
+				chip.BackgroundColor3 = Color3.fromRGB(22, 20, 18)
+				chip.BorderSizePixel = 0
+				chip.Parent = grid
+				Instance.new("UICorner", chip).CornerRadius = UDim.new(0, 6)
+				local chipStroke = Instance.new("UIStroke")
+				chipStroke.Color = palette.accent
+				chipStroke.Transparency = 0.45
+				chipStroke.Thickness = 1.5
+				chipStroke.Parent = chip
+				local function chipText(text, y, height, size, color, font)
+					local l = Instance.new("TextLabel")
+					l.BackgroundTransparency = 1
+					l.Position = UDim2.fromOffset(8, y)
+					l.Size = UDim2.new(1, -16, 0, height)
+					l.Font = font
+					l.TextSize = size
+					l.TextColor3 = color
+					l.TextXAlignment = Enum.TextXAlignment.Center
+					l.Text = text
+					l.Parent = chip
+					return l
+				end
+				chipText(award.title, 6, 16, 12, palette.accent, Enum.Font.GothamBlack)
+				local names = {}
+				for _, winner in award.winners do
+					table.insert(names, winner.name)
+				end
+				local nameLabel = chipText(table.concat(names, " y "), 24, 26, 20, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+				nameLabel.TextScaled = true
+				local limit = Instance.new("UITextSizeConstraint")
+				limit.MaxTextSize = 20
+				limit.Parent = nameLabel
+				chipText(`{award.value} {award.unit}`, 54, 16, 13, Color3.fromRGB(176, 170, 162), Enum.Font.GothamBold)
+			end
+		end
+
 		-- Dos botones en una fila: OTRA PARTIDA (con la cuenta atrás hasta la siguiente; si todos lo piden se adelanta) y VOLVER AL MENÚ
 		-- (teletransporta al lugar del Menú)
 		local buttons = Instance.new("Frame")
@@ -507,6 +616,11 @@ function ResultHud.start()
 	end
 
 	Remotes.Results.OnClientEvent:Connect(show)
+	Remotes.Record.OnClientEvent:Connect(function(info)
+		if recordSink then
+			recordSink(info)
+		end
+	end)
 	Remotes.XpGain.OnClientEvent:Connect(function(list)
 		if current then
 			current.applyXp(list)

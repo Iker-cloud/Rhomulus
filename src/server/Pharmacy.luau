@@ -18,6 +18,7 @@ local Items = require(script.Parent.Items)
 local RateLimit = require(script.Parent.RateLimit)
 local ItemModel = require(script.Parent.ItemModel)
 local Points = require(script.Parent.Points)
+local Stats = require(script.Parent.Stats)
 local PropModel = require(script.Parent.PropModel)
 local Vitrina = require(script.Parent.ZombieData.VitrinaMostrador)
 
@@ -544,6 +545,7 @@ local function useStored(player)
 		return
 	end
 	player:SetAttribute("PhialId", nil)
+	Stats.add(player, "Phials")
 	Points.feed(`{player.DisplayName} se inyectó la Phial {P.Effects[id].Name}`)
 	task.spawn(inject, player, id)
 end
