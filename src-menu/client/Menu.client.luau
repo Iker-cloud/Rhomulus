@@ -966,14 +966,7 @@ builders.setup = function()
 		drawPreview()
 	end)
 
-	-- Mutadores (reglas especiales al azar): se pueden apagar
-	text(s, spaced("MUTADORES", 3), OSW_BOLD, 36, Vector2.new(997, 598), { width = 500 })
-	choiceRow(s, 997, 628, 80, { { true, "ACTIVADOS", 330 }, { false, "APAGADOS", 330 } }, 44, function(id)
-		return setupState.mutators == id
-	end, function(id)
-		setupState.mutators = id
-	end)
-	text(s, "Cada partida puede traer reglas especiales al azar, con XP extra.", OSW_LIGHT, 26, Vector2.new(997, 742), { width = 800 })
+	-- Los mutadores se encienden o apagan después, en la sala del anfitrión (aquí se crea con ellos activados)
 
 	text(s, spaced("DIFICULTAD", 3), OSW_BOLD, 36, Vector2.new(120, 700), { width = 500 })
 	local difficultyDesc = text(s, "", OSW_LIGHT, 28, Vector2.new(120, 822), { width = 1680 })

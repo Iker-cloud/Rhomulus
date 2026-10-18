@@ -1301,6 +1301,10 @@ local function buildShop(map, refs, cfg)
 		light.Parent = lamp
 	end
 
+	-- Centro de la Tienda: la guía de pantalla la señala (GameState publica Workspace.ShopPos en cada zona)
+	refs.shopPositions = refs.shopPositions or {}
+	refs.shopPositions[cfg.zone] = at(0, D / 2).Position
+
 	-- Caja de armas al fondo, mirando a la entrada, sobre una tarima
 	local boxCenter = at(0, D - 4)
 	deco(block(folder, "TarimaCaja", Vector3.new(9, 0.5, 6), boxCenter * CFrame.new(0, 0.25, 0), C.madera, Enum.Material.WoodPlanks))

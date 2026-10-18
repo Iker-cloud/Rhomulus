@@ -1,5 +1,7 @@
 -- Revivir (mantener E), cargar al caído en hombros (mantener F, soltar con G) y frases en globo.
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,7 +17,6 @@ local Revive = {}
 
 local carrying = {} -- [carrier] = target
 local carriedBy = {} -- [target] = carrier
-local welds = {} -- [target] = WeldConstraint
 local sessions = {} -- [helper] = { target, checks pasadas, falló } mientras mantiene E con las pruebas de acción activas
 
 pcall(function()
@@ -94,20 +95,19 @@ local function drop(carrier)
 	carrying[carrier] = nil
 	carriedBy[target] = nil
 
-	if welds[target] then
-		welds[target]:Destroy()
-		welds[target] = nil
-	end
-
 	carrier:SetAttribute("Carrying", nil)
 	PlayerState.refreshSpeed(carrier)
 
 	local character = target.Character
 	if character then
 		character:SetAttribute("Carried", nil)
+		character:SetAttribute("CarriedBy", nil)
+		CollectionService:RemoveTag(character, "CarriedBody")
 		setCollisionGroup(character, "Default")
 		local droppedRoot = character:FindFirstChild("HumanoidRootPart")
 		if droppedRoot then
+			droppedRoot.Anchored = false
+			droppedRoot.AssemblyLinearVelocity = Vector3.zero
 			pcall(function()
 				droppedRoot:SetNetworkOwner(target)
 			end)
@@ -137,21 +137,16 @@ local function carry(carrier, target)
 	carrier:SetAttribute("Carrying", target.Name)
 	PlayerState.refreshSpeed(carrier)
 
+	-- El cuerpo del caído queda anclado (lo mueve el servidor y cada cliente lo pega a quien carga, ver client/CarryAttach): sin
+	-- soldaduras ni dueños de la física que se peleen entre el cliente del caído y el de quien carga
 	target.Character:SetAttribute("Carried", true) -- el cliente deja de girar al personaje
+	target.Character:SetAttribute("CarriedBy", carrier.Name)
+	CollectionService:AddTag(target.Character, "CarriedBody")
 	setCollisionGroup(target.Character, "Carried")
 	humanoid.PlatformStand = true
-
-	-- Acostado sobre los hombros de quien carga
-	targetRoot.CFrame = carrierRoot.CFrame * CFrame.new(0.5, 1.5, 0) * CFrame.Angles(0, 0, math.rad(90))
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = carrierRoot
-	weld.Part1 = targetRoot
-	weld.Parent = targetRoot
-	welds[target] = weld
-	-- Un solo dueño de la física para los dos cuerpos soldados: quien carga (si no, el cliente del caído y el de quien lo carga se pelean)
-	pcall(function()
-		targetRoot:SetNetworkOwner(carrier)
-	end)
+	targetRoot.AssemblyLinearVelocity = Vector3.zero
+	targetRoot.Anchored = true
+	targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
 
 	updatePrompts(target)
 end
@@ -371,6 +366,16 @@ function Revive.start()
 	end)
 
 	Remotes.Drop.OnServerEvent:Connect(RateLimit.wrap("DropCarry", 0.3, drop))
+
+	-- El caído a cuestas sigue a quien lo carga (en el servidor, para que la zona, la furgoneta y los demás sistemas lo vean donde está)
+	RunService.Heartbeat:Connect(function()
+		for carrier, target in carrying do
+			local carrierRoot, targetRoot = getRoot(carrier), getRoot(target)
+			if carrierRoot and targetRoot then
+				targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
+			end
+		end
+	end)
 
 	-- Pulsación de la prueba de acción: el servidor decide con la hora que dice el cliente (ya limitada por SkillCheck.judge)
 	Remotes.SkillCheckPress.OnServerEvent:Connect(function(helper, id, pressTime)

@@ -253,6 +253,7 @@ function Pharmacy.resetEffects()
 		if player:GetAttribute("FxId") then
 			clearEffect(player)
 		end
+		player:SetAttribute("PhialId", nil)
 	end
 end
 
@@ -517,13 +518,34 @@ local function takePhial(machine, player)
 		Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
 		return
 	end
+	if player:GetAttribute("PhialId") then
+		Remotes.Feed:FireClient(player, "Ya llevas una Phial: úsala con Z o tocando su panel")
+		notify(player, "denied", "YA LLEVAS UNA PHIAL")
+		return
+	end
+	-- La Phial no se inyecta al tomarla: se guarda en el panel de la izquierda (atributo PhialId) y se usa cuando se quiera
 	local pick = machine.pick
 	machine.rollId += 1
 	cooldown(machine)
 	sound(machine, "Buy", 0.8)
-	Points.feed(`{player.DisplayName} se inyectó la Phial {P.Effects[pick].Name}`)
+	player:SetAttribute("PhialId", pick)
+	Points.feed(`{player.DisplayName} guardó la Phial {P.Effects[pick].Name}`)
 	notify(machine.roller, "taken", machine.key, player.DisplayName)
-	task.spawn(inject, player, pick)
+end
+
+-- Usa la Phial guardada (tecla Z o tocar su panel)
+local function useStored(player)
+	local id = player:GetAttribute("PhialId")
+	if not id or not P.Effects[id] or PlayerState.get(player) ~= "Normal" then
+		return
+	end
+	if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
+		Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
+		return
+	end
+	player:SetAttribute("PhialId", nil)
+	Points.feed(`{player.DisplayName} se inyectó la Phial {P.Effects[id].Name}`)
+	task.spawn(inject, player, id)
 end
 
 local function onTriggered(machine, player)
@@ -677,7 +699,14 @@ function Pharmacy.start()
 	task.spawn(regenLoop)
 	-- El panel PHIAL ROLL pide girar ("roll") o inyectarse la Phial que salió ("take")
 	Remotes.PhialUi.OnServerEvent:Connect(function(player, action, key)
-		if typeof(key) ~= "number" or not RateLimit.check(player, "PhialUi", 0.3) then
+		if not RateLimit.check(player, "PhialUi", 0.3) then
+			return
+		end
+		if action == "use" then
+			useStored(player)
+			return
+		end
+		if typeof(key) ~= "number" then
 			return
 		end
 		local machine = byKey[key]
@@ -694,6 +723,9 @@ function Pharmacy.start()
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state ~= "Normal" and player:GetAttribute("FxId") then
 			clearEffect(player)
+		end
+		if state == "Dead" then
+			player:SetAttribute("PhialId", nil) -- la Phial guardada se pierde al morir
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

@@ -92,6 +92,8 @@ local function setStage(name, message, tone)
 		workspace:SetAttribute("ObjectivePos", nil)
 		workspace:SetAttribute("ObjectiveName", nil)
 	end
+	-- La Tienda de la zona en curso (Zone1 a Zone3) tiene su propia guía en pantalla
+	workspace:SetAttribute("ShopPos", map and map.shopPositions and map.shopPositions[name] or nil)
 	workspace:SetAttribute("Stage", name)
 	workspace:SetAttribute("Tone", tone)
 	workspace:SetAttribute("Message", message)
@@ -304,6 +306,7 @@ local function vote()
 	Pharmacy.clear()
 	workspace:SetAttribute("ObjectivePos", nil)
 	workspace:SetAttribute("ObjectiveName", nil)
+	workspace:SetAttribute("ShopPos", nil)
 	workspace:SetAttribute("ExtractionEnd", nil)
 
 	local fixed = privateMap()

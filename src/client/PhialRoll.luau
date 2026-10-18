@@ -11,6 +11,8 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Sfx = require(script.Parent.Sfx)
+local CanIcon = require(script.Parent.CanIcon)
+local PhialIcon = require(script.Parent.PhialIcon)
 local UiFit = require(script.Parent.UiFit)
 
 local player = Players.LocalPlayer
@@ -66,33 +68,6 @@ end
 
 local function darken(color, k)
 	return Color3.new(color.R * k, color.G * k, color.B * k)
-end
-
--- Una jeringa dibujada con cuadros, inclinada, con el líquido del color del efecto
-local function syringeIcon(parent, color, size)
-	local holder = Instance.new("Frame")
-	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, 0.5)
-	holder.Size = UDim2.fromOffset(size, size)
-	holder.Rotation = -32
-	holder.Parent = parent
-	local function part(x, y, w, h, c, transparency)
-		return box(holder, UDim2.fromScale(w, h), UDim2.fromScale(x, y), c, transparency)
-	end
-	local cream = Color3.fromRGB(226, 220, 206)
-	part(0.18, 0.04, 0.44, 0.07, cream) -- el pulgar
-	part(0.385, 0.11, 0.03, 0.16, cream) -- el vástago
-	part(0.25, 0.27, 0.30, 0.05, cream) -- la aleta
-	local barrel = part(0.30, 0.32, 0.20, 0.40, Color3.fromRGB(40, 44, 48), 0.25)
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = cream
-	stroke.Thickness = 2
-	stroke.Parent = barrel
-	part(0.315, 0.40, 0.17, 0.30, color) -- el líquido
-	part(0.37, 0.72, 0.06, 0.05, cream) -- el cuello
-	part(0.393, 0.77, 0.014, 0.17, Color3.fromRGB(200, 204, 210)) -- la aguja
-	return holder
 end
 
 -- Efectos en orden de la lista con su probabilidad en %
@@ -153,7 +128,8 @@ function PhialRoll.start()
 	coinsStroke.Color = EDGE
 	coinsStroke.Thickness = 2
 	coinsStroke.Parent = coins
-	circle(coins, 22, UDim2.fromOffset(14, 15), GOLD)
+	local coinHolder = box(coins, UDim2.fromOffset(34, 40), UDim2.fromOffset(8, 6), CARD, 1)
+	CanIcon.make(coinHolder, 34)
 	local coinsLabel = label(coins, "0", UDim2.fromOffset(110, 52), UDim2.fromOffset(46, 0), 32, CREAM)
 	box(panel, UDim2.new(1, 0, 0, 4), UDim2.fromOffset(0, 80), RED)
 
@@ -230,7 +206,8 @@ function PhialRoll.start()
 	rollStroke.Parent = roll
 	local rollText = label(roll, "ROLL", UDim2.fromOffset(150, 126), UDim2.fromOffset(26, 0), 58, CREAM)
 	local priceBadge = box(roll, UDim2.fromOffset(112, 40), UDim2.fromOffset(176, 43), Color3.fromRGB(120, 12, 16))
-	local priceCoin = circle(priceBadge, 20, UDim2.fromOffset(10, 10), GOLD)
+	local priceCoin = box(priceBadge, UDim2.fromOffset(24, 32), UDim2.fromOffset(6, 4), CARD, 1)
+	CanIcon.make(priceCoin, 28)
 	local priceText = label(priceBadge, "250", UDim2.fromOffset(70, 40), UDim2.fromOffset(36, 0), 24, CREAM)
 
 	local exit = Instance.new("TextButton")
@@ -265,7 +242,7 @@ function PhialRoll.start()
 		local outer = circle(card, 146, UDim2.fromOffset((CARD_W - 146) / 2, 66), darken(def.Color, 0.30))
 		local inner = circle(outer, 112, UDim2.fromOffset(17, 17), darken(def.Color, 0.5))
 		inner.BackgroundTransparency = 0.25
-		syringeIcon(outer, def.Color, 118)
+		PhialIcon.make(outer, def.Color, 118)
 		local name = label(card, def.Upper, UDim2.new(1, -12, 0, 34), UDim2.fromOffset(6, 216), 30, CREAM, Enum.TextXAlignment.Center)
 		name.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
@@ -381,7 +358,7 @@ function PhialRoll.start()
 				roll.BackgroundColor3 = Color3.fromRGB(70, 20, 22)
 			elseif state == "ready" then
 				local left = math.max(0, readyEnd - os.clock())
-				rollText.Text = "INYECTAR"
+				rollText.Text = "GUARDAR"
 				rollText.TextSize = 38
 				priceText.Text = `{math.ceil(left)} s`
 				priceCoin.Visible = false

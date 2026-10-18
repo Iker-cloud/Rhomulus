@@ -399,6 +399,7 @@ return {
 	Guide = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 205, 60),
+		ShopColor = Color3.fromRGB(70, 215, 225), -- la guía de la TIENDA va de otro color que la del objetivo
 		ShowBeam = false, -- columna de luz en el mundo (apagada: basta con el cartel de nombre y distancia)
 		BeaconHeight = 140, -- altura de la columna de luz (studs)
 		BeaconWidth = 4,
@@ -465,6 +466,7 @@ return {
 	Revive = {
 		HoldTime = 4, -- segundos manteniendo E
 		CarryHoldTime = 1,
+		CarryOffset = CFrame.new(0.5, 1.5, 0) * CFrame.Angles(0, 0, math.rad(90)), -- el caído acostado sobre los hombros de quien lo carga (marco de quien carga)
 		PromptDistance = 7,
 		MaxDistance = 12, -- validación en el servidor (un poco más holgada que el prompt)
 		ReplyDelay = 1.5, -- el caído responde esto después de la frase de quien revive
