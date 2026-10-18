@@ -53,6 +53,9 @@ function PlayerState.refreshSpeed(player)
 	if state ~= "Downed" then
 		humanoid.WalkSpeed *= player:GetAttribute("FxSpeed") or 1 -- jeringa Impulso (server/Pharmacy)
 	end
+	if player:GetAttribute("Injecting") then
+		humanoid.WalkSpeed = 0 -- quieto mientras se inyecta (si no, la cámara se tambalea)
+	end
 end
 
 function PlayerState.setSprinting(player, on)

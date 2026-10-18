@@ -189,6 +189,9 @@ local function inject(player, id)
 	end
 	Items.lock(player, A.Duration + 0.3)
 	player:SetAttribute("Injecting", true)
+	local jumpHeight, jumpPower = humanoid.JumpHeight, humanoid.JumpPower
+	humanoid.JumpHeight, humanoid.JumpPower = 0, 0
+	PlayerState.refreshSpeed(player) -- quieto mientras dura el gesto
 	character:SetAttribute("ItemReady", "Syringe") -- solo en el personaje: el inventario del jugador no conoce este objeto
 	Items.announce(character, "Syringe", A.Duration)
 
@@ -246,6 +249,10 @@ local function inject(player, id)
 		character:SetAttribute("ItemReady", nil)
 	end
 	player:SetAttribute("Injecting", nil)
+	if humanoid.Parent then
+		humanoid.JumpHeight, humanoid.JumpPower = jumpHeight, jumpPower
+	end
+	PlayerState.refreshSpeed(player)
 end
 
 -- Fin de partida o de ronda: nadie conserva efectos
