@@ -242,7 +242,8 @@ end
 
 -- Sortea los mutadores de la ronda (según la dificultad ya elegida) y los deja aplicados antes de construir el mapa
 local function rollMutators()
-	local ids = Mutators.roll(Difficulty.id())
+	local ids, angle = Mutators.roll(Difficulty.id())
+	workspace:SetAttribute("MutatorAngle", angle) -- donde se detiene la ruleta de mutaciones (client/MutatorWheel)
 	Difficulty.setMutators(ids)
 	Atmosphere.refreshFog()
 	Telemetry.mutators(ids)

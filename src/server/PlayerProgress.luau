@@ -17,6 +17,7 @@ local PlayerProgress = {}
 
 local KEY_PREFIX = "p_"
 local totals = {} -- [Player] = XP total (ya con lo repartido en esta sesión)
+local seen = {} -- [Player] = { [id de mutación] = true }: las mutaciones que ya le salieron alguna vez (dan XP único la primera vez)
 
 local store
 do
@@ -32,6 +33,11 @@ local function publish(player)
 	local total = totals[player] or 0
 	player:SetAttribute("ProgXP", total)
 	player:SetAttribute("ProgLevel", (Progress.fromTotal(total)))
+	local ids = {}
+	for id in seen[player] or {} do
+		table.insert(ids, id)
+	end
+	player:SetAttribute("SeenMutators", table.concat(ids, ",")) -- la ruleta de mutaciones marca las que son nuevas para él
 end
 
 local function load(player)
@@ -42,6 +48,14 @@ local function load(player)
 		end)
 		if ok and typeof(value) == "table" and typeof(value.xp) == "number" then
 			total = value.xp
+			if typeof(value.seen) == "table" then
+				seen[player] = {}
+				for id, flag in value.seen do
+					if flag == true and Mutators.isValid(id) then
+						seen[player][id] = true
+					end
+				end
+			end
 		end
 	end
 	if player.Parent == Players then
@@ -51,7 +65,7 @@ local function load(player)
 end
 
 -- Suma lo ganado en una partida a lo guardado (UpdateAsync: seguro aunque el menú u otro servidor lo lea a la vez)
-local function save(userId, gained, stats, won, finished)
+local function save(userId, gained, stats, won, finished, discovered)
 	if not store or gained <= 0 then
 		return
 	end
@@ -63,6 +77,12 @@ local function save(userId, gained, stats, won, finished)
 			old.wins = (old.wins or 0) + (won and finished and 1 or 0)
 			old.kills = (old.kills or 0) + (stats.Kills or 0)
 			old.revives = (old.revives or 0) + (stats.Revives or 0)
+			if discovered and #discovered > 0 then
+				old.seen = typeof(old.seen) == "table" and old.seen or {}
+				for _, id in discovered do
+					old.seen[id] = true
+				end
+			end
 			return old
 		end)
 	end)
@@ -77,11 +97,21 @@ function PlayerProgress.award(won)
 	for _, player in Players:GetPlayers() do
 		local stats = Stats.get(player)
 		local gained = Progress.roundXp(stats, won, true, difficultyId, bonus)
+		-- XP único por cada mutación que le sale por primera vez
+		local discovered = {}
+		seen[player] = seen[player] or {}
+		for _, id in Difficulty.mutators() do
+			if not seen[player][id] then
+				seen[player][id] = true
+				table.insert(discovered, id)
+				gained += Mutators.DiscoveryXp
+			end
+		end
 		local before = totals[player] or 0
 		totals[player] = before + gained
 		publish(player)
 		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player] })
-		task.spawn(save, player.UserId, gained, stats, won, true)
+		task.spawn(save, player.UserId, gained, stats, won, true, discovered)
 	end
 	Remotes.XpGain:FireAllClients(list)
 end
@@ -106,6 +136,7 @@ function PlayerProgress.start()
 			task.spawn(save, player.UserId, gained, stats, false, false)
 		end
 		totals[player] = nil
+		seen[player] = nil
 	end)
 end
 
