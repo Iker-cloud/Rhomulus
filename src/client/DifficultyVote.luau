@@ -156,7 +156,7 @@ function DifficultyVote.start()
 		local stage = workspace:GetAttribute("Stage")
 		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State"))
 		local ids = Mutators.parse(workspace:GetAttribute("Mutators"))
-		mutatorTag.Visible = tag.Visible and #ids > 0
+		mutatorTag.Visible = false -- las mutaciones las muestra client/MutatorHud
 		if #ids > 0 then
 			local names = {}
 			for _, id in ids do
