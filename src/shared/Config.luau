@@ -309,8 +309,8 @@ return {
 	Pharmacy = {
 		Cost = 250, -- latas por probar suerte (la dificultad lo multiplica)
 		SpinTime = 3.2, -- segundos girando la ruleta
-		TakeTime = 8, -- segundos para tomar la jeringa antes de que se pierda
-		Cooldown = 3, -- pausa tras tomar o perder una jeringa
+		TakeTime = 8, -- segundos para tomar la Phial antes de que se pierda
+		Cooldown = 3, -- pausa tras tomar o perder una Phial
 		-- Animación de inyectarse (fracciones de Duration; deben coincidir con las claves de client/ItemPoses.Syringe)
 		Anim = { Duration = 2.8, Prick = 0.44, PushStart = 0.50, PushEnd = 0.78, Apply = 0.80 },
 		Duration = 75, -- segundos de efecto
@@ -325,45 +325,54 @@ return {
 		-- Crash: lo que queda al acabar el efecto, durante CrashDuration.
 		-- Mods extra: Defense (multiplica el daño recibido), Stealth (alcance en studs a partir del cual los zombies no te notan),
 		-- Regen (vida por segundo; negativa = sangrado) y Vision (los zombies se ven a través de las paredes).
-		-- Weight: peso en el sorteo (1 por defecto; el Suero malo sale en ~10 %). MaxUses: jeringas por vitrina y ronda.
+		-- Weight: probabilidad en el sorteo (suman 100, así se muestran en el panel). Category y Rarity salen en las cartas del panel PHIAL ROLL.
+		-- MaxUses: Phials por vitrina y ronda.
 		MaxUses = 2,
+		Rarities = {
+			Common = { Text = "COMÚN", Color = Color3.fromRGB(176, 176, 182) },
+			Rare = { Text = "RARA", Color = Color3.fromRGB(78, 160, 255) },
+			Epic = { Text = "ÉPICA", Color = Color3.fromRGB(190, 108, 255) },
+			Cursed = { Text = "MALDITA", Color = Color3.fromRGB(150, 205, 60) },
+		},
+		-- Textos del panel PHIAL ROLL
+		Ui = { Title = "PHIAL ROLL", Subtitle = "FARMÁCIA POPULAR · MORRO ESPERANZA" },
 		Order = { "Furia", "Impulso", "Adrenalina", "Pulso", "PielDura", "Regeneracion", "Vision", "Sigilo", "SueroMalo" },
 		Effects = {
 			Furia = {
-				Name = "Furia", Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
+				Name = "Furia", Category = "DAÑO", Rarity = "Epic", Weight = 7, Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
 				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25 % de daño",
 			},
 			Impulso = {
-				Name = "Impulso", Upper = "IMPULSO", Color = Color3.fromRGB(80, 220, 110), Desc = "+25 % de velocidad",
+				Name = "Impulso", Category = "VELOCIDAD", Rarity = "Common", Weight = 16, Upper = "IMPULSO", Color = Color3.fromRGB(80, 220, 110), Desc = "+25 % de velocidad",
 				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25 % de velocidad",
 			},
 			Adrenalina = {
-				Name = "Adrenalina", Upper = "ADRENALINA", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 de vida máxima",
+				Name = "Adrenalina", Category = "VIDA", Rarity = "Common", Weight = 16, Upper = "ADRENALINA", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 de vida máxima",
 				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15 % de velocidad",
 			},
 			Pulso = {
-				Name = "Pulso", Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
+				Name = "Pulso", Category = "RECARGA", Rarity = "Rare", Weight = 12, Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
 				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "recarga más lenta",
 			},
 			PielDura = {
-				Name = "Piel dura", Upper = "PIEL DURA", Color = Color3.fromRGB(190, 150, 110), Desc = "-30 % de daño recibido",
+				Name = "Piel dura", Category = "ARMADURA", Rarity = "Rare", Weight = 12, Upper = "PIEL DURA", Color = Color3.fromRGB(190, 150, 110), Desc = "-30 % de daño recibido",
 				Mods = { Defense = 0.7 }, Crash = { Defense = 1.2 }, CrashDesc = "+20 % de daño recibido",
 			},
 			Regeneracion = {
-				Name = "Regeneración", Upper = "REGENERACIÓN", Color = Color3.fromRGB(120, 230, 170), Desc = "recuperas 2 de vida por segundo",
+				Name = "Regeneración", Category = "CURACIÓN", Rarity = "Common", Weight = 18, Upper = "REGENERACIÓN", Color = Color3.fromRGB(120, 230, 170), Desc = "recuperas 2 de vida por segundo",
 				Mods = { Regen = 2 }, Crash = { Regen = -1 }, CrashDesc = "pierdes 1 de vida por segundo",
 			},
 			Vision = {
-				Name = "Visión", Upper = "VISIÓN", Color = Color3.fromRGB(190, 120, 255), Desc = "ves a los zombies a través de las paredes",
+				Name = "Visión", Category = "VISIÓN", Rarity = "Epic", Weight = 6, Upper = "VISIÓN", Color = Color3.fromRGB(190, 120, 255), Desc = "ves a los zombies a través de las paredes",
 				Mods = { Vision = true }, Crash = { Reload = 1.3 }, CrashDesc = "manos temblorosas: recarga más lenta",
 			},
 			Sigilo = {
-				Name = "Sigilo", Upper = "SIGILO", Color = Color3.fromRGB(110, 120, 140), Desc = "los zombies a más de 20 studs no te notan",
+				Name = "Sigilo", Category = "SIGILO", Rarity = "Rare", Weight = 8, Upper = "SIGILO", Color = Color3.fromRGB(110, 120, 140), Desc = "los zombies a más de 20 studs no te notan",
 				Mods = { Stealth = 20 }, Crash = { Speed = 0.9 }, CrashDesc = "-10 % de velocidad",
 			},
 			SueroMalo = {
-				Name = "Suero malo", Upper = "SUERO MALO", Color = Color3.fromRGB(150, 200, 60), Desc = "+60 % de daño, pero -30 de vida máxima",
-				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15 % de daño", Weight = 0.9,
+				Name = "Suero malo", Category = "RIESGO", Rarity = "Cursed", Weight = 5, Upper = "SUERO MALO", Color = Color3.fromRGB(150, 200, 60), Desc = "+60 % de daño, pero -30 de vida máxima",
+				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15 % de daño",
 			},
 		},
 	},

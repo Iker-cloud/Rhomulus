@@ -1211,7 +1211,8 @@ end
 local SHOP_FLOOR = Color3.fromRGB(176, 150, 112)
 local SHOP_FLOOR_DARK = Color3.fromRGB(104, 84, 60)
 local SHOP_GOLD = Color3.fromRGB(246, 196, 58)
-local SHOP_WARM = Color3.fromRGB(255, 214, 150)
+local SHOP_WARM = Color3.fromRGB(255, 205, 140)
+local SHOP_BULB = Color3.fromRGB(170, 124, 78) -- el neón de los focos va apagado: la luz de la tienda es tenue
 
 local function yawFacing(direction)
 	return math.atan2(-direction.X, -direction.Z)
@@ -1231,12 +1232,12 @@ local function shopAwning(map, base, u, v, width, depth, color)
 		deco(block(map, "ToldoLona", Vector3.new(width / slats, 0.35, depth + 1.2), at(du, 0, 10.3) * CFrame.Angles(math.rad(5), 0, 0), i % 2 == 0 and C.blanco or color, Enum.Material.Fabric))
 	end
 	-- Bombillo cálido bajo el toldo
-	local bulb = deco(block(map, "ToldoFoco", Vector3.new(0.9, 0.9, 0.9), at(0, 0, 9.4), SHOP_WARM, Enum.Material.Neon))
+	local bulb = deco(block(map, "ToldoFoco", Vector3.new(0.6, 0.6, 0.6), at(0, 0, 9.4), SHOP_BULB, Enum.Material.Neon))
 	bulb.Shape = Enum.PartType.Ball
 	local light = Instance.new("PointLight")
 	light.Color = SHOP_WARM
-	light.Brightness = 0.9
-	light.Range = 16
+	light.Brightness = 0.28
+	light.Range = 12
 	light.Parent = bulb
 end
 
@@ -1288,15 +1289,15 @@ local function buildShop(map, refs, cfg)
 		for i = 0, count do
 			local u = -W / 2 + 0.3 + (W - 0.6) * i / count
 			local sag = math.sin(i / count * math.pi) * 1.3
-			local bulb = deco(block(folder, "GuirnaldaFoco", Vector3.new(0.7, 0.7, 0.7), at(u, v, 10.8 - sag), SHOP_WARM, Enum.Material.Neon))
+			local bulb = deco(block(folder, "GuirnaldaFoco", Vector3.new(0.5, 0.5, 0.5), at(u, v, 10.8 - sag), SHOP_BULB, Enum.Material.Neon))
 			bulb.Shape = Enum.PartType.Ball
 		end
 		local lamp = deco(block(folder, "GuirnaldaLuz", Vector3.one * 0.5, at(0, v, 10.5)))
 		lamp.Transparency = 1
 		local light = Instance.new("PointLight")
 		light.Color = SHOP_WARM
-		light.Brightness = 1
-		light.Range = 24
+		light.Brightness = 0.3
+		light.Range = 18
 		light.Parent = lamp
 	end
 

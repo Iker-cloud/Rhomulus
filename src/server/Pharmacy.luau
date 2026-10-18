@@ -15,6 +15,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
 local PlayerState = require(script.Parent.PlayerState)
 local Items = require(script.Parent.Items)
+local RateLimit = require(script.Parent.RateLimit)
 local ItemModel = require(script.Parent.ItemModel)
 local Points = require(script.Parent.Points)
 local PropModel = require(script.Parent.PropModel)
@@ -26,6 +27,7 @@ local FX = Config.Sounds.Fx
 local Pharmacy = {}
 
 local machines = {} -- [máquina] = true
+local byKey = {} -- [número] = máquina (el panel PHIAL ROLL la pide por su clave)
 local sessions = {} -- [Player] = número: invalida los temporizadores de un efecto anterior
 local baseMaxHealth = {} -- [Player] = vida máxima antes de inyectarse (para devolverla)
 
@@ -40,7 +42,7 @@ local function getHumanoid(player)
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
 
--- Quita todo lo que dejó la jeringa (atributos, vida máxima) y devuelve la velocidad normal
+-- Quita todo lo que dejó la Phial (atributos, vida máxima) y devuelve la velocidad normal
 local function clearEffect(player)
 	sessions[player] = (sessions[player] or 0) + 1
 	for _, attribute in ATTRIBUTES do
@@ -153,12 +155,12 @@ end
 local function burst(parent, color, count, speed, lifetime)
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Color = ColorSequence.new(color)
-	emitter.LightEmission = 1
+	emitter.LightEmission = 0.4
 	emitter.Rate = 0
 	emitter.Lifetime = NumberRange.new(lifetime * 0.6, lifetime)
 	emitter.Speed = NumberRange.new(speed * 0.5, speed)
 	emitter.SpreadAngle = Vector2.new(180, 180)
-	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) })
 	emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
 	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	emitter.Parent = parent
@@ -193,7 +195,7 @@ local function inject(player, id)
 	local hand = character:FindFirstChild("LeftHand") or forearm
 	local glow = Instance.new("PointLight")
 	glow.Color = def.Color
-	glow.Range = 9
+	glow.Range = 6
 	glow.Brightness = 0
 	glow.Parent = hand
 	local veins -- destellos continuos mientras el líquido entra
@@ -214,12 +216,12 @@ local function inject(player, id)
 		if not pushing and t >= A.PushStart then
 			pushing = true
 			veins = burst(forearm, def.Color, 0, 3, 0.9)
-			veins.Rate = 30
+			veins.Rate = 14
 			playAt(hand, "Buy", 0.5, 1.4)
 		end
 		if pushing and t < A.PushEnd + 0.1 then
 			local k = math.sin(math.clamp((t - A.PushStart) / (A.PushEnd - A.PushStart), 0, 1) * math.pi)
-			glow.Brightness = 2.5 * k
+			glow.Brightness = 0.7 * k
 		end
 		if not applied and t >= A.Apply then
 			applied = true
@@ -229,7 +231,7 @@ local function inject(player, id)
 			glow.Brightness = 0
 			Pharmacy.apply(player, id)
 			local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart")
-			burst(torso, def.Color, 40, 14, 1.1)
+			burst(torso, def.Color, 12, 6, 1.0)
 			playAt(torso, "Revived", 0.7, 1.15)
 		end
 		task.wait()
@@ -402,9 +404,9 @@ local function resetToIdle(machine)
 		setLabel(machine, "Agotada", Color3.fromRGB(150, 146, 140))
 		return
 	end
-	machine.prompt.ActionText = "Probar suerte"
+	machine.prompt.ActionText = "Phial Roll"
 	machine.prompt.ObjectText = `Farmacia · {Difficulty.price(P.Cost)} latas`
-	machine.prompt.HoldDuration = 0.5
+	machine.prompt.HoldDuration = 0.25
 	machine.prompt.Enabled = true
 	setLabel(machine, "Farmacia")
 end
@@ -424,76 +426,115 @@ local function cooldown(machine)
 	end)
 end
 
+-- El jugador que compra ve el panel PHIAL ROLL (client/PhialRoll): aquí se le manda cómo avanza la vitrina (Remotes.PhialUi):
+--   "open" (clave, posición, precio, estado)   "spin" (clave, efecto, segundos)   "ready" (clave, efecto, segundos para tomarla)
+--   "lost" (clave)   "taken" (clave, quién)   "denied" (texto)
+-- y él pide "roll" (cobra y gira) o "take" (inyectarse la Phial que salió).
+local function notify(player, ...)
+	if player and player.Parent then
+		Remotes.PhialUi:FireClient(player, ...)
+	end
+end
+
+local function nearMachine(machine, player)
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	return root ~= nil and (root.Position - machine.base.Position).Magnitude <= 22
+end
+
+local function startRoll(machine, player)
+	if not machines[machine] or PlayerState.get(player) ~= "Normal" or not nearMachine(machine, player) then
+		return
+	end
+	if machine.state ~= "idle" then
+		notify(player, "denied", machine.state == "cooldown" and "REPONIENDO…" or "OCUPADA")
+		return
+	end
+	local price = Difficulty.price(P.Cost)
+	if not Points.spend(price) then
+		Remotes.Feed:FireClient(player, `Faltan latas: la Phial cuesta {price}`)
+		notify(player, "denied", "FALTAN LATAS")
+		return
+	end
+	machine.state = "spinning"
+	machine.uses += 1
+	machine.rollId += 1
+	machine.roller = player
+	local id = machine.rollId
+	machine.prompt.Enabled = false
+	Points.feed(`{player.DisplayName} compró una Phial`)
+
+	-- La ruleta gira unos segundos y se detiene en un efecto al azar (el panel del comprador gira igual)
+	local pick = weightedPick()
+	notify(player, "spin", machine.key, pick, P.SpinTime)
+	local steps = math.floor(P.SpinTime / 0.12)
+	local last
+	for i = 1, steps do
+		if not machines[machine] or machine.rollId ~= id then
+			return
+		end
+		-- Cada paso enseña un efecto distinto al anterior
+		local choice
+		repeat
+			choice = P.Order[math.random(#P.Order)]
+		until choice ~= last
+		last = choice
+		setLabel(machine, P.Effects[choice].Upper, P.Effects[choice].Color)
+		showSyringe(machine, choice)
+		sound(machine, "Select", 0.6)
+		task.wait(0.12)
+	end
+	if not machines[machine] or machine.rollId ~= id then
+		return
+	end
+
+	local def = P.Effects[pick]
+	machine.state = "ready"
+	machine.pick = pick
+	showSyringe(machine, pick)
+	setLabel(machine, `PHIAL {def.Upper}: {def.Desc}`, def.Color)
+	sound(machine, "Revived", 0.9)
+	machine.prompt.ActionText = `Inyectar Phial: {def.Name}`
+	machine.prompt.ObjectText = `{def.Desc} · luego {def.CrashDesc}`
+	machine.prompt.HoldDuration = 0
+	machine.prompt.Enabled = true
+	Points.feed(`Salió la Phial {def.Name}`)
+	notify(player, "ready", machine.key, pick, P.TakeTime)
+
+	-- Si nadie la toma a tiempo, se pierde
+	task.delay(P.TakeTime, function()
+		if machines[machine] and machine.state == "ready" and machine.rollId == id then
+			notify(machine.roller, "lost", machine.key)
+			cooldown(machine)
+		end
+	end)
+end
+
+local function takePhial(machine, player)
+	if not machines[machine] or machine.state ~= "ready" or PlayerState.get(player) ~= "Normal" then
+		return
+	end
+	if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
+		Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
+		return
+	end
+	local pick = machine.pick
+	machine.rollId += 1
+	cooldown(machine)
+	sound(machine, "Buy", 0.8)
+	Points.feed(`{player.DisplayName} se inyectó la Phial {P.Effects[pick].Name}`)
+	notify(machine.roller, "taken", machine.key, player.DisplayName)
+	task.spawn(inject, player, pick)
+end
+
 local function onTriggered(machine, player)
 	if not machines[machine] or PlayerState.get(player) ~= "Normal" then
 		return
 	end
-
 	if machine.state == "idle" then
-		local price = Difficulty.price(P.Cost)
-		if not Points.spend(price) then
-			Remotes.Feed:FireClient(player, `Faltan latas: la jeringa cuesta {price}`)
-			return
-		end
-		machine.state = "spinning"
-		machine.uses += 1
-		machine.rollId += 1
-		local id = machine.rollId
-		machine.prompt.Enabled = false
-		Points.feed(`{player.DisplayName} probó suerte en la farmacia`)
-
-		-- La ruleta gira unos segundos y se detiene en un efecto al azar
-		local pick = weightedPick()
-		local steps = math.floor(P.SpinTime / 0.12)
-		local last
-		for i = 1, steps do
-			if not machines[machine] or machine.rollId ~= id then
-				return
-			end
-			-- Cada paso enseña un efecto distinto al anterior
-			local choice
-			repeat
-				choice = P.Order[math.random(#P.Order)]
-			until choice ~= last
-			last = choice
-			setLabel(machine, P.Effects[choice].Upper, P.Effects[choice].Color)
-			showSyringe(machine, choice)
-			sound(machine, "Select", 0.6)
-			task.wait(0.12)
-		end
-		if not machines[machine] or machine.rollId ~= id then
-			return
-		end
-
-		local def = P.Effects[pick]
-		machine.state = "ready"
-		machine.pick = pick
-		showSyringe(machine, pick)
-		setLabel(machine, `{def.Upper}: {def.Desc}`, def.Color)
-		sound(machine, "Revived", 0.9)
-		machine.prompt.ActionText = `Inyectarse {def.Name}`
-		machine.prompt.ObjectText = `{def.Desc} · luego {def.CrashDesc}`
-		machine.prompt.HoldDuration = 0
-		machine.prompt.Enabled = true
-		Points.feed(`La farmacia sacó: {def.Name}`)
-
-		-- Si nadie la toma a tiempo, se pierde
-		task.delay(P.TakeTime, function()
-			if machines[machine] and machine.state == "ready" and machine.rollId == id then
-				cooldown(machine)
-			end
-		end)
+		-- Con la vitrina libre, E abre el panel PHIAL ROLL (el cobro lo pide el botón ROLL)
+		notify(player, "open", machine.key, machine.base.Position, Difficulty.price(P.Cost), machine.state)
 	elseif machine.state == "ready" then
-		if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
-			Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
-			return
-		end
-		local pick = machine.pick
-		machine.rollId += 1
-		cooldown(machine)
-		sound(machine, "Buy", 0.8)
-		Points.feed(`{player.DisplayName} se inyectó {P.Effects[pick].Name}`)
-		task.spawn(inject, player, pick)
+		takePhial(machine, player)
 	end
 end
 
@@ -576,8 +617,8 @@ local function build(position, yaw)
 	base.Name = "Base"
 
 	local light = Instance.new("PointLight")
-	light.Range = 22
-	light.Brightness = 2.5
+	light.Range = 16
+	light.Brightness = 1.1
 	light.Enabled = false
 	light.Parent = base
 
@@ -609,13 +650,16 @@ function Pharmacy.clear()
 		machine.model:Destroy()
 	end
 	table.clear(machines)
+	table.clear(byKey)
 end
 
 -- Pone una vitrina en cada lugar de `spots` (las Tiendas del mapa: { posición, giro en grados }); sin lista, Config.Pharmacy.Spots
 function Pharmacy.place(spots)
 	Pharmacy.clear()
-	for _, spot in spots or P.Spots do
+	for index, spot in spots or P.Spots do
 		local machine = build(spot[1], math.rad(spot[2]))
+		machine.key = index
+		byKey[index] = machine
 		resetToIdle(machine)
 		machine.prompt.Triggered:Connect(function(player)
 			onTriggered(machine, player)
@@ -631,6 +675,21 @@ end
 
 function Pharmacy.start()
 	task.spawn(regenLoop)
+	-- El panel PHIAL ROLL pide girar ("roll") o inyectarse la Phial que salió ("take")
+	Remotes.PhialUi.OnServerEvent:Connect(function(player, action, key)
+		if typeof(key) ~= "number" or not RateLimit.check(player, "PhialUi", 0.3) then
+			return
+		end
+		local machine = byKey[key]
+		if not machine or not machines[machine] or not nearMachine(machine, player) then
+			return
+		end
+		if action == "roll" then
+			startRoll(machine, player)
+		elseif action == "take" then
+			takePhial(machine, player)
+		end
+	end)
 	-- Caer o morir hace perder el efecto
 	PlayerState.Changed.Event:Connect(function(player, state)
 		if state ~= "Normal" and player:GetAttribute("FxId") then

@@ -3,7 +3,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local UiFit = require(script.Parent.UiFit)
@@ -69,28 +68,7 @@ function EffectHud.start()
 	fill.BorderSizePixel = 0
 	fill.Parent = back
 
-	-- Destello de pantalla del color del efecto al empezar (cuando acaba la inyección)
-	local flash = Instance.new("Frame")
-	flash.Size = UDim2.fromScale(1, 1)
-	flash.BackgroundTransparency = 1
-	flash.BorderSizePixel = 0
-	flash.ZIndex = 0
-	flash.Parent = gui
-	local gradient = Instance.new("UIGradient")
-	gradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0.85), NumberSequenceKeypoint.new(1, 0.2) })
-	gradient.Rotation = 90
-	gradient.Parent = flash
-	player:GetAttributeChangedSignal("FxId"):Connect(function()
-		local id = player:GetAttribute("FxId")
-		local def = id and P.Effects[id]
-		if def and player:GetAttribute("FxPhase") ~= "crash" then
-			flash.BackgroundColor3 = def.Color
-			flash.BackgroundTransparency = 0.35
-			TweenService:Create(flash, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
-		end
-	end)
-
-	-- Jeringa Visión: los zombies se resaltan a través de las paredes (Roblox dibuja como mucho unos 31 resaltados a la vez)
+	-- Phial de Visión: los zombies se resaltan a través de las paredes (Roblox dibuja como mucho unos 31 resaltados a la vez)
 	task.spawn(function()
 		local zombies = workspace:WaitForChild("Zombies")
 		while true do
