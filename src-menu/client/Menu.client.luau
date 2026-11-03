@@ -454,6 +454,19 @@ button(main, TEXT_RIGHT - 340, 522, 340, 60, function()
 	show("armory")
 end).Name = "Armeria"
 
+local cratesLink = text(main, spaced("CRATES", 4) .. " →", ANTON, 40, Vector2.new(TEXT_RIGHT, 612), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+button(main, TEXT_RIGHT - 340, 582, 340, 60, function()
+	setStatus(nil)
+	show("crates")
+end).Name = "Cajas"
+local function refreshCrates()
+	local boxes = player:GetAttribute("Crates") or 0
+	cratesLink.TextColor3 = boxes > 0 and RED or INK
+	cratesLink.Text = spaced(boxes > 0 and `CRATES ×{boxes}` or "CRATES", 4) .. " →"
+end
+player:GetAttributeChangedSignal("Crates"):Connect(refreshCrates)
+refreshCrates()
+
 -- Las tres opciones: numeradas, y la elegida (la de debajo del ratón) se rellena de rojo con una flecha
 local items = {
 	{ "PLAY", function()
@@ -749,12 +762,13 @@ local function weaponView(parent, x, y, w, h, skin)
 		BackgroundTransparency = 1, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h),
 		Ambient = Color3.fromRGB(150, 146, 140), LightColor = Color3.fromRGB(255, 244, 228), LightDirection = Vector3.new(-0.5, -0.8, -0.6),
 	}, parent)
-	local module = meleeData:FindFirstChild("Melee" .. skin.Id)
+	local module = meleeData:FindFirstChild("Melee" .. (skin.Base or skin.Id)) -- las variantes de las cajas usan el modelo de su arma base
 	if not module then
 		return view, function() end, 0
 	end
 	local data = require(module)
 	local model = WeaponModel.build(data, 1)
+	Cosmetics.tintModel(model, skin)
 	model.Parent = view
 	local length = data.bounds.max.Y - data.bounds.min.Y
 	local fov = 25
@@ -858,26 +872,40 @@ builders.armory = function()
 		end
 	end
 
+	-- Solo se ven las que se pueden comprar y las que ya tiene (las de las cajas aparecen al sacarlas). La lista se desplaza.
 	local CW, CH, GAP = 520, 160, 18
-	for i, skin in Cosmetics.MeleeSkins do
-		local col, row = (i - 1) % 2, (i - 1) // 2
-		local x, y = 120 + (CW + 20) * col, 360 + (CH + GAP) * row
-		local frame = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(CW, CH), ClipsDescendants = true }, s)
-		local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, frame)
-		local _, sway = weaponView(frame, 0, 0, CW, CH - 30, skin)
-		table.insert(swayers, sway)
-		local tag = make("TextLabel", {
-			BackgroundColor3 = INK, BorderSizePixel = 0, Position = UDim2.fromOffset(14, CH - 46), Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X,
-			Text = `{string.format("%02d", i)} · {upperEs(skin.Name)}`, FontFace = OSW_BOLD, TextSize = 22, TextColor3 = BLACK,
-		}, frame)
-		make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, tag)
-		local state = text(frame, "", OSW_BOLD, 28, Vector2.new(CW - 16, CH - 30), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200, color = INK })
-		cards[skin.Id] = { skin = skin, frame = frame, stroke = stroke, state = state }
-		button(s, x, y, CW, CH, function()
-			selected = skin.Id
-			showDetail()
-			paint()
-		end).Name = "Skin_" .. skin.Id
+	local scroll = make("ScrollingFrame", {
+		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(110, 345), Size = UDim2.fromOffset(1090, 545),
+		ScrollBarThickness = 6, ScrollBarImageColor3 = RED, CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, s)
+	scroll.Name = "SkinList"
+	local shown = 0
+	for _, skin in Cosmetics.MeleeSkins do
+		if not skin.Crate or ownedNow(skin.Id) then
+			shown += 1
+			local i = shown
+			local col, row = (i - 1) % 2, (i - 1) // 2
+			local x, y = 12 + (CW + 20) * col, 15 + (CH + GAP) * row
+			local frame = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(CW, CH), ClipsDescendants = true }, scroll)
+			local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, frame)
+			local _, sway = weaponView(frame, 0, 0, CW, CH - 30, skin)
+			table.insert(swayers, sway)
+			local tag = make("TextLabel", {
+				BackgroundColor3 = INK, BorderSizePixel = 0, Position = UDim2.fromOffset(14, CH - 46), Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X,
+				Text = `{string.format("%02d", i)} · {upperEs(skin.Name)}`, FontFace = OSW_BOLD, TextSize = 22, TextColor3 = BLACK,
+			}, frame)
+			make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, tag)
+			local state = text(frame, "", OSW_BOLD, 28, Vector2.new(CW - 16, CH - 30), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200, color = INK })
+			-- una franja del color de la rareza en el borde izquierdo
+			make("Frame", { BackgroundColor3 = Cosmetics.Rarities[skin.Rarity].Color, BorderSizePixel = 0, Size = UDim2.new(0, 6, 1, 0) }, frame)
+			cards[skin.Id] = { skin = skin, frame = frame, stroke = stroke, state = state }
+			button(scroll, x, y, CW, CH, function()
+				selected = skin.Id
+				showDetail()
+				paint()
+			end).Name = "Skin_" .. skin.Id
+		end
 	end
 
 	button(s, PX + 35, PY + 440, 510, 64, function()
@@ -1038,6 +1066,166 @@ local function difficultyLock(id)
 		return nil
 	end
 	return Progress.requiredLevel(id)
+end
+
+-- 6b) Cajas: la caja Arsenal da una skin de cuerpo a cuerpo al azar -----------------------------------------------------------------
+-- Se abre con una caja que ya tiene (premio al terminar una ronda) o, si no tiene, con Rhoms. El servidor sortea (ProfileRequest
+-- "openCrate"); aquí solo se anima: una tira de cartas que gira bajo una marca roja y se detiene en el resultado. Las probabilidades
+-- se ven siempre (Cosmetics.Crates.Arsenal.Weights).
+local cratesScreen = newScreen("crates")
+local cratesConns = {}
+builders.crates = function()
+	local s = cratesScreen
+	for _, c in cratesConns do
+		c:Disconnect()
+	end
+	table.clear(cratesConns)
+	clear(s)
+	header(s, "CRATES")
+	local crate = Cosmetics.Crates.Arsenal
+	local busy = false
+	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
+	local coinsLabel = text(s, "", ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
+
+	-- Panel de la caja (izquierda)
+	local box = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(120, 360), Size = UDim2.fromOffset(560, 520) }, s)
+	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 5) }, box)
+	-- la caja, dibujada con piezas simples
+	local crateArt = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 70), Size = UDim2.fromOffset(220, 170) }, box)
+	make("Frame", { BackgroundColor3 = Color3.fromRGB(70, 58, 44), BorderSizePixel = 0, Position = UDim2.fromOffset(0, 40), Size = UDim2.fromOffset(220, 130) }, crateArt)
+	make("Frame", { BackgroundColor3 = Color3.fromRGB(96, 80, 60), BorderSizePixel = 0, Size = UDim2.fromOffset(220, 46) }, crateArt)
+	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(96, 0), Size = UDim2.fromOffset(28, 170) }, crateArt)
+	make("Frame", { BackgroundColor3 = Color3.fromRGB(30, 26, 22), BorderSizePixel = 0, Position = UDim2.fromOffset(0, 84), Size = UDim2.fromOffset(220, 8) }, crateArt)
+	text(box, spaced("ARSENAL CRATE", 1), ANTON, 50, Vector2.new(280, 290), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = INK })
+	text(box, "MELEE WEAPON SKINS. DUPLICATES GIVE RHOMS BACK.", OSW, 22, Vector2.new(280, 336), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 500, color = DIM })
+	local ownedLabel = text(box, "", OSW_BOLD, 28, Vector2.new(280, 384), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = RED })
+	local openBtn = make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(35, 428), Size = UDim2.fromOffset(490, 64) }, box)
+	local openLabel = text(openBtn, "", ANTON, 38, Vector2.new(245, 32), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 480, color = BLACK })
+
+	-- Probabilidades (derecha, abajo)
+	local odds = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(720, 700), Size = UDim2.fromOffset(1080, 180) }, s)
+	text(odds, spaced("ODDS", 4), OSW_BOLD, 24, Vector2.new(30, 30), { width = 300, color = DIM })
+	for i, name in { "Common", "Rare", "Epic", "Legendary" } do
+		local rarity = Cosmetics.Rarities[name]
+		local x = 30 + (i - 1) * 255
+		text(odds, spaced(rarity.Text, 2), OSW_BOLD, 22, Vector2.new(x, 80), { width = 240, color = rarity.Color })
+		text(odds, `{crate.Weights[name]}%`, ANTON, 52, Vector2.new(x, 128), { width = 240, color = INK })
+	end
+	text(s, `GUARANTEED EPIC EVERY {crate.Pity.Epic} CRATES · LEGENDARY EVERY {crate.Pity.Legendary}`, OSW, 20, Vector2.new(720, 905), { width = 1000, color = DIM })
+
+	-- La tira (derecha, arriba): ventana con cartas que giran y una marca roja en el centro
+	local WIN_X, WIN_Y, WIN_W, WIN_H = 720, 360, 1080, 200
+	local window = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(WIN_X, WIN_Y), Size = UDim2.fromOffset(WIN_W, WIN_H), ClipsDescendants = true }, s)
+	local strip = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 20), Size = UDim2.fromOffset(10, 160) }, window)
+	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(4, WIN_H), ZIndex = 4 }, window)
+	local CARD_W, CARD_GAP = 190, 14
+
+	local function addCard(skin, index)
+		local rarity = Cosmetics.Rarities[skin.Rarity]
+		local card = make("Frame", { BackgroundColor3 = Color3.fromRGB(26, 24, 22), BorderSizePixel = 0, Position = UDim2.fromOffset((index - 1) * (CARD_W + CARD_GAP) + 10, 0), Size = UDim2.fromOffset(CARD_W, 160) }, strip)
+		make("Frame", { BackgroundColor3 = rarity.Color, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -8), Size = UDim2.new(1, 0, 0, 8) }, card)
+		local view = make("ViewportFrame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -40), Ambient = Color3.fromRGB(150, 146, 140), LightColor = Color3.fromRGB(255, 244, 228), LightDirection = Vector3.new(-0.5, -0.8, -0.6) }, card)
+		local module = meleeData:FindFirstChild("Melee" .. (skin.Base or skin.Id))
+		if module then
+			local data = require(module)
+			local model = WeaponModel.build(data, 1)
+			Cosmetics.tintModel(model, skin)
+			model.Parent = view
+			local length = data.bounds.max.Y - data.bounds.min.Y
+			local dist = length * 0.68 / (2 * math.tan(math.rad(12.5))) * 1.5
+			view.CurrentCamera = make("Camera", { FieldOfView = 25, CFrame = CFrame.lookAt(Vector3.new(0, 0, dist), Vector3.zero) }, view)
+			model:PivotTo(CFrame.Angles(0, 0, math.rad(-55)))
+		end
+		make("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -38), Size = UDim2.new(1, 0, 0, 28), Text = upperEs(skin.Name), FontFace = OSW_BOLD, TextSize = 18, TextColor3 = rarity.Color }, card)
+	end
+
+	do
+		-- al principio, una muestra de las skins que pueden salir
+		local pool = Cosmetics.crateSkins()
+		for i = 1, 6 do
+			addCard(pool[(i * 3 - 2) % #pool + 1], i)
+		end
+	end
+
+	-- Resultado (derecha, en el centro)
+	local resultName = text(s, "", ANTON, 56, Vector2.new(720, 612), { width = 1000, color = INK })
+	local resultNote = text(s, "", OSW_BOLD, 26, Vector2.new(720, 664), { width = 1000, color = DIM })
+
+	local function paint()
+		local coins = player:GetAttribute("Rhoms")
+		coinsLabel.Text = typeof(coins) == "number" and spaced(`{coins} RHOMS`, 3) or ""
+		local boxes = player:GetAttribute("Crates") or 0
+		ownedLabel.Text = spaced(`{Lang.tr("YOU HAVE")} {boxes} {Lang.tr(boxes == 1 and "CRATE" or "CRATES")}`, 2)
+		if busy then
+			openLabel.Text = spaced("OPENING…", 1)
+			openBtn.BackgroundColor3 = LINE
+		elseif boxes > 0 then
+			openLabel.Text = spaced("OPEN · 1 CRATE", 1)
+			openBtn.BackgroundColor3 = RED
+		else
+			openLabel.Text = spaced(`OPEN · {crate.Price} RHOMS`, 1)
+			openBtn.BackgroundColor3 = (typeof(coins) == "number" and coins >= crate.Price) and RED or LINE
+		end
+	end
+
+	-- Anima la tira hasta la skin sorteada
+	local function spinTo(skin)
+		strip:ClearAllChildren()
+		strip.Position = UDim2.fromOffset(0, 20)
+		local pool = Cosmetics.crateSkins()
+		local FINAL = 34
+		for i = 1, FINAL + 4 do
+			addCard(i == FINAL and skin or pool[math.random(#pool)], i)
+		end
+		local centerOfFinal = (FINAL - 1) * (CARD_W + CARD_GAP) + 10 + CARD_W / 2
+		local goal = WIN_W / 2 - centerOfFinal + math.random(-60, 60)
+		local tween = TweenService:Create(strip, TweenInfo.new(5.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(goal, 20) })
+		tween:Play()
+		tween.Completed:Wait()
+	end
+
+	button(s, 155, 788, 490, 64, function()
+		if busy then
+			return
+		end
+		busy = true
+		note.Text = ""
+		resultName.Text, resultNote.Text = "", ""
+		paint()
+		task.spawn(function()
+			local okCall, done, id, refund = pcall(function()
+				return profileRequest:InvokeServer("openCrate")
+			end)
+			if not okCall or not done then
+				-- si falló, el segundo valor trae el motivo
+				note.Text = spaced(string.upper((okCall and typeof(id) == "string" and id) or "Couldn't connect. Try again"), 2)
+				busy = false
+				paint()
+				return
+			end
+			local skin = Cosmetics.melee(id)
+			spinTo(skin)
+			local rarity = Cosmetics.Rarities[skin.Rarity]
+			resultName.Text = upperEs(skin.Name)
+			resultName.TextColor3 = rarity.Color
+			if (refund or 0) > 0 then
+				resultNote.Text = spaced(`{Lang.tr("DUPLICATE")} · +{refund} RHOMS`, 2)
+				resultNote.TextColor3 = DIM
+			else
+				resultNote.Text = spaced(`{Lang.tr("NEW")} · {rarity.Text}`, 2)
+				resultNote.TextColor3 = rarity.Color
+			end
+			busy = false
+			paint()
+		end)
+	end).Name = "OpenCrate"
+
+	paint()
+	for _, name in { "Rhoms", "Crates" } do
+		table.insert(cratesConns, player:GetAttributeChangedSignal(name):Connect(paint))
+	end
+	backButton(s, "main")
+	smallVersion(s, 1800, 1010)
 end
 
 -- 2) Lista de salas ----------------------------------------------------------------------------------------------------------

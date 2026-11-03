@@ -22,6 +22,7 @@ local PlayerProgress = {}
 local KEY_PREFIX = "p_"
 local totals = {} -- [Player] = XP total (ya con lo repartido en esta sesión)
 local rhoms = {} -- [Player] = Rhoms que tiene (ya con las de esta sesión)
+local crates = {} -- [Player] = cajas Arsenal sin abrir (las abre el menú)
 local look = {} -- [Player] = { frame, title }: el marco y el título que lleva puestos
 local seen = {} -- [Player] = { [id de mutación] = true }: las mutaciones que ya le salieron alguna vez (dan XP único la primera vez)
 
@@ -41,6 +42,7 @@ local function publish(player)
 	local level = (Progress.fromTotal(total))
 	player:SetAttribute("ProgLevel", level)
 	player:SetAttribute("Rhoms", rhoms[player] or 0)
+	player:SetAttribute("Crates", crates[player] or 0)
 	local chosen = look[player] or {}
 	local owned = chosen.owned or {}
 	player:SetAttribute("MeleeOwned", table.concat(owned, ","))
@@ -55,7 +57,7 @@ local function publish(player)
 end
 
 local function load(player)
-	local total, coins = 0, 0
+	local total, coins, boxes = 0, 0, 0
 	local chosen
 	if store then
 		local ok, value = pcall(function()
@@ -64,6 +66,7 @@ local function load(player)
 		if ok and typeof(value) == "table" and typeof(value.xp) == "number" then
 			total = value.xp
 			coins = typeof(value.rhoms) == "number" and value.rhoms or 0
+			boxes = typeof(value.crates) == "number" and value.crates or 0
 			chosen = { frame = value.frame, title = value.title, melee = value.melee, owned = {} }
 			if typeof(value.skins) == "table" then
 				for id, flag in value.skins do
@@ -85,14 +88,15 @@ local function load(player)
 	if player.Parent == Players then
 		totals[player] = (totals[player] or 0) + total -- por si ya se le dio XP mientras cargaba
 		rhoms[player] = (rhoms[player] or 0) + coins
+		crates[player] = (crates[player] or 0) + boxes
 		look[player] = chosen
 		publish(player)
 	end
 end
 
 -- Suma lo ganado en una partida a lo guardado (UpdateAsync: seguro aunque el menú u otro servidor lo lea a la vez)
-local function save(userId, gained, stats, won, finished, discovered, coins)
-	if not store or (gained <= 0 and (coins or 0) <= 0) then
+local function save(userId, gained, stats, won, finished, discovered, coins, boxes)
+	if not store or (gained <= 0 and (coins or 0) <= 0 and (boxes or 0) <= 0) then
 		return
 	end
 	pcall(function()
@@ -100,6 +104,7 @@ local function save(userId, gained, stats, won, finished, discovered, coins)
 			old = typeof(old) == "table" and old or {}
 			old.xp = (old.xp or 0) + gained
 			old.rhoms = (old.rhoms or 0) + (coins or 0)
+			old.crates = (old.crates or 0) + (boxes or 0)
 			old.games = (old.games or 0) + (finished and 1 or 0)
 			old.wins = (old.wins or 0) + (won and finished and 1 or 0)
 			old.kills = (old.kills or 0) + (stats.Kills or 0)
@@ -145,12 +150,15 @@ function PlayerProgress.award(won)
 			end
 		end
 		local coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId])
+		-- caja Arsenal de premio (a lo más una por ronda; la abre el menú)
+		local box = math.random() < Cosmetics.crateDropChance(won, difficultyId, rarities) and 1 or 0
 		local before = totals[player] or 0
 		totals[player] = before + gained
 		rhoms[player] = (rhoms[player] or 0) + coins
+		crates[player] = (crates[player] or 0) + box
 		publish(player)
-		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player], rhoms = coins })
-		task.spawn(save, player.UserId, gained, stats, won, true, discovered, coins)
+		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player], rhoms = coins, crate = box > 0 })
+		task.spawn(save, player.UserId, gained, stats, won, true, discovered, coins, box)
 	end
 	Remotes.XpGain:FireAllClients(list)
 end
@@ -176,6 +184,7 @@ function PlayerProgress.start()
 		end
 		totals[player] = nil
 		rhoms[player] = nil
+		crates[player] = nil
 		look[player] = nil
 		seen[player] = nil
 	end)

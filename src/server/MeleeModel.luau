@@ -22,12 +22,14 @@ local GRIPS = {
 -- Devuelve el modelo de la skin y la altura del agarre respecto a su pieza raíz.
 function MeleeModel.build(skinId)
 	local skin = Cosmetics.melee(skinId) or Cosmetics.melee(Cosmetics.DefaultMelee)
-	local module = ZombieData:FindFirstChild("Melee" .. skin.Id)
-	local grip = GRIPS[skin.Id]
+	local baseId = skin.Base or skin.Id -- las variantes de las cajas usan el modelo de su arma base
+	local module = ZombieData:FindFirstChild("Melee" .. baseId)
+	local grip = GRIPS[baseId]
 	if module and grip then
 		local data = require(module)
 		local model = WeaponModel.build(data, 1)
 		model.Name = "MeleeWeapon"
+		Cosmetics.tintModel(model, skin)
 		local centerY = (data.bounds.min.Y + data.bounds.max.Y) / 2
 		return model, grip.y - centerY, grip.spin
 	end
@@ -56,7 +58,7 @@ function MeleeModel.hold(player, skinId)
 	end
 	local model, gripOffset, spin = MeleeModel.build(skinId)
 	local root = model.PrimaryPart
-	model:SetAttribute("SkinId", skinId) -- client/MeleeFx pinta la estela según la skin
+	model:SetAttribute("SkinId", Cosmetics.melee(skinId) and (Cosmetics.melee(skinId).Base or skinId) or skinId) -- client/MeleeFx pinta la estela según el arma
 	-- la mano apunta a las puntas de los dedos por -Y: la cabeza del arma sale por ahí, con el agarre en la palma
 	local palm = CFrame.new(0, -0.2, 0) * CFrame.Angles(math.pi, spin, 0)
 	model:PivotTo(hand.CFrame * palm * CFrame.new(0, -gripOffset, 0))

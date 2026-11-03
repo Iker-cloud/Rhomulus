@@ -91,6 +91,117 @@ Cosmetics.MeleeSkins = {
 }
 Cosmetics.DefaultMelee = "Knife"
 
+-- Variantes de color de las armas de arriba: salen solo de las CAJAS (Crate = true, sin precio). Usan el modelo, el gesto y el tono de
+-- su arma base (`Base`) y repintan sus piezas hacia `Tint` (Cosmetics.tintModel). Los ids de aquí se guardan en el DataStore: no cambiarlos.
+local VARIANTS = {
+	{ Id = "KnifeRust", Base = "Knife", Name = "Rusty Knife", Desc = "Pulled from a flooded basement.", Rarity = "Common", Tint = Color3.fromRGB(150, 84, 44) },
+	{ Id = "KnifeBone", Base = "Knife", Name = "Bone Knife", Desc = "Carved by someone with time to spare.", Rarity = "Rare", Tint = Color3.fromRGB(226, 218, 196) },
+	{ Id = "KnifeBlood", Base = "Knife", Name = "Blood Knife", Desc = "It was never really clean.", Rarity = "Epic", Tint = Color3.fromRGB(150, 14, 24) },
+	{ Id = "PanCopper", Base = "Pan", Name = "Copper Pan", Desc = "Grandma's good one. Handle with respect.", Rarity = "Rare", Tint = Color3.fromRGB(196, 112, 62) },
+	{ Id = "PanGold", Base = "Pan", Name = "Golden Pan", Desc = "Solid gold. Terrible for cooking.", Rarity = "Legendary", Tint = Color3.fromRGB(255, 200, 60) },
+	{ Id = "BatBurnt", Base = "Bat", Name = "Charred Bat", Desc = "Survived the fire at the market.", Rarity = "Common", Tint = Color3.fromRGB(46, 38, 34) },
+	{ Id = "BatNeon", Base = "Bat", Name = "Toxic Bat", Desc = "Glows a little. Don't ask why.", Rarity = "Epic", Tint = Color3.fromRGB(110, 255, 90) },
+	{ Id = "MacheteJade", Base = "Machete", Name = "Jade Machete", Desc = "Cold green steel from the old country.", Rarity = "Epic", Tint = Color3.fromRGB(70, 190, 130) },
+	{ Id = "MacheteObsidian", Base = "Machete", Name = "Obsidian Machete", Desc = "Black as the night over the hill.", Rarity = "Legendary", Tint = Color3.fromRGB(30, 24, 40) },
+	{ Id = "AxeFrost", Base = "Axe", Name = "Frost Axe", Desc = "Chipped from a frozen delivery truck.", Rarity = "Epic", Tint = Color3.fromRGB(130, 200, 255) },
+	{ Id = "AxeGilded", Base = "Axe", Name = "Gilded Axe", Desc = "The chief's axe. Heavy and shiny.", Rarity = "Legendary", Tint = Color3.fromRGB(255, 196, 70) },
+	{ Id = "ChainsawToxic", Base = "Chainsaw", Name = "Toxic Chainsaw", Desc = "Runs on something that shouldn't burn.", Rarity = "Legendary", Tint = Color3.fromRGB(150, 255, 60) },
+}
+for _, variant in VARIANTS do
+	local base
+	for _, skin in Cosmetics.MeleeSkins do
+		if skin.Id == variant.Base then
+			base = skin
+		end
+	end
+	table.insert(Cosmetics.MeleeSkins, {
+		Id = variant.Id, Base = variant.Base, Crate = true, Tint = variant.Tint, Name = variant.Name, Desc = variant.Desc,
+		Rarity = variant.Rarity, Price = 0, Style = base.Style, Pitch = base.Pitch, Volume = base.Volume,
+		Color = variant.Tint, Size = base.Size,
+	})
+end
+
+-- Repinta un modelo de arma hacia el color de la skin (las variantes de las cajas). Las piezas oscuras o claras conservan algo de su tono.
+function Cosmetics.tintModel(model, skin)
+	if not skin or not skin.Tint then
+		return
+	end
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Color = part.Color:Lerp(skin.Tint, 0.7)
+			if skin.Rarity == "Legendary" or skin.Rarity == "Epic" then
+				part.Material = Enum.Material.Metal
+			end
+		end
+	end
+end
+
+-- Cajas ---------------------------------------------------------------------------------------------------------------------------
+-- Arsenal: skins de cuerpo a cuerpo. Se compra con Rhoms o cae como premio al terminar una ronda; los repetidos devuelven Rhoms.
+-- Weights = % por rareza (entre las skins de esa rareza se reparte por igual). Pity: tras tantas cajas sin una rareza, la siguiente la
+-- garantiza (la Épica también sale si cae Legendaria). Sin balancear.
+Cosmetics.Crates = {
+	Arsenal = {
+		Price = 8,
+		Weights = { Common = 55, Rare = 28, Epic = 13, Legendary = 4 },
+		Refund = { Common = 1, Rare = 2, Epic = 4, Legendary = 10 }, -- Rhoms al sacar un repetido
+		Pity = { Epic = 8, Legendary = 30 },
+		Drop = { Base = 0.20, Win = 0.12, Max = 0.6, Difficulty = { Calma = 0, Tension = 0.05, Crisis = 0.10, Colapso = 0.20 }, Rarity = 0.10 },
+	},
+}
+
+-- Lista de skins que pueden salir de la caja Arsenal (todas menos la del cuchillo básico)
+function Cosmetics.crateSkins(rarity)
+	local list = {}
+	for _, skin in Cosmetics.MeleeSkins do
+		if skin.Id ~= Cosmetics.DefaultMelee and (not rarity or skin.Rarity == rarity) then
+			table.insert(list, skin)
+		end
+	end
+	return list
+end
+
+-- Sortea una caja: devuelve la skin que sale. `pity` = { sinceEpic, sinceLegendary } (cajas sin esa rareza antes de esta); `roll` es un
+-- número de 0 a 1 para la rareza y `pick` otro para elegir la skin (así el servidor decide y se puede probar con números fijos).
+function Cosmetics.rollCrate(crateId, pity, roll, pick)
+	local crate = Cosmetics.Crates[crateId]
+	local rarity
+	if (pity.sinceLegendary or 0) + 1 >= crate.Pity.Legendary then
+		rarity = "Legendary"
+	elseif (pity.sinceEpic or 0) + 1 >= crate.Pity.Epic then
+		rarity = "Epic"
+	else
+		local total = 0
+		for _, weight in crate.Weights do
+			total += weight
+		end
+		local at = roll * total
+		for _, name in { "Common", "Rare", "Epic", "Legendary" } do
+			at -= crate.Weights[name]
+			if at < 0 then
+				rarity = name
+				break
+			end
+		end
+		rarity = rarity or "Common"
+	end
+	local pool = Cosmetics.crateSkins(rarity)
+	return pool[math.clamp(math.floor(pick * #pool) + 1, 1, #pool)]
+end
+
+-- Probabilidad de que caiga una caja Arsenal al terminar la ronda
+function Cosmetics.crateDropChance(won, difficultyId, rarities)
+	local d = Cosmetics.Crates.Arsenal.Drop
+	local chance = d.Base + (won and d.Win or 0) + (d.Difficulty[difficultyId] or 0)
+	for _, rarity in rarities or {} do
+		if rarity == "Epic" or rarity == "Legendary" then
+			chance += d.Rarity
+			break
+		end
+	end
+	return math.min(chance, d.Max)
+end
+
 function Cosmetics.melee(id)
 	for _, skin in Cosmetics.MeleeSkins do
 		if skin.Id == id then
