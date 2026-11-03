@@ -408,6 +408,18 @@ return {
 		StudsPerMeter = 3.571, -- para mostrar la distancia en metros (un avatar de 5 studs ~ 1.75 m)
 	},
 
+	-- Golpe cuerpo a cuerpo (tecla X, server/Melee): igual para TODAS las skins de Cosmetics.MeleeSkins, que solo cambian aspecto,
+	-- sonido y gesto. Se golpea a lo que haya delante dentro del cono, sin atravesar paredes.
+	Melee = {
+		Damage = 35, -- por zombie (el común tiene 50: dos golpes)
+		Cooldown = 0.6, -- segundos entre golpes
+		Duration = 0.5, -- lo que dura el gesto (la pose de brazos y el arma en la mano)
+		HitAt = 0.45, -- fracción del gesto en que cae el golpe (coincide con la clave de golpe de client/ItemPoses.Melee*)
+		Range = 6.5, -- studs desde el pecho
+		Arc = 100, -- grados del cono
+		MaxTargets = 2, -- zombies que alcanza un solo golpe
+	},
+
 	-- Tolerancia de puntería: radio (en studs) de la esfera con la que se busca un zombie cuando el rayo no le da.
 	-- Compensa el retraso de red: en pantalla los zombies van un poco por detrás de donde están en el servidor.
 	HitTolerance = 0.8,

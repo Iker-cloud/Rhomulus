@@ -43,6 +43,7 @@ local LAYOUT = {
 	Fire = { x = -148, y = -58, size = 84 },
 	Aim = { x = -60, y = -135, size = 54 },
 	Reload = { x = -135, y = -140, size = 48 },
+	Melee = { x = -135, y = -205, size = 52 },
 	Sprint = { x = -222, y = -55, size = 50 },
 	Cancel = { x = -60, y = -205, size = 52 },
 	KeyE = { x = -212, y = -140, size = 64 },
@@ -351,6 +352,15 @@ function TouchControls.start()
 		setLit(reload, false)
 	end)
 
+	-- Golpe cuerpo a cuerpo (la skin equipada en el menú)
+	local melee = makeButton("Melee", "MELEE")
+	track(melee.frame, function()
+		setLit(melee, true)
+		Shooting.melee()
+	end, function()
+		setLit(melee, false)
+	end)
+
 	-- Correr (alterna): se cancela solo al disparar, apuntar o recargar y vuelve al terminar, como con Shift
 	local sprint = makeButton("Sprint", "SPRINT")
 	track(sprint.frame, function()
@@ -476,6 +486,7 @@ function TouchControls.start()
 		end
 		setLit(sprint, Sprint.isHeld())
 		reload.frame.Visible = playing and itemInHand == nil
+		melee.frame.Visible = playing and itemInHand == nil
 		aim.frame.Visible = playing and itemInHand == nil
 		if itemInHand ~= nil and Controls.aim then
 			Controls.aim = false

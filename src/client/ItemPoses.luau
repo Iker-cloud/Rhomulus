@@ -131,6 +131,60 @@ local POSES = {
 			return V(0.015 * math.sin(phase * 40), 0.01 * math.sin(phase * 33), 0) * math.min(phase / 0.15, 1)
 		end,
 	},
+	-- Golpes cuerpo a cuerpo (Config.Melee.Duration, 0,5 s; el golpe cae en 0,45): los usa server/Melee con el `Style` de cada skin.
+	-- Tajo en diagonal: sube atrás a la derecha y baja cruzando hacia la izquierda.
+	MeleeSlash = {
+		ready = { r = V(0.30, -0.30, -0.90), rt = 0.3, l = V(-0.25, -0.40, -0.85), lt = 0 },
+		right = {
+			key(0, START),
+			key(0.22, V(0.55, 0.50, -0.55), 1.0), -- arma arriba y atrás
+			key(0.45, V(-0.30, -0.15, -1.85), -0.35), -- golpe
+			key(0.70, V(-0.55, -0.40, -1.45), -0.55), -- sigue el movimiento
+			key(1, V(0.30, -0.30, -0.90), 0.3),
+		},
+		left = {
+			key(0, START),
+			key(0.22, V(-0.15, -0.20, -0.85), 0.2),
+			key(0.45, V(-0.35, -0.30, -1.10), 0),
+			key(1, V(-0.25, -0.40, -0.85), 0),
+		},
+	},
+	-- Golpe desde arriba: las dos manos lo suben sobre la cabeza y lo bajan con fuerza.
+	MeleeChop = {
+		ready = { r = V(0.25, -0.30, -0.95), rt = 0.3, l = V(-0.10, -0.35, -0.90), lt = 0.1 },
+		right = {
+			key(0, START),
+			key(0.25, V(0.20, 0.90, -0.30), 1.4), -- sobre la cabeza
+			key(0.45, V(0.10, -0.40, -1.90), -0.95), -- golpe
+			key(0.70, V(0.15, -0.55, -1.60), -0.75),
+			key(1, V(0.25, -0.30, -0.95), 0.3),
+		},
+		left = {
+			key(0, START),
+			key(0.25, V(0.05, 0.75, -0.40), 1.3),
+			key(0.45, V(0.00, -0.45, -1.70), -0.9),
+			key(0.70, V(0.00, -0.55, -1.50), -0.7),
+			key(1, V(-0.10, -0.35, -0.90), 0.1),
+		},
+	},
+	-- Barrido: el arma va atrás a la derecha y cruza en horizontal hasta la izquierda.
+	MeleeSweep = {
+		ready = { r = V(0.30, -0.30, -0.90), rt = 0.2, l = V(-0.15, -0.35, -0.90), lt = 0.1 },
+		right = {
+			key(0, START),
+			key(0.22, V(0.90, 0.05, -0.70), 0.5), -- lo echa atrás a la derecha
+			key(0.45, V(-0.10, 0.00, -1.80), 0.1), -- golpe al frente
+			key(0.70, V(-0.80, -0.05, -1.30), 0.0), -- termina a la izquierda
+			key(1, V(0.30, -0.30, -0.90), 0.2),
+		},
+		left = {
+			key(0, START),
+			key(0.22, V(0.40, -0.05, -0.85), 0.4),
+			key(0.45, V(-0.15, -0.10, -1.50), 0.1),
+			key(0.70, V(-0.55, -0.10, -1.20), 0.0),
+			key(1, V(-0.15, -0.35, -0.90), 0.1),
+		},
+	},
 	-- Botiquín (5 s): lo sube al pecho con la derecha, la izquierda abre la tapa, saca gasa y cura (la mano entra y sale del
 	-- maletín), y al final cierra la tapa y lo baja.
 	Medkit = {

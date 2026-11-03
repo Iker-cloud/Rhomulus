@@ -32,6 +32,7 @@ local NAMES = {
 	"SaveSettings", -- cliente -> servidor: (sensibilidad, modo de calidad) guarda los ajustes del jugador
 	"PhialUi", -- servidor <-> cliente: panel PHIAL ROLL ("open", "spin", "ready", "lost", "taken", "denied" / "roll", "take")
 	"Record", -- servidor -> todos: ({ difficulty, time, best, bestNames, isRecord }) el tiempo de la victoria y el récord de la dificultad
+	"Melee", -- cliente -> servidor: (dirección) golpe cuerpo a cuerpo con la skin equipada
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba
 }
 

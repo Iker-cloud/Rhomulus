@@ -448,6 +448,11 @@ button(main, TEXT_RIGHT - 340, 462, 340, 60, function()
 	setStatus(nil)
 	show("profile")
 end).Name = "Perfil"
+text(main, spaced("ARMORY", 4) .. " →", ANTON, 40, Vector2.new(TEXT_RIGHT, 552), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+button(main, TEXT_RIGHT - 340, 522, 340, 60, function()
+	setStatus(nil)
+	show("armory")
+end).Name = "Armeria"
 
 -- Las tres opciones: numeradas, y la elegida (la de debajo del ratón) se rellena de rojo con una flecha
 local items = {
@@ -726,6 +731,85 @@ builders.profile = function()
 		text(s, spaced(`{coins} RHOMS`, 3), ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
 	end
 	text(s, spaced(`LEVEL {level}`, 3), OSW_BOLD, 30, Vector2.new(1800, 262), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = RED })
+	backButton(s, "main")
+	smallVersion(s, 1800, 1010)
+end
+
+-- 6) Armería: las armas cuerpo a cuerpo --------------------------------------------------------------------------------------------
+-- El cuchillo es el básico y las demás se compran con Rhoms; todas hacen lo mismo en la partida, solo cambia cómo se ven y suenan
+-- (shared/Cosmetics). Tocar una que se tiene la pone; tocar una que no, la compra (el servidor cobra y comprueba).
+local armoryScreen = newScreen("armory")
+local armoryConns = {}
+builders.armory = function()
+	local s = armoryScreen
+	for _, c in armoryConns do
+		c:Disconnect()
+	end
+	table.clear(armoryConns)
+	clear(s)
+	header(s, "ARMORY")
+	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
+	local coinsLabel = text(s, "", ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
+	local cards = {}
+
+	local function ownedNow(id)
+		return Cosmetics.ownsMelee(player:GetAttribute("MeleeOwned"), id)
+	end
+	local function paint()
+		local coins = player:GetAttribute("Rhoms")
+		coinsLabel.Text = typeof(coins) == "number" and spaced(`{coins} RHOMS`, 3) or ""
+		local equipped = Cosmetics.validMelee(player:GetAttribute("MeleeOwned"), player:GetAttribute("MeleeSkin"))
+		for id, card in cards do
+			local skin = card.skin
+			local owned = ownedNow(id)
+			local isOn = id == equipped
+			card.stroke.Thickness = isOn and 5 or 2
+			card.stroke.Color = isOn and RED or Cosmetics.Rarities[skin.Rarity].Color
+			card.state.TextColor3 = isOn and RED or INK
+			if isOn then
+				card.state.Text = spaced("EQUIPPED", 3)
+			elseif owned then
+				card.state.Text = spaced("OWNED", 3)
+			elseif skin.Price <= 0 then
+				card.state.Text = spaced("FREE", 3)
+			else
+				card.state.Text = spaced(`{skin.Price} RHOMS`, 3)
+				card.state.TextColor3 = (typeof(coins) == "number" and coins >= skin.Price) and INK or DIM
+			end
+		end
+	end
+
+	for i, skin in Cosmetics.MeleeSkins do
+		local col, row = (i - 1) % 3, (i - 1) // 3
+		local x, y = 120 + 560 * col, 350 + 270 * row
+		local card = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(520, 240) }, s)
+		local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, card)
+		-- Lugar de la imagen del arma (hasta que haya modelos 3D: una barra con el color y la proporción del arma)
+		local well = make("Frame", { BackgroundColor3 = Color3.fromRGB(10, 10, 10), BorderSizePixel = 0, Position = UDim2.fromOffset(20, 20), Size = UDim2.fromOffset(150, 200) }, card)
+		local length = math.clamp(skin.Size.Z / 2.6, 0.4, 1) * 170
+		local thick = math.clamp(skin.Size.Y * 28, 10, 34)
+		local bar = make("Frame", { BackgroundColor3 = skin.Color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(thick, length), Rotation = 35 }, well)
+		make("UICorner", { CornerRadius = UDim.new(0, 4) }, bar)
+		text(card, upperEs(skin.Name), ANTON, 38, Vector2.new(190, 64), { width = 320 })
+		local rarity = Cosmetics.Rarities[skin.Rarity]
+		text(card, spaced(rarity.Text, 3), OSW_BOLD, 22, Vector2.new(190, 110), { width = 320, color = rarity.Color })
+		local state = text(card, "", OSW_BOLD, 28, Vector2.new(190, 196), { width = 320, color = INK })
+		cards[skin.Id] = { skin = skin, stroke = stroke, state = state }
+		button(s, x, y, 520, 240, function()
+			task.spawn(function()
+				local action = ownedNow(skin.Id) and "equipSkin" or "buySkin"
+				local okCall, done, why = pcall(function()
+					return profileRequest:InvokeServer(action, skin.Id)
+				end)
+				note.Text = (okCall and done) and "" or spaced(string.upper((okCall and why) or "Couldn't connect. Try again"), 2)
+			end)
+		end).Name = "Skin_" .. skin.Id
+	end
+	paint()
+	for _, name in { "Rhoms", "MeleeOwned", "MeleeSkin" } do
+		table.insert(armoryConns, player:GetAttributeChangedSignal(name):Connect(paint))
+	end
 	backButton(s, "main")
 	smallVersion(s, 1800, 1010)
 end

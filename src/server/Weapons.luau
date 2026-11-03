@@ -145,8 +145,8 @@ local function onFire(player, origin, direction)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local head = character and character:FindFirstChild("Head")
-	if not (state and humanoid and head) or humanoid.Health <= 0 or player:GetAttribute("ItemReady") or player:GetAttribute("Injecting") then
-		return -- con un objeto en la mano (server/Items) no se dispara
+	if not (state and humanoid and head) or humanoid.Health <= 0 or player:GetAttribute("ItemReady") or player:GetAttribute("Injecting") or player:GetAttribute("Swinging") then
+		return -- con un objeto en la mano (server/Items) o golpeando (server/Melee) no se dispara
 	end
 	if not (isValidVector(origin) and isValidVector(direction)) or direction.Magnitude < 0.001 then
 		return

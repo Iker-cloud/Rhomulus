@@ -2,7 +2,8 @@
 -- estadísticas (Stats): nunca acepta un número del cliente. Se reparte al terminar la partida (PlayerProgress.award) y, si alguien se
 -- va a mitad, se le da lo que llevaba sin los bonos de terminar o ganar.
 -- Atributos del jugador que lee la interfaz: ProgXP (XP total), ProgLevel, Rhoms (la moneda permanente), FrameId y TitleId (el marco y
--- el título del perfil que lleva puestos). El menú los pone con su propio script (src-menu), que además guarda lo que elige.
+-- el título del perfil que lleva puestos), MeleeOwned ("Knife,Pan": las skins cuerpo a cuerpo que tiene) y MeleeSkin (la que lleva).
+-- El menú los pone con su propio script (src-menu), que además guarda lo que elige y compra.
 -- Si el guardado no está disponible (Studio sin publicar) todo funciona pero no se recuerda nada.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -41,6 +42,9 @@ local function publish(player)
 	player:SetAttribute("ProgLevel", level)
 	player:SetAttribute("Rhoms", rhoms[player] or 0)
 	local chosen = look[player] or {}
+	local owned = chosen.owned or {}
+	player:SetAttribute("MeleeOwned", table.concat(owned, ","))
+	player:SetAttribute("MeleeSkin", Cosmetics.validMelee(owned, chosen.melee)) -- server/Melee
 	player:SetAttribute("FrameId", Cosmetics.valid("frame", chosen.frame, level))
 	player:SetAttribute("TitleId", Cosmetics.valid("title", chosen.title, level))
 	local ids = {}
@@ -60,7 +64,14 @@ local function load(player)
 		if ok and typeof(value) == "table" and typeof(value.xp) == "number" then
 			total = value.xp
 			coins = typeof(value.rhoms) == "number" and value.rhoms or 0
-			chosen = { frame = value.frame, title = value.title }
+			chosen = { frame = value.frame, title = value.title, melee = value.melee, owned = {} }
+			if typeof(value.skins) == "table" then
+				for id, flag in value.skins do
+					if flag == true and Cosmetics.melee(id) then
+						table.insert(chosen.owned, id)
+					end
+				end
+			end
 			if typeof(value.seen) == "table" then
 				seen[player] = {}
 				for id, flag in value.seen do

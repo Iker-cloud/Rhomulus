@@ -1,4 +1,4 @@
--- Detecta clic (disparar, mantener si el arma es automática), R (recargar) y 1/2/Q (cambiar de arma).
+-- Detecta clic (disparar, mantener si el arma es automática), R (recargar), 1/2/Q (cambiar de arma) y X (golpe cuerpo a cuerpo).
 -- El servidor decide si el tiro da y cuánto daño hace.
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -107,6 +107,13 @@ function Shooting.reload()
 	end
 end
 
+-- Golpe cuerpo a cuerpo (tecla X y botón MELEE): el servidor decide si cabe y a quién alcanza
+function Shooting.melee()
+	if not itemInHand() then
+		Remotes.Melee:FireServer(WeaponAnimator.cameraCFrame().LookVector)
+	end
+end
+
 function Shooting.switchTo(newSlot)
 	switchTo(newSlot)
 end
@@ -126,6 +133,8 @@ function Shooting.start()
 			if not itemInHand() then
 				Remotes.Reload:FireServer()
 			end
+		elseif input.KeyCode == Enum.KeyCode.X then
+			Shooting.melee()
 		elseif input.KeyCode == Enum.KeyCode.One then
 			switchTo("primary")
 		elseif input.KeyCode == Enum.KeyCode.Two then

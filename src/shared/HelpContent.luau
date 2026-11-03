@@ -29,7 +29,7 @@ local Content = {
 		} },
 		{ "ITEMS", {
 			{ "3", "GRENADE" }, { "4", "MEDKIT" }, { "5", "MOLOTOV" },
-			{ "6", "BANDAGES" }, { "7", "FLARE" }, { "1 – 4", "VOTE DIFFICULTY" },
+			{ "6", "BANDAGES" }, { "7", "FLARE" }, { "X", "MELEE STRIKE" },
 		} },
 	},
 	ControlsNote = "H only works when playing solo (once per zone). K opens this help in-game.",
@@ -73,7 +73,7 @@ Content.Touch = {
 		} },
 		{ "ITEMS", {
 			{ "BAR", "TAP AN ITEM" }, { "FIRE", "USE OR THROW IT" }, { "CANCEL", "CANCEL THE THROW" },
-			{ "?", "THIS HELP" }, { "SETTINGS", "SENSITIVITY" }, { "PANEL", "TAP TO VOTE" },
+			{ "MELEE", "MELEE STRIKE" }, { "SETTINGS", "SENSITIVITY" }, { "PANEL", "TAP TO VOTE" },
 		} },
 	},
 	ControlsNote = "GET UP only appears when playing solo (once per zone). The E and F buttons appear when something is nearby.",
