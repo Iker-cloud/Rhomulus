@@ -214,6 +214,12 @@ return {
 			ZombieDeath = { "rbxassetid://138338177111300", 0.6, 0.85 }, -- 3D
 			TankRoar = { "rbxassetid://9113980319", 0.9, 0.55 }, -- 3D, al aparecer un Tanque
 			TankDeath = { "rbxassetid://94978851787238", 1, 1 }, -- 3D, al caer un Tanque
+			-- Atrapador (ids reutilizados con otro tono: sin oír todavía)
+			GrabberAim = { "rbxassetid://9113980319", 0.5, 1.9 }, -- 3D, empieza a apuntar
+			TongueShot = { "rbxassetid://75492070005287", 0.8, 1.6 }, -- 3D, sale la lengua
+			TongueHit = { "rbxassetid://138338177111300", 0.9, 1.3 }, -- 3D / 2D, agarra
+			TongueSnap = { "rbxassetid://75492070005287", 0.8, 0.7 }, -- 3D, la lengua se recoge tras soltar
+			Struggle = { "rbxassetid://75492070005287", 0.35, 1.8 }, -- 2D, cada pulsación al forcejear
 			Hurt = { -- el jugador recibe un golpe
 				{ "rbxassetid://9120417632", 0.7, 1 },
 				{ "rbxassetid://9120417141", 0.7, 1 },
@@ -379,7 +385,7 @@ return {
 
 	-- Latas del equipo (la moneda compartida; el módulo se llama Points)
 	Points = {
-		Kill = { Common = 25, Fast = 40, Tank = 150 },
+		Kill = { Common = 25, Fast = 40, Tank = 150, Grabber = 100 },
 		Revive = 50,
 		Carry = 20,
 		ZoneComplete = 100,
@@ -559,6 +565,50 @@ return {
 			AgentRadius = 2.2, -- grosor para calcular rutas (los demás usan 1.5)
 			ModelDetail = "full",
 		},
+
+		-- El Atrapador (zombie-el-atrapador.glb): frágil, se mantiene a media distancia y caza con la lengua (server/Grabber, Config.Grabber).
+		-- WeakPoints: piezas que cuentan como crítico, además de la cabeza (los quistes brillantes y el ojo extra).
+		Grabber = {
+			DisplayName = "Grabber",
+			Health = 150,
+			Speed = 13,
+			Damage = 12,
+			AttackRange = 5,
+			AttackCooldown = 1.2,
+			AgentRadius = 1.8,
+			ModelDetail = "full",
+			WeakPoints = { "ojo_extra", "quiste_0", "quiste_1", "quiste_2", "quiste_3" },
+		},
+	},
+
+	-- El Atrapador (server/Grabber, client/GrabberFx, client/Grabbed): apunta con un láser rojo (Aim), dispara la lengua (Speed) y, si
+	-- acierta, arrastra a su víctima. La víctima puede disparar, moverse flojo (Resist) y forcejear (Struggle); la lengua se corta a tiros
+	-- (TongueHealth). Los tiempos de espera se multiplican por Difficulties.GrabberEvery.
+	Grabber = {
+		Range = 44, -- alcance de la lengua (studs)
+		MinRange = 14, -- más cerca que esto retrocede en vez de apuntar
+		Aim = 0.85, -- segundos de aviso (láser rojo y cabeza hacia atrás) antes de disparar
+		TongueSpeed = 75, -- studs por segundo de la lengua en el aire
+		HitRadius = 3.6, -- cuánto se puede haber movido la víctima desde que se fijó el tiro para que aún acierte
+		FirstCooldown = 3, -- espera tras aparecer
+		Cooldown = 9, -- espera tras soltar a una víctima
+		MissCooldown = 4, -- espera tras fallar
+		PullSpeed = 24, -- velocidad a la que arrastra (studs/s)
+		Resist = 0.45, -- fracción de su velocidad de caminar que la víctima puede usar para resistirse
+		MaxPull = 6, -- si en tantos segundos no llega al zombie, la lengua se suelta
+		HoldRange = 6, -- a esta distancia la víctima ya está en sus manos y deja de arrastrarse
+		HoldDamage = 7, -- daño por mordida (se multiplica por la dificultad)
+		HoldInterval = 0.8,
+		MaxHold = 14, -- segundos máximos agarrado
+		StruggleNeeded = 14, -- pulsaciones para soltarse
+		StruggleDecay = 1.6, -- pulsaciones que se pierden por segundo
+		StruggleMaxRate = 12, -- pulsaciones por segundo que el servidor acepta
+		TongueHealth = 30, -- daño de bala para cortar la lengua
+		StunCut = 2.4, -- segundos aturdido si le cortan la lengua
+		StunBreak = 1.3, -- segundos aturdido si la víctima se suelta
+		AmbushChance = 0.3, -- probabilidad de que una emboscada traiga un Atrapador
+		Loose = { Chance = 0.04, Gap = 40, Zones = { Zone2 = true, Zone3 = true, Extraction = true } }, -- apariciones sueltas del director
+		Extraction = { First = 40, Interval = 55 }, -- en la extracción: segundos tras llamar a la radio y entre atrapadores
 	},
 
 	Director = {

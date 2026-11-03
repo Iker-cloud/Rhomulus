@@ -22,6 +22,8 @@ end
 
 -- Presión de la extracción: llegan despacio y con un tope más bajo (ver Config.Director)
 local nextTankTime = math.huge
+local nextGrabberTime = math.huge -- en la extracción: cuándo sale el próximo Atrapador
+local lastLooseGrabber = 0 -- última vez que salió uno suelto
 
 function Director.setBoost(on)
 	boost = on
@@ -29,6 +31,7 @@ function Director.setBoost(on)
 	nextWave = on and boostStart + Config.Director.Extraction.FirstWave or math.huge
 	-- En la extracción llega un tanque poco después de llamar a la radio y luego cada cierto tiempo
 	nextTankTime = on and os.clock() + Config.Director.Tank.ExtractionFirst * Difficulty.get().TankEvery or math.huge
+	nextGrabberTime = on and os.clock() + Config.Grabber.Extraction.First * Difficulty.get().GrabberEvery or math.huge
 end
 
 local function getSpawnPoints()
@@ -54,6 +57,7 @@ local function getScaling()
 		MaxAlive = math.clamp(math.floor(base.MaxAlive * d.MaxAlive + 0.5), 1, Difficulties.MaxAliveCap),
 		HordeScale = base.HordeScale * d.Horde,
 		MaxTanks = base.MaxTanks + d.ExtraTanks,
+		MaxGrabbers = (count >= 3 and 2 or 1) + d.ExtraGrabbers,
 	}
 end
 
@@ -141,6 +145,14 @@ local function spawnTank()
 	return spawnOne("Tank")
 end
 
+-- Un Atrapador, si no se pasó del máximo vivo a la vez
+local function spawnGrabber()
+	if Zombies.getAlive("Grabber") >= getScaling().MaxGrabbers then
+		return false
+	end
+	return spawnOne("Grabber")
+end
+
 -- Oleada de la extracción: una horda de golpe (sin Tanque; esos van aparte), respetando el tope de vivos
 local function spawnWave(size)
 	local count = math.max(2, math.floor(size * getScaling().HordeScale + 0.5))
@@ -158,6 +170,7 @@ function Director.spawnHorde(size)
 	if Config.Director.Tank.InHorde then
 		spawnTank()
 	end
+	spawnGrabber()
 	local count = math.floor(size * getScaling().HordeScale + 0.5)
 	for _ = 1, count do
 		if Zombies.getAlive() >= getMaxAlive() then
@@ -196,6 +209,15 @@ function Director.spawnAmbush(size, points, withTank)
 		end
 	end
 
+	-- A veces la emboscada trae también un Atrapador (más seguido en las dificultades altas), si no salió un Tanque
+	if not withTank and Zombies.getAlive("Grabber") < getScaling().MaxGrabbers
+		and math.random() < math.min(0.8, Config.Grabber.AmbushChance / Difficulty.get().GrabberEvery) then
+		local candidates = freePoints()
+		if #candidates > 0 then
+			Zombies.spawn("Grabber", candidates[math.random(#candidates)])
+		end
+	end
+
 	local count = math.max(1, math.floor(size * getScaling().HordeScale + 0.5))
 	for _ = 1, count do
 		if Zombies.getAlive() >= getMaxAlive() then
@@ -222,6 +244,15 @@ function Director.start()
 			if zone and #Players:GetPlayers() > 0 then
 				if boost and os.clock() >= nextTankTime and spawnTank() then
 					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval * Difficulty.get().TankEvery
+				end
+				if boost and os.clock() >= nextGrabberTime and spawnGrabber() then
+					nextGrabberTime = os.clock() + Config.Grabber.Extraction.Interval * Difficulty.get().GrabberEvery
+				end
+				-- Fuera de la extracción, de vez en cuando sale un Atrapador suelto en las zonas avanzadas
+				local loose = Config.Grabber.Loose
+				if not boost and loose.Zones[zone] and os.clock() - lastLooseGrabber >= loose.Gap * Difficulty.get().GrabberEvery
+					and math.random() < loose.Chance / Difficulty.get().GrabberEvery and spawnGrabber() then
+					lastLooseGrabber = os.clock()
 				end
 				if Zombies.getAlive() < getMaxAlive() and not spawnOne() then
 					pause = math.min(pause, Config.Director.FailedSpawnRetry) -- sin punto libre: reintenta pronto

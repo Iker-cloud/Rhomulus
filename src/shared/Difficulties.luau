@@ -9,6 +9,8 @@
 --   FastChance                     probabilidad de que un zombie común sea rápido (en vez de 0.2 fijo)
 --   ExtraTanks                     Tanques vivos a la vez de más (se suman al máximo según el número de jugadores)
 --   TankEvery                      multiplica el tiempo entre Tanques de la extracción (menos = más seguidos)
+--   ExtraGrabbers                  Atrapadores vivos a la vez de más (el máximo base es 1, 2 con 3 o más jugadores)
+--   GrabberEvery                   multiplica la espera entre lenguetazos y entre Atrapadores (menos = más seguidos)
 --   SpawnInterval                  multiplica la pausa entre apariciones (menos = llegan más rápido)
 --   Cost                           multiplica los precios (caja, munición y objetos)
 --   Reward                         multiplica las latas que se ganan
@@ -33,6 +35,8 @@ local Difficulties = {
 		FastChance = 0.1,
 		ExtraTanks = 0,
 		TankEvery = 1.5,
+		ExtraGrabbers = 0,
+		GrabberEvery = 1.4,
 		SpawnInterval = 1.3,
 		Cost = 0.8,
 		Reward = 1,
@@ -54,6 +58,8 @@ local Difficulties = {
 		FastChance = 0.2,
 		ExtraTanks = 0,
 		TankEvery = 1,
+		ExtraGrabbers = 0,
+		GrabberEvery = 1,
 		SpawnInterval = 1,
 		Cost = 1,
 		Reward = 1,
@@ -75,6 +81,8 @@ local Difficulties = {
 		FastChance = 0.3,
 		ExtraTanks = 1,
 		TankEvery = 0.75,
+		ExtraGrabbers = 0,
+		GrabberEvery = 0.85,
 		SpawnInterval = 0.8,
 		Cost = 1.25,
 		Reward = 1.15,
@@ -96,6 +104,8 @@ local Difficulties = {
 		FastChance = 0.4,
 		ExtraTanks = 2,
 		TankEvery = 0.55,
+		ExtraGrabbers = 1,
+		GrabberEvery = 0.7,
 		SpawnInterval = 0.65,
 		Cost = 1.5,
 		Reward = 1.3,

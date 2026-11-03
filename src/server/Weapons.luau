@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
+local Grabber = require(script.Parent.Grabber)
 local Zombies = require(script.Parent.Zombies)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
@@ -123,21 +124,25 @@ local function spread(direction, degrees)
 	return cf.LookVector
 end
 
--- ¿El rayo pasa por la cabeza del zombie? (la caja invisible del zombie tapa la cabeza, así que se mide la cercanía)
+-- ¿El rayo pasa por la cabeza del zombie (o por uno de sus puntos débiles: Config.Zombie.<tipo>.WeakPoints)? La caja invisible del
+-- zombie tapa la cabeza, así que se mide la cercanía del rayo a la pieza.
 local function isHeadshot(model, origin, direction, hitDistance)
-	local head
-	for _, name in Config.Headshot.PartNames do
-		head = model:FindFirstChild(name)
-		if head then
-			break
+	local names = table.clone(Config.Headshot.PartNames)
+	local kindStats = Config.Zombie[model:GetAttribute("Kind")]
+	if kindStats and kindStats.WeakPoints then
+		table.move(kindStats.WeakPoints, 1, #kindStats.WeakPoints, #names + 1, names)
+	end
+	for _, name in names do
+		local part = model:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			local along = math.clamp((part.Position - origin):Dot(direction), 0, hitDistance + Config.Headshot.Depth)
+			local radius = part.Size.Magnitude * Config.Headshot.RadiusScale
+			if (part.Position - (origin + direction * along)).Magnitude <= radius then
+				return true
+			end
 		end
 	end
-	if not (head and head:IsA("BasePart")) then
-		return false
-	end
-	local along = math.clamp((head.Position - origin):Dot(direction), 0, hitDistance + Config.Headshot.Depth)
-	local radius = head.Size.Magnitude * Config.Headshot.RadiusScale
-	return (head.Position - (origin + direction * along)).Magnitude <= radius
+	return false
 end
 
 local function onFire(player, origin, direction)
@@ -216,8 +221,11 @@ local function onFire(player, origin, direction)
 		if result then
 			local model = result.Instance:FindFirstAncestorWhichIsA("Model")
 			local target = model and model:FindFirstChildOfClass("Humanoid")
+			if result.Instance.Name == "TongueHitbox" then
+				-- La lengua tensa de un Atrapador: el disparo la corta (no hiere al zombie)
+				Grabber.hitTongue(model, cfg.Damage * (player:GetAttribute("FxDamage") or 1))
 			-- Fuego amigo desactivado: no se daña a otros jugadores
-			if target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
+			elseif target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
 				local hit = hits[target]
 				if not hit then
 					hit = { model = model, damage = 0, crit = false }

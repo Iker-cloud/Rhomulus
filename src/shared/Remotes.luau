@@ -33,6 +33,7 @@ local NAMES = {
 	"PhialUi", -- servidor <-> cliente: panel PHIAL ROLL ("open", "spin", "ready", "lost", "taken", "denied" / "roll", "take")
 	"Record", -- servidor -> todos: ({ difficulty, time, best, bestNames, isRecord }) el tiempo de la victoria y el récord de la dificultad
 	"Melee", -- cliente -> servidor: (dirección) golpe cuerpo a cuerpo con la skin equipada
+	"Struggle", -- cliente -> servidor: forcejea para soltarse de la lengua de un Atrapador
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba
 }
 

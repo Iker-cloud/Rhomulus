@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulty = require(script.Parent.Difficulty)
+local Grabber = require(script.Parent.Grabber)
 local PlayerState = require(script.Parent.PlayerState)
 local ZombieModel = require(script.Parent.ZombieModel)
 
@@ -16,6 +17,7 @@ local MODELS = {
 	Common = require(script.Parent.ZombieData.Brotado),
 	Fast = require(script.Parent.ZombieData.Desbocado),
 	Tank = require(script.Parent.ZombieData.Tanque),
+	Grabber = require(script.Parent.ZombieData.Atrapador),
 }
 
 local folder = Instance.new("Folder")
@@ -310,7 +312,7 @@ function Zombies.clear()
 	folder:ClearAllChildren()
 end
 
--- Crea un zombie del tipo dado ("Common", "Fast" o "Tank") en la posición (a nivel del suelo). Devuelve el modelo.
+-- Crea un zombie del tipo dado ("Common", "Fast", "Tank" o "Grabber") en la posición (a nivel del suelo). Devuelve el modelo.
 -- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
 function Zombies.spawn(kind, position)
 	local stats = Difficulty.zombieStats(kind) -- vida, velocidad y daño según la dificultad
@@ -320,6 +322,9 @@ function Zombies.spawn(kind, position)
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()
+		if kind == "Grabber" then
+			Grabber.onDeath(model)
+		end
 		if Difficulty.get().Flags.Explosive and kind ~= "Tank" and math.random() < Config.Zombie.Explosive.Chance then
 			task.spawn(explode, model, root)
 		end
@@ -335,7 +340,11 @@ function Zombies.spawn(kind, position)
 		model:Destroy()
 	end)
 
-	task.spawn(think, humanoid, root, stats)
+	if kind == "Grabber" then
+		task.spawn(Grabber.think, model, humanoid, root, stats, { nearestTarget = nearestTarget, folder = folder })
+	else
+		task.spawn(think, humanoid, root, stats)
+	end
 	return model
 end
 
