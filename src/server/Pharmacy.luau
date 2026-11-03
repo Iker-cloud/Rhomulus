@@ -128,9 +128,6 @@ local function regenLoop()
 end
 
 -- Animación de inyectarse -----------------------------------------------------------------------------------------------------------
--- La jeringa sale en la mano derecha, el brazo izquierdo se extiende, la aguja se clava en el antebrazo, el émbolo empuja el líquido (que
--- brilla del color del efecto) y al terminar la inyección el efecto empieza. Los brazos los mueve client/ItemPoses.Syringe en todos los
--- clientes (atributos del personaje ItemReady, ItemId, ItemStart y ItemEnd); aquí se mueve el émbolo y se ponen luces, chispas y sonido.
 
 local function smoothstep(x)
 	x = math.clamp(x, 0, 1)
@@ -173,86 +170,15 @@ local function burst(parent, color, count, speed, lifetime)
 end
 
 local function inject(player, id)
+	-- Sin animación: la jeringa en la mano y el gesto de los brazos hacían vibrar la cámara. El efecto entra al instante, con destello y sonido.
 	local def = P.Effects[id]
 	local character = player.Character
-	local humanoid = getHumanoid(player)
-	local A = P.Anim
-	if not (character and humanoid and humanoid.Health > 0 and player:HasAppearanceLoaded() and character:FindFirstChild("RightHand")) then
-		Pharmacy.apply(player, id)
-		return
+	Pharmacy.apply(player, id)
+	local torso = character and (character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart"))
+	if torso and def then
+		burst(torso, def.Color, 12, 6, 1.0)
+		playAt(torso, "Revived", 0.7, 1.15)
 	end
-	Items.unequip(player, true) -- guarda lo que tenga en la mano
-	local restore, model = ItemModel.hold(player, "Syringe", { color = def.Color })
-	if not model then
-		Pharmacy.apply(player, id)
-		return
-	end
-	Items.lock(player, A.Duration + 0.3)
-	player:SetAttribute("Injecting", true)
-	local jumpHeight, jumpPower = humanoid.JumpHeight, humanoid.JumpPower
-	humanoid.JumpHeight, humanoid.JumpPower = 0, 0
-	PlayerState.refreshSpeed(player) -- quieto mientras dura el gesto
-	character:SetAttribute("ItemReady", "Syringe") -- solo en el personaje: el inventario del jugador no conoce este objeto
-	Items.announce(character, "Syringe", A.Duration)
-
-	local forearm = character:FindFirstChild("LeftLowerArm") or character:FindFirstChild("LeftHand")
-	local hand = character:FindFirstChild("LeftHand") or forearm
-	local glow = Instance.new("PointLight")
-	glow.Color = def.Color
-	glow.Range = 6
-	glow.Brightness = 0
-	glow.Parent = hand
-	local veins -- destellos continuos mientras el líquido entra
-	local pricked, pushing, applied = false, false, false
-
-	local start = os.clock()
-	while true do
-		local t = (os.clock() - start) / A.Duration
-		if t >= 1 or not character.Parent or humanoid.Health <= 0 or PlayerState.get(player) ~= "Normal" then
-			break
-		end
-		ItemModel.setSyringe(model, smoothstep((t - A.PushStart) / (A.PushEnd - A.PushStart)))
-		if not pricked and t >= A.Prick then
-			pricked = true
-			playAt(hand, "Select", 1.2, 1.8)
-			burst(forearm, Color3.fromRGB(255, 70, 70), 4, 4, 0.5) -- una gotita de sangre
-		end
-		if not pushing and t >= A.PushStart then
-			pushing = true
-			veins = burst(forearm, def.Color, 0, 3, 0.9)
-			veins.Rate = 14
-			playAt(hand, "Buy", 0.5, 1.4)
-		end
-		if pushing and t < A.PushEnd + 0.1 then
-			local k = math.sin(math.clamp((t - A.PushStart) / (A.PushEnd - A.PushStart), 0, 1) * math.pi)
-			glow.Brightness = 0.7 * k
-		end
-		if not applied and t >= A.Apply then
-			applied = true
-			if veins then
-				veins.Rate = 0
-			end
-			glow.Brightness = 0
-			Pharmacy.apply(player, id)
-			local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("HumanoidRootPart")
-			burst(torso, def.Color, 12, 6, 1.0)
-			playAt(torso, "Revived", 0.7, 1.15)
-		end
-		task.wait()
-	end
-	if veins then
-		veins.Rate = 0
-	end
-	glow:Destroy()
-	restore()
-	if character.Parent then
-		character:SetAttribute("ItemReady", nil)
-	end
-	player:SetAttribute("Injecting", nil)
-	if humanoid.Parent then
-		humanoid.JumpHeight, humanoid.JumpPower = jumpHeight, jumpPower
-	end
-	PlayerState.refreshSpeed(player)
 end
 
 -- Fin de partida o de ronda: nadie conserva efectos
