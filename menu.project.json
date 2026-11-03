@@ -20,6 +20,9 @@
         "Cosmetics": {
           "$path": "src/shared/Cosmetics.luau"
         },
+        "Accessories": {
+          "$path": "src/shared/Accessories.luau"
+        },
         "Lang": {
           "$path": "src/shared/Lang.luau"
         },

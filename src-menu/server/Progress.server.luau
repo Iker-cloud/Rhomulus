@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Progress = require(ReplicatedStorage.Shared.Progress)
 local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
+local Accessories = require(ReplicatedStorage.Shared.Accessories)
 
 local profile = Instance.new("RemoteFunction")
 profile.Name = "ProfileRequest"
@@ -54,7 +55,8 @@ local function load(player)
 	if not store then
 		return
 	end
-	local total, coins, frame, title, boxes = 0, 0, nil, nil, 0
+	local total, coins, frame, title, boxes, boxesB = 0, 0, nil, nil, 0, 0
+	local acc, accEq = nil, nil
 	local skins, melee = nil, nil
 	local readOk, value = pcall(function()
 		return store:GetAsync("p_" .. player.UserId)
@@ -63,6 +65,8 @@ local function load(player)
 		total = value.xp
 		coins = typeof(value.rhoms) == "number" and value.rhoms or 0
 		boxes = typeof(value.crates) == "number" and value.crates or 0
+		boxesB = typeof(value.crates_b) == "number" and value.crates_b or 0
+		acc, accEq = value.acc, value.accEq
 		frame, title = value.frame, value.title
 		skins, melee = value.skins, value.melee
 	end
@@ -70,6 +74,25 @@ local function load(player)
 		publish(player, total, coins, frame, title)
 		publishSkins(player, ownedList(skins), melee)
 		player:SetAttribute("Crates", boxes)
+		player:SetAttribute("CratesBarrio", boxesB)
+		local list = {}
+		if typeof(acc) == "table" then
+			for _, item in Accessories.Items do
+				if acc[item.Id] == true then
+					table.insert(list, item.Id)
+				end
+			end
+		end
+		player:SetAttribute("AccOwned", table.concat(list, ","))
+		local worn = {}
+		if typeof(accEq) == "table" then
+			for slot, id in accEq do
+				if typeof(id) == "string" and table.find(list, id) then
+					worn[slot] = id
+				end
+			end
+		end
+		player:SetAttribute("AccEquipped", Accessories.encode(worn))
 	end
 end
 
@@ -150,29 +173,49 @@ local function equipSkin(player, id)
 	return true
 end
 
--- ("openCrate"): abre una caja Arsenal (una que ya tiene o, si no, la compra con Rhoms) y sortea la skin. -> true, id, Rhoms devueltos
--- (0 si es nueva) | false y el motivo. El servidor decide todo; el cliente solo anima el resultado.
-local sessionPity = {} -- [Player] = { sinceEpic, sinceLegendary } cuando no hay guardado
-local function openCrate(player)
-	local crate = Cosmetics.Crates.Arsenal
+-- ("openCrate", "Arsenal" | "Barrio"): abre una caja (una que ya tiene o, si no, la compra con Rhoms) y sortea lo que sale: una skin de
+-- cuerpo a cuerpo (Arsenal) o un accesorio (Barrio). -> true, id, Rhoms devueltos (0 si es nuevo) | false y el motivo. El servidor
+-- decide todo; el cliente solo anima el resultado.
+local CRATE_KINDS = {
+	Arsenal = { boxField = "crates", boxAttr = "Crates", ownedField = "skins", pityField = "pity" },
+	Barrio = { boxField = "crates_b", boxAttr = "CratesBarrio", ownedField = "acc", pityField = "pity_b" },
+}
+local sessionPity = {} -- [Player] = { [tipo] = { sinceEpic, sinceLegendary } } cuando no hay guardado
+
+local function ownedAccessories(player)
+	local text = player:GetAttribute("AccOwned")
+	return type(text) == "string" and string.split(text, ",") or {}
+end
+
+local function openCrate(player, kind)
+	local cfg = CRATE_KINDS[kind]
+	local crate = Cosmetics.Crates[kind]
+	if not cfg then
+		return false, "Invalid request"
+	end
 	local result, refund, reason = nil, 0, nil
-	local useBox = (player:GetAttribute("Crates") or 0) > 0
-	local pityNow
+	local useBox = (player:GetAttribute(cfg.boxAttr) or 0) > 0
 	local function draw(pity)
-		local skin = Cosmetics.rollCrate("Arsenal", pity, math.random(), math.random())
-		pity.sinceEpic = (skin.Rarity == "Epic" or skin.Rarity == "Legendary") and 0 or (pity.sinceEpic or 0) + 1
-		pity.sinceLegendary = skin.Rarity == "Legendary" and 0 or (pity.sinceLegendary or 0) + 1
-		return skin
+		local item = Cosmetics.rollCrate(kind, pity, math.random(), math.random())
+		pity.sinceEpic = (item.Rarity == "Epic" or item.Rarity == "Legendary") and 0 or (pity.sinceEpic or 0) + 1
+		pity.sinceLegendary = item.Rarity == "Legendary" and 0 or (pity.sinceLegendary or 0) + 1
+		return item
+	end
+	local function isOwnedLocal(id)
+		if kind == "Arsenal" then
+			return Cosmetics.ownsMelee(ownedOf(player), id)
+		end
+		return table.find(ownedAccessories(player), id) ~= nil
 	end
 	if store then
 		local okSave = pcall(function()
 			store:UpdateAsync("p_" .. player.UserId, function(old)
 				old = typeof(old) == "table" and old or {}
-				old.skins = typeof(old.skins) == "table" and old.skins or {}
-				old.pity = typeof(old.pity) == "table" and old.pity or {}
+				old[cfg.ownedField] = typeof(old[cfg.ownedField]) == "table" and old[cfg.ownedField] or {}
+				old[cfg.pityField] = typeof(old[cfg.pityField]) == "table" and old[cfg.pityField] or {}
 				reason = nil
-				if (old.crates or 0) > 0 then
-					old.crates -= 1
+				if (old[cfg.boxField] or 0) > 0 then
+					old[cfg.boxField] -= 1
 					useBox = true
 				elseif (old.rhoms or 0) >= crate.Price then
 					old.rhoms -= crate.Price
@@ -181,16 +224,15 @@ local function openCrate(player)
 					reason = "Not enough Rhoms"
 					return nil
 				end
-				local skin = draw(old.pity)
-				result = skin
-				if old.skins[skin.Id] or skin.Id == Cosmetics.DefaultMelee then
-					refund = crate.Refund[skin.Rarity] or 0
+				local item = draw(old[cfg.pityField])
+				result = item
+				if old[cfg.ownedField][item.Id] or item.Id == Cosmetics.DefaultMelee then
+					refund = crate.Refund[item.Rarity] or 0
 					old.rhoms = (old.rhoms or 0) + refund
 				else
 					refund = 0
-					old.skins[skin.Id] = true
+					old[cfg.ownedField][item.Id] = true
 				end
-				pityNow = old.pity
 				return old
 			end)
 		end)
@@ -202,33 +244,67 @@ local function openCrate(player)
 		end
 	else
 		-- sin guardado (Studio sin publicar): solo dura la sesión
-		if useBox then
-			-- se gasta la caja
-		elseif (player:GetAttribute("Rhoms") or 0) >= crate.Price then
-			useBox = false
-		else
+		if not useBox and (player:GetAttribute("Rhoms") or 0) < crate.Price then
 			return false, "Not enough Rhoms"
 		end
 		sessionPity[player] = sessionPity[player] or {}
-		result = draw(sessionPity[player])
-		if Cosmetics.ownsMelee(ownedOf(player), result.Id) then
+		sessionPity[player][kind] = sessionPity[player][kind] or {}
+		result = draw(sessionPity[player][kind])
+		if isOwnedLocal(result.Id) then
 			refund = crate.Refund[result.Rarity] or 0
 		end
 	end
 	-- Atributos del jugador (lo que ve el menú)
 	if useBox then
-		player:SetAttribute("Crates", math.max(0, (player:GetAttribute("Crates") or 0) - 1))
+		player:SetAttribute(cfg.boxAttr, math.max(0, (player:GetAttribute(cfg.boxAttr) or 0) - 1))
 	else
 		player:SetAttribute("Rhoms", (player:GetAttribute("Rhoms") or 0) - crate.Price)
 	end
 	if refund > 0 then
 		player:SetAttribute("Rhoms", (player:GetAttribute("Rhoms") or 0) + refund)
-	else
+	elseif kind == "Arsenal" then
 		local owned = ownedOf(player)
 		table.insert(owned, result.Id)
 		player:SetAttribute("MeleeOwned", table.concat(owned, ","))
+	else
+		local owned = ownedAccessories(player)
+		table.insert(owned, result.Id)
+		player:SetAttribute("AccOwned", table.concat(owned, ","))
 	end
 	return true, result.Id, refund
+end
+
+-- ("equipAcc", ranura, id): se pone un accesorio que ya tiene en su ranura; con id vacío se lo quita. -> true | false y el motivo
+local function equipAccessory(player, slot, id)
+	if typeof(slot) ~= "string" or not table.find(Accessories.Slots, slot) then
+		return false, "Invalid request"
+	end
+	local worn = Accessories.decode(player:GetAttribute("AccEquipped"))
+	if id == nil or id == "" then
+		worn[slot] = nil
+		id = nil
+	else
+		local item = Accessories.get(id)
+		if typeof(id) ~= "string" or not item or item.Slot ~= slot or not table.find(ownedAccessories(player), id) then
+			return false, "You don't own this one"
+		end
+		worn[slot] = id
+	end
+	player:SetAttribute("AccEquipped", Accessories.encode(worn))
+	if store then
+		local okSave = pcall(function()
+			store:UpdateAsync("p_" .. player.UserId, function(old)
+				old = typeof(old) == "table" and old or {}
+				old.accEq = typeof(old.accEq) == "table" and old.accEq or {}
+				old.accEq[slot] = id
+				return old
+			end)
+		end)
+		if not okSave then
+			return false, "Couldn't save. Try again"
+		end
+	end
+	return true
 end
 
 -- ("equip", "frame" | "title", id) -> true, o false y el motivo
@@ -238,7 +314,11 @@ profile.OnServerInvoke = function(player, action, kind, id)
 	end
 	if action == "openCrate" then
 		lastEquip[player] = os.clock()
-		return openCrate(player)
+		return openCrate(player, kind or "Arsenal") -- aquí `kind` trae el tipo de caja
+	end
+	if action == "equipAcc" then
+		lastEquip[player] = os.clock()
+		return equipAccessory(player, kind, id) -- aquí `kind` trae la ranura
 	end
 	if action == "buySkin" or action == "equipSkin" then
 		lastEquip[player] = os.clock()

@@ -3,6 +3,8 @@
 -- hacen lo mismo (el daño, el alcance y el ritmo están en Config.Melee), solo cambian el aspecto, el sonido y el gesto del golpe.
 -- Solo son datos: la partida guarda lo que cada jugador lleva puesto y el menú lo muestra y deja elegirlo.
 -- Los ids no se traducen; los nombres sí (shared/LangEs).
+local Accessories = require(script.Parent:WaitForChild("Accessories"))
+
 local Cosmetics = {}
 
 -- Marcos: `Color` es el aro; `Level` el nivel que hace falta
@@ -148,10 +150,30 @@ Cosmetics.Crates = {
 		Pity = { Epic = 8, Legendary = 30 },
 		Drop = { Base = 0.20, Win = 0.12, Max = 0.6, Difficulty = { Calma = 0, Tension = 0.05, Crisis = 0.10, Colapso = 0.20 }, Rarity = 0.10 },
 	},
+	-- Barrio: accesorios del superviviente (gorras, gafas, mochilas, parches). Mismas reglas; el premio de ronda es la misma
+	-- probabilidad y elige Arsenal o Barrio a partes iguales (Cosmetics.crateKind).
+	Barrio = {
+		Price = 8,
+		Weights = { Common = 55, Rare = 28, Epic = 13, Legendary = 4 },
+		Refund = { Common = 1, Rare = 2, Epic = 4, Legendary = 10 },
+		Pity = { Epic = 8, Legendary = 30 },
+	},
 }
 
--- Lista de skins que pueden salir de la caja Arsenal (todas menos la del cuchillo básico)
+-- Qué caja cae de premio: Arsenal o Barrio a partes iguales (`roll` de 0 a 1)
+function Cosmetics.crateKind(roll)
+	return roll < 0.5 and "Arsenal" or "Barrio"
+end
+
+-- Lista de cosas que pueden salir de una caja: Arsenal = skins de cuerpo a cuerpo (todas menos el cuchillo básico), Barrio = accesorios
 function Cosmetics.crateSkins(rarity)
+	return Cosmetics.cratePool("Arsenal", rarity)
+end
+
+function Cosmetics.cratePool(crateId, rarity)
+	if crateId == "Barrio" then
+		return Accessories.pool(rarity)
+	end
 	local list = {}
 	for _, skin in Cosmetics.MeleeSkins do
 		if skin.Id ~= Cosmetics.DefaultMelee and (not rarity or skin.Rarity == rarity) then
@@ -185,7 +207,7 @@ function Cosmetics.rollCrate(crateId, pity, roll, pick)
 		end
 		rarity = rarity or "Common"
 	end
-	local pool = Cosmetics.crateSkins(rarity)
+	local pool = Cosmetics.cratePool(crateId, rarity)
 	return pool[math.clamp(math.floor(pick * #pool) + 1, 1, #pool)]
 end
 

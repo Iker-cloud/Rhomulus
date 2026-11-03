@@ -459,12 +459,18 @@ button(main, TEXT_RIGHT - 340, 582, 340, 60, function()
 	setStatus(nil)
 	show("crates")
 end).Name = "Cajas"
+text(main, spaced("WARDROBE", 4) .. " →", ANTON, 40, Vector2.new(TEXT_RIGHT, 672), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+button(main, TEXT_RIGHT - 340, 642, 340, 60, function()
+	setStatus(nil)
+	show("wardrobe")
+end).Name = "Armario"
 local function refreshCrates()
-	local boxes = player:GetAttribute("Crates") or 0
+	local boxes = (player:GetAttribute("Crates") or 0) + (player:GetAttribute("CratesBarrio") or 0)
 	cratesLink.TextColor3 = boxes > 0 and RED or INK
 	cratesLink.Text = spaced(boxes > 0 and `CRATES ×{boxes}` or "CRATES", 4) .. " →"
 end
 player:GetAttributeChangedSignal("Crates"):Connect(refreshCrates)
+player:GetAttributeChangedSignal("CratesBarrio"):Connect(refreshCrates)
 refreshCrates()
 
 -- Las tres opciones: numeradas, y la elegida (la de debajo del ratón) se rellena de rojo con una flecha
@@ -1068,12 +1074,58 @@ local function difficultyLock(id)
 	return Progress.requiredLevel(id)
 end
 
--- 6b) Cajas: la caja Arsenal da una skin de cuerpo a cuerpo al azar -----------------------------------------------------------------
--- Se abre con una caja que ya tiene (premio al terminar una ronda) o, si no tiene, con Rhoms. El servidor sortea (ProfileRequest
--- "openCrate"); aquí solo se anima: una tira de cartas que gira bajo una marca roja y se detiene en el resultado. Las probabilidades
--- se ven siempre (Cosmetics.Crates.Arsenal.Weights).
+-- 6b) Cajas: Arsenal (skins de cuerpo a cuerpo) y Barrio (accesorios del superviviente) ----------------------------------------------
+-- Se abren con una caja que ya tiene (premio al terminar una ronda) o, si no tiene, con Rhoms. El servidor sortea (ProfileRequest
+-- "openCrate", tipo); aquí solo se anima: una tira de cartas que gira bajo una marca roja y se detiene en el resultado. Las
+-- probabilidades se ven siempre (Cosmetics.Crates.<tipo>.Weights). Los accesorios se ponen en el ARMARIO (6c).
+local Accessories = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Accessories"))
+
+local CRATE_INFO = {
+	Arsenal = {
+		Title = "ARSENAL CRATE", Desc = "MELEE WEAPON SKINS. DUPLICATES GIVE RHOMS BACK.", BoxAttr = "Crates",
+		Wood = Color3.fromRGB(70, 58, 44), Lid = Color3.fromRGB(96, 80, 60),
+	},
+	Barrio = {
+		Title = "BARRIO CRATE", Desc = "SURVIVOR ACCESSORIES: CAPS, SHADES, PACKS AND PATCHES. DUPLICATES GIVE RHOMS BACK.", BoxAttr = "CratesBarrio",
+		Wood = Color3.fromRGB(34, 58, 62), Lid = Color3.fromRGB(52, 88, 92),
+	},
+}
+-- Desde dónde se mira cada accesorio suelto (hacia el centro del modelo)
+local SLOT_VIEW = { Head = Vector3.new(0.55, 0.3, -1), Face = Vector3.new(0.45, 0.2, -1), Back = Vector3.new(-0.55, 0.25, 1), Shoulder = Vector3.new(1, 0.3, -0.45) }
+
+-- Dibuja una cosa de una caja en un visor: el arma (kind "Arsenal") o el accesorio ("Barrio"). Devuelve el visor y `sway(t)`.
+local function previewItem(parent, x, y, w, h, kind, item)
+	if kind == "Arsenal" then
+		local view, sway = weaponView(parent, x, y, w, h, item)
+		return view, sway
+	end
+	local view = make("ViewportFrame", {
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h),
+		Ambient = Color3.fromRGB(150, 146, 140), LightColor = Color3.fromRGB(255, 244, 228), LightDirection = Vector3.new(-0.5, -0.8, -0.6),
+	}, parent)
+	local model = Accessories.build(item.Id)
+	if not model then
+		return view, function() end
+	end
+	model.Parent = view
+	local cf, size = model:GetBoundingBox()
+	local radius = math.max(size.X, size.Y, size.Z)
+	local dist = radius / (2 * math.tan(math.rad(12.5))) * 1.35
+	local dir = SLOT_VIEW[item.Slot] or Vector3.new(0.5, 0.3, -1)
+	view.CurrentCamera = make("Camera", { FieldOfView = 25, CFrame = CFrame.lookAt(cf.Position + dir.Unit * dist, cf.Position) }, view)
+	local function sway(t)
+		model:PivotTo(CFrame.Angles(0, math.sin(t * 0.9) * 0.5, 0))
+	end
+	return view, sway
+end
+
+local function lookupItem(kind, id)
+	return kind == "Arsenal" and Cosmetics.melee(id) or Accessories.get(id)
+end
+
 local cratesScreen = newScreen("crates")
 local cratesConns = {}
+local cratesKind = "Arsenal" -- la pestaña que se ve (se recuerda al volver)
 builders.crates = function()
 	local s = cratesScreen
 	for _, c in cratesConns do
@@ -1082,36 +1134,41 @@ builders.crates = function()
 	table.clear(cratesConns)
 	clear(s)
 	header(s, "CRATES")
-	local crate = Cosmetics.Crates.Arsenal
 	local busy = false
 	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
 	local coinsLabel = text(s, "", ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
 
-	-- Panel de la caja (izquierda)
+	-- Panel de la caja (izquierda), con las dos pestañas arriba
 	local box = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(120, 360), Size = UDim2.fromOffset(560, 520) }, s)
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 5) }, box)
-	-- la caja, dibujada con piezas simples
-	local crateArt = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 70), Size = UDim2.fromOffset(220, 170) }, box)
-	make("Frame", { BackgroundColor3 = Color3.fromRGB(70, 58, 44), BorderSizePixel = 0, Position = UDim2.fromOffset(0, 40), Size = UDim2.fromOffset(220, 130) }, crateArt)
-	make("Frame", { BackgroundColor3 = Color3.fromRGB(96, 80, 60), BorderSizePixel = 0, Size = UDim2.fromOffset(220, 46) }, crateArt)
+	local tabs = {}
+	for i, kind in { "Arsenal", "Barrio" } do
+		local tabFrame = make("Frame", { BackgroundColor3 = LINE, BorderSizePixel = 0, Position = UDim2.fromOffset(20 + (i - 1) * 270, 22), Size = UDim2.fromOffset(250, 46) }, box)
+		local tabLabel = text(tabFrame, "", ANTON, 30, Vector2.new(125, 23), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 240, color = INK })
+		tabs[kind] = { frame = tabFrame, label = tabLabel }
+	end
+	local crateArt = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(170, 90), Size = UDim2.fromOffset(220, 170) }, box)
+	local artBody = make("Frame", { BackgroundColor3 = CRATE_INFO.Arsenal.Wood, BorderSizePixel = 0, Position = UDim2.fromOffset(0, 40), Size = UDim2.fromOffset(220, 130) }, crateArt)
+	local artLid = make("Frame", { BackgroundColor3 = CRATE_INFO.Arsenal.Lid, BorderSizePixel = 0, Size = UDim2.fromOffset(220, 46) }, crateArt)
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(96, 0), Size = UDim2.fromOffset(28, 170) }, crateArt)
 	make("Frame", { BackgroundColor3 = Color3.fromRGB(30, 26, 22), BorderSizePixel = 0, Position = UDim2.fromOffset(0, 84), Size = UDim2.fromOffset(220, 8) }, crateArt)
-	text(box, spaced("ARSENAL CRATE", 1), ANTON, 50, Vector2.new(280, 290), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = INK })
-	text(box, "MELEE WEAPON SKINS. DUPLICATES GIVE RHOMS BACK.", OSW, 22, Vector2.new(280, 336), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 500, color = DIM })
-	local ownedLabel = text(box, "", OSW_BOLD, 28, Vector2.new(280, 384), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = RED })
-	local openBtn = make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(35, 428), Size = UDim2.fromOffset(490, 64) }, box)
+	local titleLabel = text(box, "", ANTON, 50, Vector2.new(280, 296), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = INK })
+	local descLabel = text(box, "", OSW, 20, Vector2.new(280, 340), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 500, color = DIM })
+	local ownedLabel = text(box, "", OSW_BOLD, 28, Vector2.new(280, 388), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 520, color = RED })
+	local openBtn = make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(35, 432), Size = UDim2.fromOffset(490, 64) }, box)
 	local openLabel = text(openBtn, "", ANTON, 38, Vector2.new(245, 32), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 480, color = BLACK })
 
 	-- Probabilidades (derecha, abajo)
 	local odds = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(720, 700), Size = UDim2.fromOffset(1080, 180) }, s)
 	text(odds, spaced("ODDS", 4), OSW_BOLD, 24, Vector2.new(30, 30), { width = 300, color = DIM })
+	local oddsLabels = {}
 	for i, name in { "Common", "Rare", "Epic", "Legendary" } do
 		local rarity = Cosmetics.Rarities[name]
 		local x = 30 + (i - 1) * 255
 		text(odds, spaced(rarity.Text, 2), OSW_BOLD, 22, Vector2.new(x, 80), { width = 240, color = rarity.Color })
-		text(odds, `{crate.Weights[name]}%`, ANTON, 52, Vector2.new(x, 128), { width = 240, color = INK })
+		oddsLabels[name] = text(odds, "", ANTON, 52, Vector2.new(x, 128), { width = 240, color = INK })
 	end
-	text(s, `GUARANTEED EPIC EVERY {crate.Pity.Epic} CRATES · LEGENDARY EVERY {crate.Pity.Legendary}`, OSW, 20, Vector2.new(720, 905), { width = 1000, color = DIM })
+	local pityLabel = text(s, "", OSW, 20, Vector2.new(720, 905), { width = 1000, color = DIM })
 
 	-- La tira (derecha, arriba): ventana con cartas que giran y una marca roja en el centro
 	local WIN_X, WIN_Y, WIN_W, WIN_H = 720, 360, 1080, 200
@@ -1120,41 +1177,50 @@ builders.crates = function()
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(4, WIN_H), ZIndex = 4 }, window)
 	local CARD_W, CARD_GAP = 190, 14
 
-	local function addCard(skin, index)
-		local rarity = Cosmetics.Rarities[skin.Rarity]
-		local card = make("Frame", { BackgroundColor3 = Color3.fromRGB(26, 24, 22), BorderSizePixel = 0, Position = UDim2.fromOffset((index - 1) * (CARD_W + CARD_GAP) + 10, 0), Size = UDim2.fromOffset(CARD_W, 160) }, strip)
+	local function addCard(item, index)
+		local rarity = Cosmetics.Rarities[item.Rarity]
+		local card = make("Frame", { BackgroundColor3 = Color3.fromRGB(26, 24, 22), BorderSizePixel = 0, Position = UDim2.fromOffset((index - 1) * (CARD_W + CARD_GAP) + 10, 0), Size = UDim2.fromOffset(CARD_W, 160), ClipsDescendants = true }, strip)
 		make("Frame", { BackgroundColor3 = rarity.Color, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -8), Size = UDim2.new(1, 0, 0, 8) }, card)
-		local view = make("ViewportFrame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -40), Ambient = Color3.fromRGB(150, 146, 140), LightColor = Color3.fromRGB(255, 244, 228), LightDirection = Vector3.new(-0.5, -0.8, -0.6) }, card)
-		local module = meleeData:FindFirstChild("Melee" .. (skin.Base or skin.Id))
-		if module then
-			local data = require(module)
-			local model = WeaponModel.build(data, 1)
-			Cosmetics.tintModel(model, skin)
-			model.Parent = view
-			local length = data.bounds.max.Y - data.bounds.min.Y
-			local dist = length * 0.68 / (2 * math.tan(math.rad(12.5))) * 1.5
-			view.CurrentCamera = make("Camera", { FieldOfView = 25, CFrame = CFrame.lookAt(Vector3.new(0, 0, dist), Vector3.zero) }, view)
-			model:PivotTo(CFrame.Angles(0, 0, math.rad(-55)))
-		end
-		make("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -38), Size = UDim2.new(1, 0, 0, 28), Text = upperEs(skin.Name), FontFace = OSW_BOLD, TextSize = 18, TextColor3 = rarity.Color }, card)
-	end
-
-	do
-		-- al principio, una muestra de las skins que pueden salir
-		local pool = Cosmetics.crateSkins()
-		for i = 1, 6 do
-			addCard(pool[(i * 3 - 2) % #pool + 1], i)
-		end
+		previewItem(card, 0, 0, CARD_W, 122, cratesKind, item)
+		make("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -38), Size = UDim2.new(1, 0, 0, 28), Text = upperEs(item.Name), FontFace = OSW_BOLD, TextSize = 18, TextColor3 = rarity.Color }, card)
 	end
 
 	-- Resultado (derecha, en el centro)
 	local resultName = text(s, "", ANTON, 56, Vector2.new(720, 612), { width = 1000, color = INK })
 	local resultNote = text(s, "", OSW_BOLD, 26, Vector2.new(720, 664), { width = 1000, color = DIM })
 
+	local function showKind()
+		local info = CRATE_INFO[cratesKind]
+		local crate = Cosmetics.Crates[cratesKind]
+		for kind, tab in tabs do
+			local on = kind == cratesKind
+			tab.frame.BackgroundColor3 = on and RED or LINE
+			tab.label.Text = spaced(kind == "Arsenal" and "ARSENAL" or "BARRIO", 2)
+			tab.label.TextColor3 = on and BLACK or INK
+		end
+		artBody.BackgroundColor3, artLid.BackgroundColor3 = info.Wood, info.Lid
+		titleLabel.Text = spaced(info.Title, 1)
+		descLabel.Text = Lang.tr(info.Desc)
+		for name, label in oddsLabels do
+			label.Text = `{crate.Weights[name]}%`
+		end
+		pityLabel.Text = Lang.tr(`GUARANTEED EPIC EVERY {crate.Pity.Epic} CRATES · LEGENDARY EVERY {crate.Pity.Legendary}`)
+		strip:ClearAllChildren()
+		strip.Position = UDim2.fromOffset(0, 20)
+		-- al principio, una muestra de lo que puede salir
+		local pool = Cosmetics.cratePool(cratesKind)
+		for i = 1, 6 do
+			addCard(pool[(i * 3 - 2) % #pool + 1], i)
+		end
+		resultName.Text, resultNote.Text = "", ""
+	end
+
 	local function paint()
+		local info = CRATE_INFO[cratesKind]
+		local crate = Cosmetics.Crates[cratesKind]
 		local coins = player:GetAttribute("Rhoms")
 		coinsLabel.Text = typeof(coins) == "number" and spaced(`{coins} RHOMS`, 3) or ""
-		local boxes = player:GetAttribute("Crates") or 0
+		local boxes = player:GetAttribute(info.BoxAttr) or 0
 		ownedLabel.Text = spaced(`{Lang.tr("YOU HAVE")} {boxes} {Lang.tr(boxes == 1 and "CRATE" or "CRATES")}`, 2)
 		if busy then
 			openLabel.Text = spaced("OPENING…", 1)
@@ -1168,14 +1234,14 @@ builders.crates = function()
 		end
 	end
 
-	-- Anima la tira hasta la skin sorteada
-	local function spinTo(skin)
+	-- Anima la tira hasta lo sorteado
+	local function spinTo(item)
 		strip:ClearAllChildren()
 		strip.Position = UDim2.fromOffset(0, 20)
-		local pool = Cosmetics.crateSkins()
+		local pool = Cosmetics.cratePool(cratesKind)
 		local FINAL = 34
 		for i = 1, FINAL + 4 do
-			addCard(i == FINAL and skin or pool[math.random(#pool)], i)
+			addCard(i == FINAL and item or pool[math.random(#pool)], i)
 		end
 		local centerOfFinal = (FINAL - 1) * (CARD_W + CARD_GAP) + 10 + CARD_W / 2
 		local goal = WIN_W / 2 - centerOfFinal + math.random(-60, 60)
@@ -1184,7 +1250,19 @@ builders.crates = function()
 		tween.Completed:Wait()
 	end
 
-	button(s, 155, 788, 490, 64, function()
+	for kind, tab in tabs do
+		button(box, tab.frame.Position.X.Offset, tab.frame.Position.Y.Offset, 250, 46, function()
+			if busy or cratesKind == kind then
+				return
+			end
+			cratesKind = kind
+			note.Text = ""
+			showKind()
+			paint()
+		end).Name = "Tab_" .. kind
+	end
+
+	button(box, 35, 432, 490, 64, function()
 		if busy then
 			return
 		end
@@ -1192,9 +1270,10 @@ builders.crates = function()
 		note.Text = ""
 		resultName.Text, resultNote.Text = "", ""
 		paint()
+		local kind = cratesKind
 		task.spawn(function()
 			local okCall, done, id, refund = pcall(function()
-				return profileRequest:InvokeServer("openCrate")
+				return profileRequest:InvokeServer("openCrate", kind)
 			end)
 			if not okCall or not done then
 				-- si falló, el segundo valor trae el motivo
@@ -1203,10 +1282,10 @@ builders.crates = function()
 				paint()
 				return
 			end
-			local skin = Cosmetics.melee(id)
-			spinTo(skin)
-			local rarity = Cosmetics.Rarities[skin.Rarity]
-			resultName.Text = upperEs(skin.Name)
+			local item = lookupItem(kind, id)
+			spinTo(item)
+			local rarity = Cosmetics.Rarities[item.Rarity]
+			resultName.Text = upperEs(item.Name)
 			resultName.TextColor3 = rarity.Color
 			if (refund or 0) > 0 then
 				resultNote.Text = spaced(`{Lang.tr("DUPLICATE")} · +{refund} RHOMS`, 2)
@@ -1220,10 +1299,162 @@ builders.crates = function()
 		end)
 	end).Name = "OpenCrate"
 
+	showKind()
 	paint()
-	for _, name in { "Rhoms", "Crates" } do
+	for _, name in { "Rhoms", "Crates", "CratesBarrio" } do
 		table.insert(cratesConns, player:GetAttributeChangedSignal(name):Connect(paint))
 	end
+	backButton(s, "main")
+	smallVersion(s, 1800, 1010)
+end
+
+-- 6c) Armario: los accesorios que ya tienes, por ranura ------------------------------------------------------------------------------
+-- Eliges un accesorio de la ranura (cabeza, cara, espalda u hombro) y se pone; "NONE" la deja vacía. Se ve en la partida (server/AccessoryRig).
+local wardrobeScreen = newScreen("wardrobe")
+local wardrobeConns = {}
+local wardrobeSlot = "Head"
+builders.wardrobe = function()
+	local s = wardrobeScreen
+	for _, c in wardrobeConns do
+		c:Disconnect()
+	end
+	table.clear(wardrobeConns)
+	clear(s)
+	header(s, "WARDROBE")
+	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
+	local swayers = {}
+
+	local function ownedNow(id)
+		return table.find(string.split(player:GetAttribute("AccOwned") or "", ","), id) ~= nil
+	end
+	local function wornNow()
+		return Accessories.decode(player:GetAttribute("AccEquipped"))
+	end
+
+	-- Pestañas de ranura (arriba)
+	local tabButtons = {}
+	for i, slot in Accessories.Slots do
+		local frame = make("Frame", { BackgroundColor3 = LINE, BorderSizePixel = 0, Position = UDim2.fromOffset(120 + (i - 1) * 220, 346), Size = UDim2.fromOffset(204, 46) }, s)
+		local label = text(frame, "", ANTON, 30, Vector2.new(102, 23), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 196, color = INK })
+		tabButtons[slot] = { frame = frame, label = label }
+	end
+
+	-- Lista de la ranura (izquierda) con scroll
+	local scroll = make("ScrollingFrame", {
+		BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(110, 410), Size = UDim2.fromOffset(1090, 480),
+		ScrollBarThickness = 6, ScrollBarImageColor3 = RED, CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, s)
+	scroll.Name = "AccList"
+
+	-- Panel de lo que llevas (derecha)
+	local panel = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(1240, 410), Size = UDim2.fromOffset(560, 480) }, s)
+	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 5) }, panel)
+	text(panel, spaced("YOU WEAR", 4), OSW_BOLD, 24, Vector2.new(30, 40), { width = 400, color = DIM })
+	local wearRows = {}
+	for i, slot in Accessories.Slots do
+		local y = 96 + (i - 1) * 74
+		text(panel, spaced(Accessories.SlotNames[slot], 2), OSW_BOLD, 22, Vector2.new(30, y), { width = 160, color = DIM })
+		wearRows[slot] = text(panel, "", ANTON, 34, Vector2.new(200, y), { width = 340, color = INK })
+	end
+	local collected = text(panel, "", OSW_BOLD, 22, Vector2.new(30, 440), { width = 500, color = DIM })
+
+	local cards = {}
+	local function buildList()
+		scroll:ClearAllChildren()
+		table.clear(cards)
+		table.clear(swayers)
+		local entries = { false } -- false = "NONE"
+		for _, item in Accessories.Items do
+			if item.Slot == wardrobeSlot and ownedNow(item.Id) then
+				table.insert(entries, item)
+			end
+		end
+		local CW, CH, GAP = 340, 190, 16
+		for i, item in entries do
+			local col, row = (i - 1) % 3, (i - 1) // 3
+			local x, y = 12 + (CW + GAP) * col, 12 + (CH + GAP) * row
+			local frame = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(CW, CH), ClipsDescendants = true }, scroll)
+			local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, frame)
+			local id = item and item.Id or ""
+			if item then
+				local _, sway = previewItem(frame, 0, 0, CW, CH - 40, "Barrio", item)
+				table.insert(swayers, sway)
+				make("Frame", { BackgroundColor3 = Cosmetics.Rarities[item.Rarity].Color, BorderSizePixel = 0, Size = UDim2.new(0, 6, 1, 0) }, frame)
+			else
+				text(frame, spaced("NONE", 3), ANTON, 44, Vector2.new(CW / 2, 70), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = CW, color = DIM })
+			end
+			make("TextLabel", {
+				BackgroundTransparency = 1, Position = UDim2.fromOffset(16, CH - 38), Size = UDim2.fromOffset(CW - 32, 30), TextXAlignment = Enum.TextXAlignment.Left,
+				Text = item and upperEs(item.Name) or "", FontFace = OSW_BOLD, TextSize = 22, TextColor3 = item and Cosmetics.Rarities[item.Rarity].Color or INK,
+			}, frame)
+			cards[id] = { frame = frame, stroke = stroke }
+			button(scroll, x, y, CW, CH, function()
+				task.spawn(function()
+					local okCall, done, why = pcall(function()
+						return profileRequest:InvokeServer("equipAcc", wardrobeSlot, id)
+					end)
+					note.Text = (okCall and done) and "" or spaced(string.upper((okCall and why) or "Couldn't connect. Try again"), 2)
+				end)
+			end).Name = "Acc_" .. (id == "" and "None" or id)
+		end
+	end
+
+	local function paint()
+		local worn = wornNow()
+		for slot, tab in tabButtons do
+			local on = slot == wardrobeSlot
+			tab.frame.BackgroundColor3 = on and RED or LINE
+			tab.label.Text = spaced(Accessories.SlotNames[slot], 2)
+			tab.label.TextColor3 = on and BLACK or INK
+			local item = worn[slot] and Accessories.get(worn[slot])
+			wearRows[slot].Text = item and upperEs(item.Name) or "—"
+			wearRows[slot].TextColor3 = item and Cosmetics.Rarities[item.Rarity].Color or DIM
+		end
+		for id, card in cards do
+			local on = (id == "" and worn[wardrobeSlot] == nil) or worn[wardrobeSlot] == id
+			card.frame.BackgroundColor3 = on and Color3.fromRGB(40, 11, 13) or PANEL
+			card.stroke.Color = on and RED or LINE
+			card.stroke.Thickness = on and 4 or 2
+		end
+		local own = string.split(player:GetAttribute("AccOwned") or "", ",")
+		local count = 0
+		for _, id in own do
+			if id ~= "" then
+				count += 1
+			end
+		end
+		collected.Text = Lang.tr("COLLECTED") .. ` {count} / {#Accessories.Items}`
+	end
+
+	for slot, tab in tabButtons do
+		button(s, tab.frame.Position.X.Offset, tab.frame.Position.Y.Offset, 204, 46, function()
+			wardrobeSlot = slot
+			buildList()
+			paint()
+		end).Name = "Slot_" .. slot
+	end
+
+	buildList()
+	paint()
+	for _, name in { "AccOwned", "AccEquipped" } do
+		table.insert(wardrobeConns, player:GetAttributeChangedSignal(name):Connect(function()
+			if name == "AccOwned" then
+				buildList()
+			end
+			paint()
+		end))
+	end
+	-- los accesorios giran despacio mientras la pantalla se ve
+	table.insert(wardrobeConns, RunService.RenderStepped:Connect(function()
+		if not s.Visible then
+			return
+		end
+		local t = os.clock()
+		for i, sway in swayers do
+			sway(t + i * 0.7)
+		end
+	end))
 	backButton(s, "main")
 	smallVersion(s, 1800, 1010)
 end
