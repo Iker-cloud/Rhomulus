@@ -98,8 +98,8 @@ def group_of(i):
 
 # grupos = nodos sin malla que tienen hijos
 ONLY = set(sys.argv[4].split(",")) if len(sys.argv) > 4 else None
-groups = [i for i, n in enumerate(nodes) if "mesh" not in n and n.get("children") and (ONLY is None or n["name"] in ONLY or i not in parent)]
-group_names = {i: nodes[i]["name"] for i in groups}
+groups = [i for i, n in enumerate(nodes) if "mesh" not in n and n.get("children") and (ONLY is None or n.get("name") in ONLY or i not in parent)]
+group_names = {i: nodes[i].get("name", f"grupo_{i}") for i in groups}  # hay nodos de giro sin nombre (clavos del bate)
 
 def nearest_group(i):
     j = parent.get(i)
@@ -118,11 +118,20 @@ for i, n in enumerate(nodes):
     mesh = gltf["meshes"][n["mesh"]]
     prim = mesh["primitives"][0]
     pos = read_positions(prim["attributes"]["POSITION"])
+    w_full = get_world(i)
+    # Los nodos pueden traer escala (columnas de la matriz que no miden 1): se pasa a las medidas de la pieza y la matriz queda solo
+    # con el giro, porque un CFrame de Roblox no admite escala.
+    sc = [math.sqrt(sum(w_full[c * 4 + r] ** 2 for r in range(3))) or 1.0 for c in range(3)]
+    w = list(w_full)
+    for c in range(3):
+        for r in range(3):
+            w[c * 4 + r] = w_full[c * 4 + r] / sc[c]
+    pos_raw = pos
+    pos = [[p[k] * sc[k] for k in range(3)] for p in pos_raw]
     lo = [min(p[k] for p in pos) for k in range(3)]
     hi = [max(p[k] for p in pos) for k in range(3)]
     size = [hi[k] - lo[k] for k in range(3)]
     center = [(hi[k] + lo[k]) / 2 for k in range(3)]
-    w = get_world(i)
     # posición del centro de la pieza en el mundo
     ctr = mat_mul(w, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, center[0], center[1], center[2], 1])
     # Forma: caja (8 vértices distintos), esfera (todos a la misma distancia del centro), cilindro (dos medidas
@@ -170,8 +179,8 @@ for i, n in enumerate(nodes):
         "mat": material["name"] if (material["pbrMetallicRoughness"].get("baseColorTexture") or material.get("emissiveTexture")) else None,
     })
     # extremos para la altura
-    for p in pos:
-        pw = mat_mul(w, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, p[0], p[1], p[2], 1])
+    for p in pos_raw:
+        pw = mat_mul(w_full, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, p[0], p[1], p[2], 1])
         y = pw[13] * SCALE
         min_y, max_y = min(min_y, y), max(max_y, y)
         fx, fz = -pw[12] * SCALE, -pw[14] * SCALE  # tras el giro de 180 grados

@@ -65,8 +65,8 @@ end
 -- Armas cuerpo a cuerpo ----------------------------------------------------------------------------------------------------------
 -- Rarity: Common, Rare, Epic o Legendary (Cosmetics.Rarities). Price: Rhoms (el cuchillo es gratis y siempre se tiene).
 -- Style: el gesto de los brazos (client/ItemPoses: "MeleeSlash" tajo en diagonal, "MeleeChop" golpe desde arriba, "MeleeSweep" barrido).
--- Pitch / Volume: cómo suena el golpe (el mismo sonido a otro tono). Model: de momento un bloque de color (server/MeleeModel); cuando
--- haya modelos 3D se reemplaza ahí, sin tocar nada más. Size: largo, ancho y grosor del bloque.
+-- Pitch / Volume: cómo suena el golpe (el mismo sonido a otro tono). Model: cada skin usa su modelo 3D de ZombieData (Melee<Id>, server/MeleeModel); si falta sale un bloque de color; cuando
+-- no hay modelo se usa Size (largo, ancho y grosor del bloque).
 Cosmetics.Rarities = {
 	Common = { Text = "COMMON", Color = Color3.fromRGB(176, 176, 182) },
 	Rare = { Text = "RARE", Color = Color3.fromRGB(78, 160, 255) },
