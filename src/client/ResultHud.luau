@@ -16,7 +16,7 @@ local player = Players.LocalPlayer
 
 local PALETTES = {
 	Victory = {
-		title = "VICTORIA",
+		title = "VICTORY",
 		accent = Color3.fromRGB(245, 196, 60),
 		glow = Color3.fromRGB(255, 214, 90),
 		rowTint = Color3.fromRGB(38, 32, 14),
@@ -24,7 +24,7 @@ local PALETTES = {
 		damageColor = Color3.new(1, 1, 1),
 	},
 	Defeat = {
-		title = "DERROTA",
+		title = "DEFEAT",
 		accent = Color3.fromRGB(226, 66, 54),
 		glow = Color3.fromRGB(255, 80, 60),
 		rowTint = Color3.fromRGB(34, 15, 15),
@@ -264,7 +264,7 @@ function ResultHud.start()
 		boardLayout.Parent = board
 
 		local gray = Color3.fromRGB(150, 146, 140)
-		tableRow(board, 34, { "JUGADOR", "KILLS", "REVIVIDOS", "DAÑO RECIBIDO" }, { gray, gray, gray, gray }, 12, Enum.Font.GothamBold)
+		tableRow(board, 34, { "PLAYER", "KILLS", "REVIVIDOS", "DAMAGE TAKEN" }, { gray, gray, gray, gray }, 12, Enum.Font.GothamBold)
 
 		table.sort(stats, function(a, b)
 			return a.kills > b.kills
@@ -348,7 +348,7 @@ function ResultHud.start()
 				local levelAfter, intoAfter, needAfter = Progress.fromTotal(info.after)
 				barBack.Visible = true
 				xpText.Text = `+{info.gained} XP`
-				levelText.Text = `NIVEL {levelBefore}`
+				levelText.Text = `LEVEL {levelBefore}`
 				barFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
 				task.spawn(function()
 					task.wait(0.9) -- primero se leen las estadísticas
@@ -359,7 +359,7 @@ function ResultHud.start()
 						if not barFill.Parent then
 							return
 						end
-						levelText.Text = `¡NIVEL {levelAfter}!`
+						levelText.Text = `LEVEL {levelAfter}!`
 						levelText.TextColor3 = palette.accent
 						barFill.Size = UDim2.fromScale(0, 1)
 					end
@@ -415,11 +415,11 @@ function ResultHud.start()
 				line.TextColor3 = Color3.fromRGB(190, 184, 176)
 				local accent = string.format("#%02X%02X%02X", palette.accent.R * 255, palette.accent.G * 255, palette.accent.B * 255)
 				if info.isRecord then
-					line.Text = `TIEMPO {clock(info.time)}  ·  <font color="{accent}">¡NUEVO RÉCORD DE {difficulty.Upper}!</font>`
+					line.Text = `TIME {clock(info.time)}  ·  <font color="{accent}">NEW {difficulty.Upper} RECORD!</font>`
 				elseif info.best then
-					line.Text = `TIEMPO {clock(info.time)}  ·  RÉCORD {difficulty.Upper}: <font color="{accent}">{clock(info.best)}</font>`
+					line.Text = `TIME {clock(info.time)}  ·  {difficulty.Upper} RECORD: <font color="{accent}">{clock(info.best)}</font>`
 				else
-					line.Text = `TIEMPO {clock(info.time)}`
+					line.Text = `TIME {clock(info.time)}`
 				end
 				line.Parent = extras
 			end
@@ -508,7 +508,7 @@ function ResultHud.start()
 		again.Font = Enum.Font.GothamBlack
 		again.TextSize = 17
 		again.TextColor3 = Color3.fromRGB(14, 13, 13)
-		again.Text = "OTRA PARTIDA"
+		again.Text = "PLAY AGAIN"
 		again.Parent = buttons
 		Instance.new("UICorner", again).CornerRadius = UDim.new(0, 6)
 		again.Activated:Connect(function()
@@ -527,7 +527,7 @@ function ResultHud.start()
 		back.Font = Enum.Font.GothamBold
 		back.TextSize = 14
 		back.TextColor3 = palette.accent
-		back.Text = "VOLVER AL MENÚ"
+		back.Text = "BACK TO MENU"
 		back.Parent = buttons
 		Instance.new("UICorner", back).CornerRadius = UDim.new(0, 6)
 		local backStroke = Instance.new("UIStroke")
@@ -541,13 +541,13 @@ function ResultHud.start()
 				return
 			end
 			leaving = true
-			back.Text = "VOLVIENDO…"
+			back.Text = "RETURNING…"
 			local ok, err = pcall(function()
 				TeleportService:Teleport(Places.Menu, player)
 			end)
 			if not ok then
 				warn("[ResultHud] No se pudo volver al menú (en Studio no funciona):", err)
-				back.Text = "VOLVER AL MENÚ"
+				back.Text = "BACK TO MENU"
 				leaving = false
 			end
 		end)
@@ -564,11 +564,11 @@ function ResultHud.start()
 						ready += 1
 					end
 				end
-				again.Text = `LISTO {ready}/{total}` .. (seconds and ` · {seconds}` or "")
+				again.Text = `READY {ready}/{total}` .. (seconds and ` · {seconds}` or "")
 				again.BackgroundColor3 = Color3.fromRGB(70, 66, 60)
 				again.TextColor3 = Color3.new(1, 1, 1)
 			else
-				again.Text = "OTRA PARTIDA" .. (seconds and ` · {seconds}` or "")
+				again.Text = "PLAY AGAIN" .. (seconds and ` · {seconds}` or "")
 			end
 		end
 		refreshAgain()

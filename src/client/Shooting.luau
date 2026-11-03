@@ -18,7 +18,7 @@ local TRACER_SPEED = 600 -- studs por segundo
 
 local Shooting = {}
 
-local weaponName = "Pistola" -- nombre del arma activa (lo manda el servidor)
+local weaponName = "Pistol" -- nombre del arma activa (lo manda el servidor)
 local firing = false
 local lastShot = 0
 local slot = "pistol"

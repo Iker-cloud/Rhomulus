@@ -90,7 +90,7 @@ function MedkitHud.start()
 		bar.BorderSizePixel = 0
 		bar.Parent = cross
 	end
-	label(badge, `BOTIQUÍN  [{M.KeyLabel}]`, UDim2.fromOffset(130, 32), UDim2.fromOffset(36, 0), Enum.Font.GothamBlack, Color3.new(1, 1, 1))
+	label(badge, `MEDKIT  [{M.KeyLabel}]`, UDim2.fromOffset(130, 32), UDim2.fromOffset(36, 0), Enum.Font.GothamBlack, Color3.new(1, 1, 1))
 
 	-- Barra de curación (debajo de la mira)
 	local panel = Instance.new("Frame")
@@ -121,7 +121,7 @@ function MedkitHud.start()
 		if endTime then
 			local left = math.max(0, endTime - workspace:GetServerTimeNow())
 			local target = player:GetAttribute("HealingTarget")
-			title.Text = (target and target ~= "") and `Curando a {target}…` or "Curándote…"
+			title.Text = (target and target ~= "") and `Healing {target}…` or "Healing yourself…"
 			fill.Size = UDim2.fromScale(1 - left / M.Time, 1)
 			panel.Visible = true
 		else

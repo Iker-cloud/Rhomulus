@@ -121,7 +121,7 @@ function MutatorHud.start()
 		local limit = Instance.new("UITextSizeConstraint")
 		limit.MaxTextSize = 21
 		limit.Parent = name
-		local rarityLabel = label(chip, `{rarity.Text}  ·  {bonus > 0 and `+{bonus} % XP` or "SIN BONO"}`, UDim2.fromOffset(170, 16), UDim2.fromOffset(56, 33), 13, rarity.Color)
+		local rarityLabel = label(chip, `{rarity.Text}  ·  {bonus > 0 and `+{bonus} % XP` or "NO BONUS"}`, UDim2.fromOffset(170, 16), UDim2.fromOffset(56, 33), 13, rarity.Color)
 		local description = label(chip, def.Description, UDim2.fromOffset(212, 52), UDim2.fromOffset(8, 62), 14, Color3.fromRGB(196, 192, 184), OSWALD_LIGHT)
 		description.TextWrapped = true
 		description.TextYAlignment = Enum.TextYAlignment.Top
@@ -157,7 +157,7 @@ function MutatorHud.start()
 		if not (playing and #ids > 0) then
 			return
 		end
-		title.Text = #ids == 1 and "MUTACIÓN DE LA RONDA" or "MUTACIONES DE LA RONDA"
+		title.Text = #ids == 1 and "ROUND MUTATION" or "ROUND MUTATIONS"
 		for index, id in ids do
 			local holder, chip = makeChip(id, index)
 			table.insert(chips, holder)

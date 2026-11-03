@@ -21,9 +21,9 @@ local Difficulties = {
 	MaxAliveCap = 32, -- tope de zombies vivos a la vez en cualquier dificultad (rendimiento en celular)
 
 	Calma = {
-		Name = "Calma",
-		Upper = "CALMA",
-		Description = "Para conocer el barrio: menos zombies, más débiles y lentos. Todo cuesta menos y aguantas más caído.",
+		Name = "Calm",
+		Upper = "CALM",
+		Description = "To get to know the barrio: fewer zombies, weaker and slower. Everything costs less and you last longer downed.",
 		Color = Color3.fromRGB(110, 190, 140),
 		Health = 0.8,
 		Speed = 0.9,
@@ -42,9 +42,9 @@ local Difficulties = {
 	},
 
 	Tension = {
-		Name = "Tensión",
-		Upper = "TENSIÓN",
-		Description = "La experiencia pensada: hordas medianas, zombies normales y precios justos. Hay que cuidarse las espaldas.",
+		Name = "Tension",
+		Upper = "TENSION",
+		Description = "The intended experience: medium hordes, normal zombies and fair prices. Watch your back.",
 		Color = Color3.fromRGB(240, 200, 80),
 		Health = 1,
 		Speed = 1,
@@ -65,7 +65,7 @@ local Difficulties = {
 	Crisis = {
 		Name = "Crisis",
 		Upper = "CRISIS",
-		Description = "Más zombies, más duros y más rápidos. Los Tanques llegan seguido y hay menos ayuda; las latas rinden algo más.",
+		Description = "More zombies, tougher and faster. Tanks show up often and there's less help; cans go a bit further.",
 		Color = Color3.fromRGB(235, 130, 55),
 		Health = 1.5,
 		Speed = 1.08,
@@ -84,9 +84,9 @@ local Difficulties = {
 	},
 
 	Colapso = {
-		Name = "Colapso",
-		Upper = "COLAPSO",
-		Description = "El barrio ya cayó: hordas enormes de zombies que muerden fuerte, Tanques sin descanso y casi nada de ayuda.",
+		Name = "Collapse",
+		Upper = "COLLAPSE",
+		Description = "The barrio has fallen: huge hordes of hard-biting zombies, relentless Tanks and almost no help.",
 		Color = Color3.fromRGB(226, 38, 44),
 		Health = 2,
 		Speed = 1.15,

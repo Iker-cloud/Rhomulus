@@ -18,13 +18,13 @@ folder.Parent = workspace
 local function spawnDummy(position)
 	-- De frente a los jugadores (el lobby los espera mirando hacia -Z, los maniquíes miran hacia +Z)
 	local model, root = PropModel.build(Data, position, math.pi)
-	model.Name = "Maniquí"
+	model.Name = "Dummy"
 	root.Name = "HumanoidRootPart"
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = Config.Dummy.Health
 	humanoid.Health = Config.Dummy.Health
-	humanoid.DisplayName = "Maniquí"
+	humanoid.DisplayName = "Dummy"
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.BreakJointsOnDeath = false

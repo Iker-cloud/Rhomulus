@@ -174,7 +174,7 @@ function ObjectiveGuide.start()
 		return
 	end
 	createGuide({ beaconName = "ObjectiveBeacon", guiName = "ObjectiveGuide", posAttr = "ObjectivePos", nameAttr = "ObjectiveName", color = G.Color, order = 10 })
-	createGuide({ beaconName = "ShopBeacon", guiName = "ShopGuide", posAttr = "ShopPos", fixedName = "TIENDA", color = G.ShopColor, order = 9, signHeight = 24 })
+	createGuide({ beaconName = "ShopBeacon", guiName = "ShopGuide", posAttr = "ShopPos", fixedName = "SHOP", color = G.ShopColor, order = 9, signHeight = 24 })
 end
 
 return ObjectiveGuide

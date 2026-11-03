@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local CameraController = require(script.Parent.CameraController)
 local Controls = require(script.Parent.Controls)
 local GameHud = require(script.Parent.GameHud)
@@ -217,7 +218,7 @@ local function bindPromptButton(name, keyCode, keyText)
 		end
 		if current then
 			local action = current.ActionText ~= "" and current.ActionText or keyText
-			button.label.Text = `{keyText}\n{string.upper(action)}`
+			button.label.Text = `{keyText}\n{Lang.upper(Lang.tr(action))}`
 		end
 		button.visible = current ~= nil
 	end
@@ -317,7 +318,7 @@ function TouchControls.start()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- Disparo -------------------------------------------------------------------------------------------------------
-	local fire = makeButton("Fire", "FUEGO", RED)
+	local fire = makeButton("Fire", "FIRE", RED)
 	track(fire.frame, function()
 		setLit(fire, true)
 		Controls.firing = true
@@ -332,14 +333,14 @@ function TouchControls.start()
 	end, addDrag)
 
 	-- Apuntar (alterna)
-	local aim = makeButton("Aim", "APUNTAR")
+	local aim = makeButton("Aim", "AIM")
 	track(aim.frame, function()
 		Controls.aim = not Controls.aim
 		CameraController.setAiming(Controls.aim)
 		setLit(aim, Controls.aim)
 	end)
 
-	local reload = makeButton("Reload", "RECARGAR")
+	local reload = makeButton("Reload", "RELOAD")
 	track(reload.frame, function()
 		setLit(reload, true)
 		Shooting.reload()
@@ -348,12 +349,12 @@ function TouchControls.start()
 	end)
 
 	-- Correr (alterna): se cancela solo al disparar, apuntar o recargar y vuelve al terminar, como con Shift
-	local sprint = makeButton("Sprint", "CORRER")
+	local sprint = makeButton("Sprint", "SPRINT")
 	track(sprint.frame, function()
 		Sprint.setHeld(not Sprint.isHeld())
 	end)
 
-	local cancel = makeButton("Cancel", "CANCELAR", GOLD)
+	local cancel = makeButton("Cancel", "CANCEL", GOLD)
 	track(cancel.frame, function()
 		ItemUse.cancel()
 	end)
@@ -361,12 +362,12 @@ function TouchControls.start()
 	bindPromptButton("KeyE", Enum.KeyCode.E, "E")
 	bindPromptButton("KeyF", Enum.KeyCode.F, "F")
 
-	local drop = makeButton("Drop", "SOLTAR", GOLD)
+	local drop = makeButton("Drop", "DROP", GOLD)
 	track(drop.frame, function()
 		TeamHud.drop()
 	end)
 
-	local selfRevive = makeButton("SelfRevive", "LEVANTAR", GOLD)
+	local selfRevive = makeButton("SelfRevive", "GET UP", GOLD)
 	local selfReviveHeld = false
 	track(selfRevive.frame, function()
 		selfReviveHeld = true
@@ -464,7 +465,7 @@ function TouchControls.start()
 			buttons[name].frame.Visible = playing
 		end
 		-- con un objeto en la mano el botón de disparo lo usa; recargar y apuntar se quedan para el arma
-		fire.label.Text = itemInHand and (itemInHand == "Medkit" and "CURAR" or (itemInHand == "Bandage" and "VENDAR" or "LANZAR")) or "FUEGO"
+		fire.label.Text = itemInHand and (itemInHand == "Medkit" and "HEAL" or (itemInHand == "Bandage" and "BANDAGE" or "THROW")) or "FIRE"
 		setLit(sprint, Sprint.isHeld())
 		reload.frame.Visible = playing and itemInHand == nil
 		aim.frame.Visible = playing and itemInHand == nil
@@ -493,7 +494,7 @@ function TouchControls.start()
 
 		local inLobby = stage == "Lobby" and not Spectator.isActive() and not player:GetAttribute("UiOpen")
 		ready.Visible = inLobby
-		ready.Text = player:GetAttribute("Ready") and "✔ LISTO" or "ESTOY LISTO"
+		ready.Text = player:GetAttribute("Ready") and "✔ READY" or "I'M READY"
 		readyStroke.Color = player:GetAttribute("Ready") and Color3.fromRGB(110, 210, 110) or GOLD
 	end
 

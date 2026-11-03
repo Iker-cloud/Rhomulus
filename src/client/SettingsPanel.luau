@@ -88,17 +88,17 @@ function SettingsPanel.start()
 	fit()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
 
-	label(panel, "AJUSTES", UDim2.new(1, -60, 0, 36), UDim2.fromOffset(16, 6), 26, GOLD)
+	label(panel, "SETTINGS", UDim2.new(1, -60, 0, 36), UDim2.fromOffset(16, 6), 26, GOLD)
 	local close = button(panel, "X", UDim2.fromOffset(40, 36), UDim2.new(1, -46, 0, 6))
 	close.TextSize = 22
 
-	label(panel, "SENSIBILIDAD", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 56), 18, Color3.fromRGB(215, 210, 200))
+	label(panel, "SENSITIVITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 56), 18, Color3.fromRGB(215, 210, 200))
 	local minus = button(panel, "−", UDim2.fromOffset(64, 52), UDim2.fromOffset(16, 86))
 	local plus = button(panel, "+", UDim2.fromOffset(64, 52), UDim2.new(1, -80, 0, 86))
 	local value = label(panel, "", UDim2.new(1, -176, 0, 52), UDim2.fromOffset(88, 86), 30, Color3.new(1, 1, 1), Enum.TextXAlignment.Center)
 	label(
 		panel,
-		Controls.isTouch() and "Cuánto gira la cámara al arrastrar el dedo" or "Cuánto gira la cámara con el ratón",
+		Controls.isTouch() and "How far the camera turns when you drag your finger" or "How far the camera turns with the mouse",
 		UDim2.new(1, -32, 0, 40),
 		UDim2.fromOffset(16, 148),
 		15,
@@ -112,7 +112,7 @@ function SettingsPanel.start()
 	Controls.sensitivityChanged:Connect(refresh)
 
 	-- Calidad gráfica: AUTO / ALTA / MEDIA / BAJA
-	label(panel, "CALIDAD GRÁFICA", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 196), 18, Color3.fromRGB(215, 210, 200))
+	label(panel, "GRAPHICS QUALITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 196), 18, Color3.fromRGB(215, 210, 200))
 	local qualityPrev = button(panel, "<", UDim2.fromOffset(64, 44), UDim2.fromOffset(16, 222))
 	qualityPrev.Name = "QualityPrev"
 	local qualityNext = button(panel, ">", UDim2.fromOffset(64, 44), UDim2.new(1, -80, 0, 222))
@@ -138,7 +138,7 @@ function SettingsPanel.start()
 	perf.Name = "PerfToggle"
 	perf.TextSize = 20
 	local function refreshPerf()
-		perf.Text = Performance.isOverlayShown() and "RENDIMIENTO: VISIBLE" or "RENDIMIENTO: OCULTO"
+		perf.Text = Performance.isOverlayShown() and "PERFORMANCE: SHOWN" or "PERFORMANCE: HIDDEN"
 	end
 	refreshPerf()
 	perf.Activated:Connect(function()

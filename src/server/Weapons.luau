@@ -288,10 +288,10 @@ end
 function Weapons.ammoDenied(player)
 	local state = states[player]
 	if not state or not state.primary then
-		return "Necesitas un arma principal"
+		return "You need a primary weapon"
 	end
 	if state.primary.reserve >= maxReserve(Config.Weapons[state.primary.name]) then
-		return "Ya tienes toda la munición"
+		return "You already have full ammo"
 	end
 	return nil
 end

@@ -15,6 +15,10 @@ local TOUCH = UserInputService.TouchEnabled and not UserInputService.MouseEnable
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Idioma: el texto del menú está en inglés; quien tiene Roblox en español lo ve traducido (shared/Lang)
+local Lang = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Lang"))
+Lang.watch()
+
 -- Diseño v2: fondo casi negro, texto crema y el rojo como acento (el negro queda para el texto sobre las casillas rojas)
 local RED = Color3.fromRGB(200, 22, 28)
 local BLACK = Color3.new(0, 0, 0)
@@ -59,15 +63,13 @@ RunService:BindToRenderStep("MenuCursor", Enum.RenderPriority.Last.Value, functi
 	UserInputService.MouseIconEnabled = true
 end)
 
--- string.upper no pasa a mayúsculas las letras con tilde (UTF-8)
-local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ", ["ü"] = "Ü" }
+-- Mayúsculas (con tilde en español) del texto ya traducido
 local function upperEs(str)
-	return (string.gsub(string.upper(str), "[Ã][¡©­³º±¼]", function(c)
-		return ACCENTS[c] or c
-	end))
+	return Lang.upper(Lang.tr(str))
 end
 
 local function spaced(str, gap)
+	str = Lang.tr(str) -- se traduce antes de separar las letras
 	local out = {}
 	for _, cp in utf8.codes(str) do
 		table.insert(out, utf8.char(cp) .. string.rep("\u{2009}", gap or 1))
@@ -152,7 +154,7 @@ local function text(parent, str, font, size, pos, props)
 	local factor = math.max(1, size / 100)
 	local label = make("TextLabel", {
 		BackgroundTransparency = 1,
-		Text = str,
+		Text = Lang.tr(str),
 		FontFace = font,
 		TextSize = math.min(size, 100),
 		TextColor3 = props.color or INK,
@@ -292,9 +294,9 @@ local function drips(parent, x, y, list)
 	end
 end
 
--- Elementos fijos (todas las pantallas): "DÍA 01" arriba a la izquierda y "SOBREVIVE" en rojo arriba a la derecha
-text(root, spaced("DÍA 01", 4), OSW_BOLD, 30, Vector2.new(120, 130), { width = 500, color = INK })
-text(root, spaced("SOBREVIVE", 5), OSW_BOLD, 30, Vector2.new(1800, 130), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, color = RED, width = 700 })
+-- Elementos fijos (todas las pantallas): "DAY 01" arriba a la izquierda y "SURVIVE" en rojo arriba a la derecha
+text(root, spaced("DAY 01", 4), OSW_BOLD, 30, Vector2.new(120, 130), { width = 500, color = INK })
+text(root, spaced("SURVIVE", 5), OSW_BOLD, 30, Vector2.new(1800, 130), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, color = RED, width = 700 })
 
 -- Pantallas --------------------------------------------------------------
 local screens = {}
@@ -342,7 +344,7 @@ end
 
 local function backButton(s, target, leaveRoom)
 	text(s, "←", OSW, 70, Vector2.new(130, 950), { width = 70, color = INK })
-	text(s, "VOLVER", ANTON, 66, Vector2.new(212, 945), { width = 400, color = INK })
+	text(s, "BACK", ANTON, 66, Vector2.new(212, 945), { width = 400, color = INK })
 	button(s, 120, 905, 320, 85, function()
 		if leaveRoom then
 			roomState = nil
@@ -361,7 +363,7 @@ end
 
 -- 1) Principal -----------------------------------------------------------
 local main = newScreen("main")
-local DEFAULT_STATUS = spaced("1–4 JUGADORES · COOPERATIVO", 3)
+local DEFAULT_STATUS = spaced("1–4 PLAYERS · CO-OP", 3)
 local status = text(main, DEFAULT_STATUS, OSW_BOLD, 30, Vector2.new(120, 973), { width = 1400, color = INK })
 local function setStatus(msg)
 	status.Text = msg and spaced(string.upper(msg), 3) or DEFAULT_STATUS
@@ -416,24 +418,24 @@ local function refreshLevel()
 		return
 	end
 	local level, into, need = Progress.fromTotal(total)
-	levelText.Text = spaced(`NIVEL {level}`, 4)
+	levelText.Text = spaced(`LEVEL {level}`, 4)
 	levelFill.Size = UDim2.fromScale(need > 0 and into / need or 1, 1)
-	levelXp.Text = need > 0 and spaced(`{into} / {need} XP PARA EL NIVEL {level + 1}`, 2) or spaced("NIVEL MÁXIMO", 2)
+	levelXp.Text = need > 0 and spaced(`{into} / {need} XP TO LEVEL {level + 1}`, 2) or spaced("MAX LEVEL", 2)
 end
 player:GetAttributeChangedSignal("ProgXP"):Connect(refreshLevel)
 refreshLevel()
 
 -- Las tres opciones: numeradas, y la elegida (la de debajo del ratón) se rellena de rojo con una flecha
 local items = {
-	{ "JUGAR", function()
+	{ "PLAY", function()
 		setStatus(nil)
 		show("list")
 	end },
-	{ "CREAR PARTIDA", function()
+	{ "CREATE GAME", function()
 		setStatus(nil)
 		show("setup")
 	end },
-	{ "CÓMO JUGAR", function()
+	{ "HOW TO PLAY", function()
 		setStatus(nil)
 		show("help")
 	end },
@@ -564,8 +566,8 @@ buildHelpTab[4] = function(c)
 			make("UIStroke", { Color = RED, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
 		end
 		paragraph(c, d.Description, OSW, 30, Vector2.new(600, y + 6), 740, 100)
-		text(c, "VIDA ×" .. ratio(d.Health) .. "    DAÑO ×" .. ratio(d.Damage), OSW_BOLD, 30, Vector2.new(1390, y + 32), { width = 430 })
-		text(c, "PRECIOS ×" .. ratio(d.Cost) .. "    LATAS ×" .. ratio(d.Reward), OSW_BOLD, 30, Vector2.new(1390, y + 74), { width = 430 })
+		text(c, "HEALTH ×" .. ratio(d.Health) .. "    DAMAGE ×" .. ratio(d.Damage), OSW_BOLD, 30, Vector2.new(1390, y + 32), { width = 430 })
+		text(c, "PRICES ×" .. ratio(d.Cost) .. "    CANS ×" .. ratio(d.Reward), OSW_BOLD, 30, Vector2.new(1390, y + 74), { width = 430 })
 		if i < #Difficulties.Order then
 			rule(c, 120, y + 118, 1680)
 		end
@@ -575,7 +577,7 @@ end
 builders.help = function()
 	local s = help
 	clear(s)
-	header(s, "CÓMO JUGAR")
+	header(s, "HOW TO PLAY")
 	local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, s)
 	local tabs = {}
 	local function paintTabs(active)
@@ -667,7 +669,7 @@ end
 
 -- Casillas de elección: la elegida se rellena de negro. items = { { id, etiqueta, ancho }, ... }. Devuelve la función que las repinta.
 -- `lockedLevel` (opcional): función(id) que devuelve el nivel que falta para poder elegir esa casilla (nil = libre). Las bloqueadas salen
--- atenuadas con "NIVEL N" debajo y no se pueden pulsar.
+-- atenuadas con "LEVEL N" debajo y no se pueden pulsar.
 local function choiceRow(s, x, y, h, items, textSize, isOn, onPick, lockedLevel)
 	local boxes = {}
 	local function paint()
@@ -682,7 +684,7 @@ local function choiceRow(s, x, y, h, items, textSize, isOn, onPick, lockedLevel)
 			b.label.Position = need and UDim2.fromOffset(b.cx, b.y + h * 0.36) or UDim2.fromOffset(b.cx, b.y + h / 2)
 			b.lock.Visible = need ~= nil
 			if need then
-				b.lock.Text = spaced(`NIVEL {need}`, 1)
+				b.lock.Text = spaced(`LEVEL {need}`, 1)
 			end
 		end
 	end
@@ -698,7 +700,7 @@ local function choiceRow(s, x, y, h, items, textSize, isOn, onPick, lockedLevel)
 		local itemX = x
 		button(s, x, y, w, h, function()
 			if lockedLevel and lockedLevel(item[1]) then
-				return -- bloqueada: el "NIVEL N" de la casilla dice cuándo se desbloquea
+				return -- bloqueada: el "LEVEL N" de la casilla dice cuándo se desbloquea
 			end
 			onPick(item[1])
 			paint()
@@ -747,7 +749,7 @@ local listToken = 0
 -- Intenta entrar a una sala. Devuelve true, o false + motivo + si el código estaba mal.
 local function tryJoin(item, pass)
 	if busy then
-		return false, "Espera un momento"
+		return false, "Hold on a moment"
 	end
 	busy = true
 	local ok, r = pcall(function()
@@ -755,13 +757,13 @@ local function tryJoin(item, pass)
 	end)
 	busy = false
 	if not ok or not r then
-		return false, "No se pudo conectar. Intenta de nuevo"
+		return false, "Couldn't connect. Try again"
 	end
 	if r.room then
 		enterRoom(r.room)
 		return true
 	end
-	return false, r.error or "No se pudo entrar", r.wrongCode
+	return false, r.error or "Couldn't join", r.wrongCode
 end
 
 -- Ventana para escribir el código de una sala privada
@@ -770,7 +772,7 @@ local function askCode(s, item)
 	local panel = make("Frame", { BackgroundColor3 = PANEL, Position = UDim2.fromOffset(330, 200), Size = UDim2.fromOffset(1260, 700), BorderSizePixel = 0 }, layer)
 	make("UIStroke", { Color = RED, Thickness = 5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, panel)
 	lockIcon(panel, 60, 62, 70, INK)
-	text(panel, "SALA PRIVADA", ANTON, 84, Vector2.new(160, 100), { width = 900 })
+	text(panel, "PRIVATE ROOM", ANTON, 84, Vector2.new(160, 100), { width = 900 })
 	text(panel, spaced(upperEs(item.name), 2), OSW_BOLD, 34, Vector2.new(60, 190), { width = 1100 })
 	rule(panel, 60, 222, 1140)
 
@@ -781,14 +783,14 @@ local function askCode(s, item)
 		make("UIStroke", { Color = LINE, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, slotBox)
 		slots[i] = text(panel, "", ANTON, 250, Vector2.new(x + 110, 395), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 220 })
 	end
-	local caption = text(panel, spaced("ESCRIBE EL CÓDIGO DE 4 LETRAS", 3), OSW_BOLD, 32, Vector2.new(630, 568),
+	local caption = text(panel, spaced("ENTER THE 4-LETTER CODE", 3), OSW_BOLD, 32, Vector2.new(630, 568),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1100 })
 
 	local enterBox = make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(760, 600), Size = UDim2.fromOffset(440, 80) }, panel)
-	local enterLabel = text(panel, "ENTRAR", ANTON, 62, Vector2.new(980, 640),
+	local enterLabel = text(panel, "JOIN", ANTON, 62, Vector2.new(980, 640),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 440, color = BLACK, transparency = 0.5 })
 	outline(panel, 60, 600, 440, 80, 4)
-	text(panel, "CANCELAR", ANTON, 62, Vector2.new(280, 640), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 440 })
+	text(panel, "CANCEL", ANTON, 62, Vector2.new(280, 640), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 440 })
 	enterBox.Name = "EnterBox"
 
 	-- La TextBox invisible recibe lo que se escribe (también el teclado del celular)
@@ -800,12 +802,12 @@ local function askCode(s, item)
 		if #box.Text ~= 4 then
 			return
 		end
-		caption.Text = spaced("COMPROBANDO…", 3)
+		caption.Text = spaced("CHECKING…", 3)
 		local ok, why, wrong = tryJoin(item, box.Text)
 		if ok then
 			layer:Destroy()
 		else
-			caption.Text = spaced(string.upper(why or "NO SE PUDO ENTRAR"), 2)
+			caption.Text = spaced(string.upper(why or "COULDN'T JOIN"), 2)
 			if wrong then
 				box.Text = ""
 			end
@@ -846,11 +848,11 @@ builders.list = function()
 	clear(s)
 	listToken += 1
 	local token = listToken
-	header(s, "SALAS")
+	header(s, "ROOMS")
 
 	-- Crear una sala nueva (arriba a la derecha)
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(1340, 200), Size = UDim2.fromOffset(460, 72) }, s)
-	text(s, "CREAR SALA", ANTON, 54, Vector2.new(1570, 236), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 460, color = BLACK })
+	text(s, "CREATE ROOM", ANTON, 54, Vector2.new(1570, 236), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 460, color = BLACK })
 	button(s, 1340, 200, 460, 72, function()
 		show("setup")
 	end).Name = "CrearSala"
@@ -864,9 +866,9 @@ builders.list = function()
 		CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 8,
 		ScrollBarImageColor3 = RED, ScrollingDirection = Enum.ScrollingDirection.Y, ElasticBehavior = Enum.ElasticBehavior.Never,
 	}, s)
-	local emptyTitle = text(s, spaced("NO HAY SALAS ABIERTAS", 3), ANTON, 64, Vector2.new(960, 560),
+	local emptyTitle = text(s, spaced("NO OPEN ROOMS", 3), ANTON, 64, Vector2.new(960, 560),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1500 })
-	local emptyHint = text(s, spaced("CREA LA TUYA CON EL BOTÓN DE ARRIBA", 3), OSW, 34, Vector2.new(960, 640),
+	local emptyHint = text(s, spaced("CREATE YOUR OWN WITH THE BUTTON ABOVE", 3), OSW, 34, Vector2.new(960, 640),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 1500, color = DIM })
 	emptyTitle.Visible, emptyHint.Visible = false, false
 	local note = text(s, "", OSW_BOLD, 28, Vector2.new(120, 842), { width = 1680, color = RED })
@@ -905,7 +907,7 @@ builders.list = function()
 			text(row, `{item.count}/{item.max}`, ANTON, 64, Vector2.new(1600, 40),
 				{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, transparency = alpha })
 			if full then
-				text(row, spaced("LLENA", 3), OSW_BOLD, 22, Vector2.new(1600, 84),
+				text(row, spaced("FULL", 3), OSW_BOLD, 22, Vector2.new(1600, 84),
 					{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200, color = RED })
 			end
 			-- caras de quienes ya están dentro
@@ -924,12 +926,12 @@ builders.list = function()
 			click.Activated:Connect(function()
 				uiSound("Click")
 				if full then
-					note.Text = spaced("ESA SALA ESTÁ LLENA", 3)
+					note.Text = spaced("THAT ROOM IS FULL", 3)
 				elseif item.public then
 					note.Text = ""
 					local ok, why = tryJoin(item)
 					if not ok then
-						note.Text = spaced(string.upper(why or "NO SE PUDO ENTRAR"), 3)
+						note.Text = spaced(string.upper(why or "COULDN'T JOIN"), 3)
 					end
 				else
 					note.Text = ""
@@ -964,7 +966,7 @@ end
 local setup = newScreen("setup")
 local setupState = { public = true, map = "Morro", difficulty = Difficulties.Default, mutators = true }
 
--- Etiqueta roja de sección ("QUIÉN PUEDE ENTRAR", "MAPA"…)
+-- Etiqueta roja de sección ("WHO CAN JOIN", "MAP"…)
 local function tag(s, str, x, y)
 	return text(s, spaced(str, 5), OSW_BOLD, 24, Vector2.new(x, y), { width = 900, color = RED })
 end
@@ -972,10 +974,10 @@ end
 builders.setup = function()
 	local s = setup
 	clear(s)
-	header(s, "NUEVA SALA")
+	header(s, "NEW ROOM")
 
 	-- Vista previa: así se verá tu sala en la lista (se actualiza al cambiar las opciones)
-	tag(s, "ASÍ APARECERÁ EN LA LISTA", 1020, 356)
+	tag(s, "THIS IS HOW IT WILL SHOW IN THE LIST", 1020, 356)
 	local previewHolder = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(1020, 380), Size = UDim2.fromOffset(780, 260) }, s)
 	local function drawPreview()
 		for _, c in previewHolder:GetChildren() do
@@ -988,23 +990,23 @@ builders.setup = function()
 			lockIcon(card, 34, 36, 54, INK)
 			nameX = 108
 		end
-		text(card, upperEs("Sala de " .. (player.DisplayName ~= "" and player.DisplayName or player.Name)), ANTON, 60, Vector2.new(nameX, 68), { width = 560 })
+		text(card, upperEs((player.DisplayName ~= "" and player.DisplayName or player.Name) .. "'s room"), ANTON, 60, Vector2.new(nameX, 68), { width = 560 })
 		text(card, spaced(upperEs(mapName(setupState.map)), 5), OSW_BOLD, 22, Vector2.new(34, 130), { width = 520, color = RED })
 		text(card, "1/4", ANTON, 78, Vector2.new(745, 70), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
 		text(card, spaced(difficultyName(setupState.difficulty), 3), OSW_BOLD, 20, Vector2.new(745, 128),
 			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 330, color = DIM })
-		text(previewHolder, setupState.public and "Entra cualquiera con un toque." or "Pedirá un código de 4 letras que te daremos al crear la sala.",
+		text(previewHolder, setupState.public and "Anyone can join with a tap." or "Asks for a 4-letter code that we'll give you when you create the room.",
 			OSW, 24, Vector2.new(2, 203), { width = 770, color = DIM })
 	end
 	drawPreview()
 
-	tag(s, "QUIÉN PUEDE ENTRAR", 120, 356)
+	tag(s, "WHO CAN JOIN", 120, 356)
 	local visibilityText = text(s, "", OSW, 24, Vector2.new(120, 496), { width = 880, color = DIM })
 	local function describeVisibility()
-		visibilityText.Text = setupState.public and "Aparece en la lista y entra cualquiera con un toque. No lleva código."
-			or "Aparece con candado: solo entra quien tenga el código de 4 letras que te damos."
+		visibilityText.Text = setupState.public and "Shows up in the list and anyone can join with a tap. No code needed."
+			or "Shows up with a lock: only people with the 4-letter code we give you can join."
 	end
-	choiceRow(s, 120, 380, 88, { { true, "PÚBLICA", 380 }, { false, "PRIVADA", 380 } }, 58, function(id)
+	choiceRow(s, 120, 380, 88, { { true, "PUBLIC", 380 }, { false, "PRIVATE", 380 } }, 58, function(id)
 		return setupState.public == id
 	end, function(id)
 		setupState.public = id
@@ -1013,7 +1015,7 @@ builders.setup = function()
 	end)
 	describeVisibility()
 
-	tag(s, "MAPA", 120, 550)
+	tag(s, "MAP", 120, 550)
 	choiceRow(s, 120, 574, 84, { { "Morro", "MORRO ESPERANZA", 520 } }, 52, function(id)
 		return setupState.map == id
 	end, function(id)
@@ -1023,7 +1025,7 @@ builders.setup = function()
 
 	-- Los mutadores se encienden o apagan después, en la sala del anfitrión (aquí se crea con ellos activados)
 
-	tag(s, "DIFICULTAD", 120, 698)
+	tag(s, "DIFFICULTY", 120, 698)
 	local difficultyDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 830), { width = 1000, color = DIM })
 	local function describeDifficulty()
 		difficultyDesc.Text = Difficulties.get(setupState.difficulty).Description
@@ -1045,14 +1047,14 @@ builders.setup = function()
 	backButton(s, "list")
 	local errorText = text(s, "", OSW_BOLD, 28, Vector2.new(1340, 948), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(1380, 896), Size = UDim2.fromOffset(420, 104) }, s)
-	text(s, "CREAR", ANTON, 90, Vector2.new(1590, 948), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 420, color = BLACK })
+	text(s, "CREATE", ANTON, 90, Vector2.new(1590, 948), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 420, color = BLACK })
 	local createButton
 	createButton = button(s, 1380, 896, 420, 104, function()
 		if busy then
 			return
 		end
 		busy = true
-		errorText.Text = spaced("CREANDO LA SALA…", 3)
+		errorText.Text = spaced("CREATING THE ROOM…", 3)
 		local ok, r = pcall(function()
 			return request:InvokeServer("create", { map = setupState.map, difficulty = setupState.difficulty, public = setupState.public, mutators = setupState.mutators })
 		end)
@@ -1060,7 +1062,7 @@ builders.setup = function()
 		if ok and r and r.room then
 			enterRoom(r.room)
 		else
-			errorText.Text = spaced(upperEs((ok and r and r.error) or "NO SE PUDO CREAR LA SALA"), 3)
+			errorText.Text = spaced(upperEs((ok and r and r.error) or "COULDN'T CREATE THE ROOM"), 3)
 		end
 	end)
 	createButton.Name = "Crear"
@@ -1069,20 +1071,20 @@ end
 -- Datos comunes de la sala: acceso (código o pública) y jugadores ----------------------------------------------------------------
 local function codeText(s, st)
 	if st.public then
-		tag(s, "ACCESO", 120, 356)
-		text(s, "PÚBLICA", ANTON, 250, Vector2.new(126, 482), { width = 900, color = RED })
-		text(s, "PÚBLICA", ANTON, 250, Vector2.new(120, 476), { width = 900, color = INK })
-		text(s, spaced("CUALQUIERA PUEDE ENTRAR DESDE LA LISTA", 3), OSW_BOLD, 24, Vector2.new(120, 597), { width = 780 })
+		tag(s, "ACCESS", 120, 356)
+		text(s, "PUBLIC", ANTON, 250, Vector2.new(126, 482), { width = 900, color = RED })
+		text(s, "PUBLIC", ANTON, 250, Vector2.new(120, 476), { width = 900, color = INK })
+		text(s, spaced("ANYONE CAN JOIN FROM THE LIST", 3), OSW_BOLD, 24, Vector2.new(120, 597), { width = 780 })
 	else
-		tag(s, "CÓDIGO", 120, 356)
+		tag(s, "CODE", 120, 356)
 		text(s, spaced(st.code or "", 0), ANTON, 290, Vector2.new(126, 482), { width = 780, color = RED })
 		text(s, spaced(st.code or "", 0), ANTON, 290, Vector2.new(120, 476), { width = 780, color = INK })
-		text(s, spaced("COMPÁRTELO CON TU GRUPO", 3), OSW_BOLD, 24, Vector2.new(120, 597), { width = 780 })
+		text(s, spaced("SHARE IT WITH YOUR GROUP", 3), OSW_BOLD, 24, Vector2.new(120, 597), { width = 780 })
 	end
 end
 
 local function playerList(s, names, hostIdx, youIdx, ids)
-	tag(s, "JUGADORES " .. #names .. "/4", 900, 356)
+	tag(s, `PLAYERS {#names}/4`, 900, 356)
 	for i = 1, 4 do
 		local y = 423 + 67 * (i - 1)
 		text(s, string.format("%02d", i), OSW_BOLD, 32, Vector2.new(900, y), { width = 70, color = names[i] and RED or DIM })
@@ -1095,11 +1097,11 @@ local function playerList(s, names, hostIdx, youIdx, ids)
 			if i == hostIdx then
 				local tagBox = outline(s, 1640, y - 20, 160, 40, 2)
 				tagBox.UIStroke.Color = RED
-				text(s, spaced("ANFITRIÓN", 3), OSW_BOLD, 18, Vector2.new(1720, y),
+				text(s, spaced("HOST", 3), OSW_BOLD, 18, Vector2.new(1720, y),
 					{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 160, color = RED })
 			elseif i == youIdx then
 				make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(1738, y - 21), Size = UDim2.fromOffset(62, 42) }, s)
-				text(s, spaced("TÚ", 2), OSW_BOLD, 24, Vector2.new(1769, y),
+				text(s, spaced("YOU", 2), OSW_BOLD, 24, Vector2.new(1769, y),
 					{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 62, color = BLACK })
 			end
 		else
@@ -1108,7 +1110,7 @@ local function playerList(s, names, hostIdx, youIdx, ids)
 				Position = UDim2.fromOffset(1000, y), Size = UDim2.fromOffset(62, 62) }, s)
 			make("UICorner", { CornerRadius = UDim.new(1, 0) }, empty)
 			make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, empty)
-			text(s, spaced("ESPERANDO…", 5), OSW_LIGHT, 28, Vector2.new(1064, y), { width = 600, color = DIM })
+			text(s, spaced("WAITING…", 5), OSW_LIGHT, 28, Vector2.new(1064, y), { width = 600, color = DIM })
 			rule(s, 900, y + 33, 900, true)
 		end
 	end
@@ -1123,7 +1125,7 @@ builders.create = function()
 	if not st then
 		return
 	end
-	header(s, upperEs(st.name or "TU SALA"))
+	header(s, upperEs(st.name or "YOUR ROOM"))
 	codeText(s, st)
 	playerList(s, st.names, st.hostIndex, nil, st.ids)
 
@@ -1141,7 +1143,7 @@ builders.create = function()
 			end
 		end)
 	end
-	choiceRow(s, 1348, 200, 70, { { true, "PÚBLICA", 220 }, { false, "PRIVADA", 220 } }, 40, function(id)
+	choiceRow(s, 1348, 200, 70, { { true, "PUBLIC", 220 }, { false, "PRIVATE", 220 } }, 40, function(id)
 		return st.public == id
 	end, function(id)
 		if st.public ~= id then
@@ -1150,15 +1152,15 @@ builders.create = function()
 		end
 	end)
 
-	tag(s, "MUTADORES", 1368, 703)
-	choiceRow(s, 1368, 728, 80, { { true, "SÍ", 110 }, { false, "NO", 110 } }, 54, function(id)
+	tag(s, "MUTATIONS", 1368, 703)
+	choiceRow(s, 1368, 728, 80, { { true, "YES", 110 }, { false, "NO", 110 } }, 54, function(id)
 		return st.mutators ~= false == id
 	end, function(id)
 		st.mutators = id
 		hostRequest("setMutators", id)
 	end)
 
-	tag(s, "MAPA", 900, 703)
+	tag(s, "MAP", 900, 703)
 	choiceRow(s, 900, 728, 80, { { "Morro", "MORRO ESPERANZA", 440 } }, 54, function(id)
 		return st.map == id
 	end, function(id)
@@ -1167,7 +1169,7 @@ builders.create = function()
 	end)
 
 	-- Dificultad (izquierda, bajo el acceso): cuatro casillas y la descripción de la elegida
-	tag(s, "DIFICULTAD", 120, 662)
+	tag(s, "DIFFICULTY", 120, 662)
 	local diffH = TOUCH and 76 or 66 -- casillas más altas en celular
 	local diffDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 686 + diffH + 8), { width = 700, color = DIM })
 	diffDesc.AnchorPoint = Vector2.new(0, 0)
@@ -1194,7 +1196,7 @@ builders.create = function()
 	backButton(s, "main", true)
 	smallVersion(s, 1330, 949)
 	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(1380, 896), Size = UDim2.fromOffset(420, 104) }, s)
-	text(s, spaced(st.started and "EMPEZANDO…" or "EMPEZAR", 0), ANTON, 90, Vector2.new(1590, 948),
+	text(s, spaced(st.started and "STARTING…" or "START", 0), ANTON, 90, Vector2.new(1590, 948),
 		{ anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 420, color = BLACK })
 	button(s, 1380, 896, 420, 104, function()
 		if not st.started then
@@ -1214,20 +1216,20 @@ builders.joined = function()
 	if not st then
 		return
 	end
-	header(s, upperEs(st.name or "SALA"))
+	header(s, upperEs(st.name or "ROOM"))
 	codeText(s, st)
 	playerList(s, st.names, st.hostIndex, st.youIndex, st.ids)
 	-- Lo que eligió el anfitrión (solo se ve)
-	tag(s, "DIFICULTAD", 120, 662)
+	tag(s, "DIFFICULTY", 120, 662)
 	text(s, spaced(Difficulties.get(st.difficulty).Upper, 3), ANTON, 54, Vector2.new(120, 725), { width = 700 })
 	text(s, Difficulties.get(st.difficulty).Description, OSW_LIGHT, 24, Vector2.new(120, 790), { width = 700, color = DIM })
-	tag(s, "MAPA", 900, 703)
+	tag(s, "MAP", 900, 703)
 	text(s, upperEs(mapName(st.map)), ANTON, 54, Vector2.new(900, 765), { width = 460 })
-	tag(s, "MUTADORES", 1368, 703)
-	text(s, st.mutators ~= false and "SÍ" or "NO", ANTON, 54, Vector2.new(1368, 765), { width = 300 })
+	tag(s, "MUTATIONS", 1368, 703)
+	text(s, st.mutators ~= false and "YES" or "NO", ANTON, 54, Vector2.new(1368, 765), { width = 300 })
 	rule(s, 120, 869, 1680)
 	backButton(s, "main", true)
-	text(s, spaced(st.started and "EMPEZANDO…" or "ESPERANDO AL ANFITRIÓN", 3), ANTON, 54, Vector2.new(1800, 948),
+	text(s, spaced(st.started and "STARTING…" or "WAITING FOR THE HOST", 3), ANTON, 54, Vector2.new(1800, 948),
 		{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 1000, color = RED })
 end
 
@@ -1238,7 +1240,7 @@ roomUpdate.OnClientEvent:Connect(function(st)
 	if not st then
 		lastKey = nil
 		if current == screens.create or current == screens.joined then
-			setStatus("La sala se cerró")
+			setStatus("The room closed")
 			show("main")
 		end
 		return

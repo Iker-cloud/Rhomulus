@@ -5,15 +5,15 @@ local Awards = {}
 
 -- id, título, estadística, unidad (singular, plural), mínimo para merecerlo. El orden es la prioridad si hay más de `MAX` ganados.
 Awards.List = {
-	{ id = "Asesino", title = "EL MÁS ASESINO", key = "kills", unit = { "zombi", "zombis" }, min = 1 },
-	{ id = "Enfermero", title = "EL ENFERMERO", key = "revives", unit = { "revivido", "revividos" }, min = 1 },
-	{ id = "Cargador", title = "EL CARGADOR", key = "carries", unit = { "carga", "cargas" }, min = 1 },
-	{ id = "Productivo", title = "EL MÁS PRODUCTIVO", key = "latas", unit = { "lata ganada", "latas ganadas" }, min = 50 },
-	{ id = "Punteria", title = "PUNTERÍA DE ORO", key = "headshots", unit = { "tiro a la cabeza", "tiros a la cabeza" }, min = 3 },
-	{ id = "Saco", title = "EL SACO DE BOXEO", key = "damage", unit = { "de daño recibido", "de daño recibido" }, min = 30 },
-	{ id = "Caido", title = "EL MÁS CAÍDO", key = "downs", unit = { "caída", "caídas" }, min = 1 },
-	{ id = "Muerto", title = "EL QUE MÁS MURIÓ", key = "deaths", unit = { "muerte", "muertes" }, min = 1 },
-	{ id = "Adicto", title = "EL ADICTO A LAS PHIALS", key = "phials", unit = { "Phial", "Phials" }, min = 1 },
+	{ id = "Asesino", title = "THE SLAYER", key = "kills", unit = { "zombie", "zombies" }, min = 1 },
+	{ id = "Enfermero", title = "THE MEDIC", key = "revives", unit = { "revive", "revives" }, min = 1 },
+	{ id = "Cargador", title = "THE CARRIER", key = "carries", unit = { "carry", "carries" }, min = 1 },
+	{ id = "Productivo", title = "MOST PRODUCTIVE", key = "latas", unit = { "can earned", "cans earned" }, min = 50 },
+	{ id = "Punteria", title = "GOLDEN AIM", key = "headshots", unit = { "headshot", "headshots" }, min = 3 },
+	{ id = "Saco", title = "THE PUNCHING BAG", key = "damage", unit = { "damage taken", "damage taken" }, min = 30 },
+	{ id = "Caido", title = "MOST DOWNED", key = "downs", unit = { "time downed", "times downed" }, min = 1 },
+	{ id = "Muerto", title = "DIED THE MOST", key = "deaths", unit = { "death", "deaths" }, min = 1 },
+	{ id = "Adicto", title = "THE PHIAL ADDICT", key = "phials", unit = { "Phial", "Phials" }, min = 1 },
 }
 Awards.MAX = 6 -- cuántos salen como mucho en la pantalla
 

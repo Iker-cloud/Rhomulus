@@ -153,11 +153,11 @@ local function indexOf(room, userId)
 	end
 end
 
--- "Sala de <anfitrión>" (sale del nombre del anfitrión actual)
+-- "<anfitrión>'s room" (sale del nombre del anfitrión actual)
 local function roomName(room)
 	for _, m in room.members do
 		if m.id == room.host then
-			return "Sala de " .. m.name
+			return m.name .. "'s room"
 		end
 	end
 	return "Sala"
@@ -229,7 +229,7 @@ local function change(id, fn)
 	local ok, result = pcall(function()
 		return rooms:UpdateAsync(id, function(room)
 			if not room then
-				reason = "Esa sala ya no existe"
+				reason = "That room doesn't exist anymore"
 				return nil
 			end
 			prune(room)
@@ -246,10 +246,10 @@ local function change(id, fn)
 	end)
 	if not ok then
 		warn("[Rooms] MemoryStore falló:", result)
-		return nil, "No se pudo conectar. Intenta de nuevo"
+		return nil, "Couldn't connect. Try again"
 	end
 	if result == nil and not reason then
-		reason = "La sala ya no existe"
+		reason = "The room doesn't exist anymore"
 	end
 	return result, reason
 end
@@ -304,7 +304,7 @@ function actions.create(player, options)
 	local map = MAPS[options.map] and options.map or "Morro"
 	local difficulty = Difficulties.isValid(options.difficulty) and options.difficulty or Difficulties.Default
 	if not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
-		return { error = `{Difficulties.get(difficulty).Name} se desbloquea en el nivel {Progress.requiredLevel(difficulty)}` }
+		return { error = `{Difficulties.get(difficulty).Name} unlocks at level {Progress.requiredLevel(difficulty)}` }
 	end
 	local isPublic = options.public ~= false
 	-- En Studio no se puede reservar servidor ni teletransportar: se usa un código falso para probar las salas
@@ -316,7 +316,7 @@ function actions.create(player, options)
 	end
 	if not ok then
 		warn("[Rooms] ReserveServer falló:", access)
-		return { error = "No se pudo crear la sala. Intenta de nuevo" }
+		return { error = "Couldn't create the room. Try again" }
 	end
 	for _ = 1, 8 do
 		local id = randomCode(5)
@@ -350,7 +350,7 @@ function actions.create(player, options)
 			return { room = view(room, id, player.UserId) }
 		end
 	end
-	return { error = "No se pudo crear la sala. Intenta de nuevo" }
+	return { error = "Couldn't create the room. Try again" }
 end
 
 -- Lista de salas abiertas (de todos los servidores del menú), con una caché corta para no gastar cuota de MemoryStore
@@ -389,11 +389,11 @@ end
 -- Entra a una sala de la lista. En las privadas hay que dar el código.
 function actions.join(player, id, pass)
 	if type(id) ~= "string" or not string.match(id, "^%a%a%a%a%a$") then
-		return { error = "Sala no válida" }
+		return { error = "Invalid room" }
 	end
 	id = string.upper(id)
 	if roomOf[player] == id then
-		return { error = "Ya estás en esa sala" }
+		return { error = "You're already in that room" }
 	end
 	if roomOf[player] then
 		leave(player)
@@ -401,20 +401,20 @@ function actions.join(player, id, pass)
 	local wrongCode = false
 	local room, reason = change(id, function(r)
 		if r.started then
-			return false, "Esa partida ya empezó"
+			return false, "That game already started"
 		end
 		if not r.public then
 			local typed = type(pass) == "string" and string.upper(pass) or ""
 			if typed ~= r.pass then
 				wrongCode = true
-				return false, "Código incorrecto"
+				return false, "Wrong code"
 			end
 		end
 		if indexOf(r, player.UserId) then
 			return true
 		end
 		if #r.members >= MAX_PLAYERS then
-			return false, "La sala está llena"
+			return false, "The room is full"
 		end
 		table.insert(r.members, member(player))
 		return true
@@ -436,14 +436,14 @@ end
 local function hostChange(player, fn)
 	local id = roomOf[player]
 	if not id then
-		return { error = "No estás en una sala" }
+		return { error = "You're not in a room" }
 	end
 	local room, reason = change(id, function(r)
 		if r.host ~= player.UserId then
-			return false, "Solo el anfitrión puede hacer eso"
+			return false, "Only the host can do that"
 		end
 		if r.started then
-			return false, "La partida ya empezó"
+			return false, "The game already started"
 		end
 		return fn(r)
 	end)
@@ -456,7 +456,7 @@ end
 
 function actions.setMap(player, map)
 	if not MAPS[map] then
-		return { error = "Mapa no válido" }
+		return { error = "Invalid map" }
 	end
 	return hostChange(player, function(r)
 		r.map = map
@@ -474,10 +474,10 @@ end
 
 function actions.setDifficulty(player, difficulty)
 	if not Difficulties.isValid(difficulty) then
-		return { error = "Dificultad no válida" }
+		return { error = "Invalid difficulty" }
 	end
 	if not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
-		return { error = `{Difficulties.get(difficulty).Name} se desbloquea en el nivel {Progress.requiredLevel(difficulty)}` }
+		return { error = `{Difficulties.get(difficulty).Name} unlocks at level {Progress.requiredLevel(difficulty)}` }
 	end
 	return hostChange(player, function(r)
 		r.difficulty = difficulty
@@ -500,11 +500,11 @@ end
 function actions.start(player)
 	local id = roomOf[player]
 	if not id then
-		return { error = "No estás en una sala" }
+		return { error = "You're not in a room" }
 	end
 	local room, reason = change(id, function(r)
 		if r.host ~= player.UserId then
-			return false, "Solo el anfitrión puede empezar"
+			return false, "Only the host can start"
 		end
 		r.started = true
 		return true
@@ -524,7 +524,7 @@ local lastCall = setmetatable({}, { __mode = "k" }) -- [Player] = { [acción] = 
 request.OnServerInvoke = function(player, action, ...)
 	local fn = actions[action]
 	if not fn then
-		return { error = "Acción no válida" }
+		return { error = "Invalid action" }
 	end
 	local record = lastCall[player]
 	if not record then
@@ -533,13 +533,13 @@ request.OnServerInvoke = function(player, action, ...)
 	end
 	local now = os.clock()
 	if record[action] and now - record[action] < (MIN_INTERVAL[action] or 0.4) then
-		return { error = "Más despacio, inténtalo de nuevo" }
+		return { error = "Slow down, try again" }
 	end
 	record[action] = now
 	local ok, result = pcall(fn, player, ...)
 	if not ok then
 		warn("[Rooms]", action, result)
-		return { error = "Algo salió mal. Intenta de nuevo" }
+		return { error = "Something went wrong. Try again" }
 	end
 	return result
 end
@@ -632,7 +632,7 @@ if usingFakeStore then
 		end)
 	end
 	-- (ids de cuentas públicas de Roblox, solo para ver los avatares en las pruebas)
-	fake("DEMOA", "Sala de Isaac", "Morro", "Tension", { 156, 261 }, true)
-	fake("DEMOB", "Sala de Lucía", "Morro", "Crisis", { 1 }, false)
-	fake("DEMOC", "Sala de Mateo", "Morro", "Calma", { 156, 261, 1, 2 }, true)
+	fake("DEMOA", "Isaac's room", "Morro", "Tension", { 156, 261 }, true)
+	fake("DEMOB", "Lucía's room", "Morro", "Crisis", { 1 }, false)
+	fake("DEMOC", "Mateo's room", "Morro", "Calma", { 156, 261, 1, 2 }, true)
 end

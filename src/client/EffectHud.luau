@@ -110,7 +110,7 @@ function EffectHud.start()
 		root.Visible = true
 		stripe.BackgroundColor3 = color
 		fill.BackgroundColor3 = color
-		name.Text = crash and "BAJÓN" or def.Upper
+		name.Text = crash and "CRASH" or def.Upper
 		name.TextColor3 = color
 		desc.Text = crash and def.CrashDesc or def.Desc
 		seconds.Text = `{math.ceil(left)}`

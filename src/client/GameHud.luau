@@ -69,7 +69,7 @@ function GameHud.start()
 		local stage = workspace:GetAttribute("Stage")
 		local arrival = workspace:GetAttribute("ExtractionEnd")
 		local remaining = arrival and arrival - workspace:GetServerTimeNow() or 0
-		timer.Text = (stage == "Extraction" and remaining > 0) and `Rescate en {math.ceil(remaining)}s` or ""
+		timer.Text = (stage == "Extraction" and remaining > 0) and `Rescue in {math.ceil(remaining)}s` or ""
 	end
 
 	workspace:GetAttributeChangedSignal("Stage"):Connect(update)

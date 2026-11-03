@@ -1,3 +1,4 @@
+require(game:GetService("ReplicatedStorage").Shared.Lang).watch() -- jugadores con Roblox en español: traduce la interfaz y los carteles
 require(script.UiFit).start()
 require(script.Performance).start()
 require(script.SettingsSave).start()

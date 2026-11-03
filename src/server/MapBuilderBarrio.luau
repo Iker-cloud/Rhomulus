@@ -1020,8 +1020,8 @@ local function buildStreet(map, refs, rng)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(31.5, 0, -220), math.rad(90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 
 	-- Lugares posibles de la caja de armas de la ruta Calle (libres de obstáculos); una caja por ruta
@@ -1093,9 +1093,9 @@ local function canPile(parent, position)
 	deco(pole(model, "Lata", position + Vector3.new(0, 2.2, 0), 1, 0.7, C.concreto))
 	local hitbox = deco(block(model, "Hitbox", Vector3.new(3, 3, 3), position + Vector3.new(0, 1.5, 0)))
 	hitbox.Transparency = 1
-	label(hitbox, "LATAS", C.mostaza, 16)
+	label(hitbox, "CANS", C.mostaza, 16)
 	model.Parent = parent
-	return model, prompt(hitbox, "Recoger latas", 0.5)
+	return model, prompt(hitbox, "Pick up cans", 0.5)
 end
 
 -- Botiquín que se recoge con E (server/Medkits). `position` es el centro de la base (sobre una mesa o el suelo).
@@ -1107,9 +1107,9 @@ local function medkitPickup(parent, position)
 	deco(block(model, "BotiquinCruz", Vector3.new(1.62, 0.7, 0.25), box.Position, C.rojo, Enum.Material.SmoothPlastic))
 	local hitbox = deco(block(model, "Hitbox", Vector3.new(2.5, 2.5, 2.5), position + Vector3.new(0, 1, 0)))
 	hitbox.Transparency = 1
-	label(hitbox, "BOTIQUÍN", C.rojo, 14)
+	label(hitbox, "MEDKIT", C.rojo, 14)
 	model.Parent = parent
-	return model, prompt(hitbox, "Tomar botiquín", 0.3)
+	return model, prompt(hitbox, "Take medkit", 0.3)
 end
 
 -- Parte 4: tramo 1, ruta Callejón (amarilla). Franja de x -120 a -60, entre el borde del mapa y las casas de la calle.
@@ -1275,7 +1275,7 @@ local function buildShop(map, refs, cfg)
 	boardRect(gui, 0.025, 0.07, 0.95, 0.86, SHOP_GOLD)
 	boardText(gui, "TIENDA", 0.06, 0.07, 0.88, 0.62, RHO_BLACK, Enum.TextXAlignment.Center)
 	boardRect(gui, 0.06, 0.72, 0.88, 0.012, RHO_BLACK)
-	boardText(gui, "ARMAS  ·  MUNICIÓN  ·  FARMACIA", 0.06, 0.745, 0.88, 0.17, RHO_BLACK, Enum.TextXAlignment.Center)
+	boardText(gui, "WEAPONS  ·  AMMO  ·  PHARMACY", 0.06, 0.745, 0.88, 0.17, RHO_BLACK, Enum.TextXAlignment.Center)
 	for _, side in { -1, 1 } do
 		deco(block(folder, "CartelCadena", Vector3.new(0.15, 1.6, 0.15), at(signU + side * (signWidth / 2 - 1), 0.6, gantryHeight - 0.8), C.oscuro, Enum.Material.Metal))
 	end
@@ -1317,8 +1317,8 @@ local function buildShop(map, refs, cfg)
 	local model, hitbox = PropModel.build(CajaMunicion, stationAt.Position, yawFacing(-right))
 	hitbox.Name = "AmmoStation"
 	model.Parent = folder
-	label(hitbox, "MUNICIÓN Y OBJETOS", Color3.fromRGB(80, 165, 255), 22)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	label(hitbox, "AMMO AND ITEMS", Color3.fromRGB(80, 165, 255), 22)
+	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	shopAwning(folder, base, W / 2 - 3.6, D * 0.42, 6, 7, C.lonaAzul)
 
 	-- Vitrina de la farmacia en la pared izquierda, mirando al centro (separada de la pared para que se vea de frente)
@@ -1647,8 +1647,8 @@ local function buildStairs(map, refs, rng, spawns)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -325), math.rad(90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 
 	-- Puntos de aparición al fondo de los callejones laterales que rodean la cancha
@@ -2185,8 +2185,8 @@ local function buildSafePoint(map, refs)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25, 0, -108), math.rad(90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 
 	-- Radio con la primera pista
@@ -2342,8 +2342,8 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 	generatorModel.Parent = map
 	refs.generator = generator
 	refs.generatorModel = generatorModel
-	refs.generatorPrompt = prompt(generator, "Encender generador", config.GeneratorHoldTime)
-	label(generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
+	refs.generatorPrompt = prompt(generator, "Start generator", config.GeneratorHoldTime)
+	label(generator, "GENERATOR", Color3.fromRGB(255, 155, 60))
 	sandbags(map, 23, 34, 45)
 	sandbags(map, 37, 47, 45)
 	crates(map, 39, 33)
@@ -2353,8 +2353,8 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-47.5, 0, 20), math.rad(-90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(-35, 3, 61.2))
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
@@ -2414,7 +2414,7 @@ local function buildChurch(map, refs)
 	beaconLight.Parent = beacon
 
 	refs.gate = door(map, "ChurchEntryDoor", 161, 24, 14)
-	refs.gateText = { label = "IGLESIA", open = "abrir la iglesia", run = "a la iglesia" }
+	refs.gateText = { label = "IGLESIA", open = "open the iglesia", run = "to the iglesia" }
 	refs.church = {
 		exitDoor = door(map, "ChurchExitDoor", 199, 24, 14),
 		volume = volume(map, "ChurchVolume", -28, 28, 162, 198, 12),
@@ -2449,8 +2449,8 @@ local function buildChurch(map, refs)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25.5, 0, 170), math.rad(90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 	block(map, "MesaRadio", Vector3.new(4, 3, 2.5), Vector3.new(-25, 1.5, 166), C.madera, Enum.Material.Wood)
 	deco(block(map, "RadioIglesia", Vector3.new(2.4, 1.4, 1.2), Vector3.new(-25, 3.7, 166), C.oscuro, Enum.Material.Metal))
@@ -2496,9 +2496,9 @@ local function gasCan(parent, position)
 	block(model, "Asa", Vector3.new(0.9, 0.4, 0.2), position + Vector3.new(0, 3.7, 0), C.oscuro, Enum.Material.Metal).CanCollide = false
 	block(model, "Valvula", Vector3.new(0.4, 0.4, 0.4), position + Vector3.new(0, 3.6, 0.35), C.concreto, Enum.Material.Metal).CanCollide = false
 	model.PrimaryPart = body
-	label(body, "GARRAFA", C.lonaNaranja, 18)
+	label(body, "GAS CAN", C.lonaNaranja, 18)
 	model.Parent = parent
-	return model, body, prompt(body, "Cargar garrafa", 0.8)
+	return model, body, prompt(body, "Carry gas can", 0.8)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -3040,8 +3040,8 @@ local function buildEscalera2(map, refs, rng, spawns)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -80), math.rad(90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(106, ROOF_HEIGHT, 14)) -- el botiquín está en la azotea
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
@@ -3610,8 +3610,8 @@ local function buildTerminal(map, refs, rng, spawns)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-57.5, 0, 258), math.rad(-90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 	if LEGACY_SHOPS then
 	refs.boxSpots.Zone3 = { { Vector3.new(0, 0, 298), Vector3.new(-8, 0, 308), Vector3.new(4, 0, 312) } }
@@ -3816,7 +3816,7 @@ local function buildStadium(map, refs, rng, spawns, config)
 	radioModel.Parent = map
 	refs.radio = radio
 	refs.radioModel = radioModel
-	refs.radioPrompt = prompt(radio, "Llamar a la radio", config.RadioHoldTime)
+	refs.radioPrompt = prompt(radio, "Use the radio", config.RadioHoldTime)
 	label(radio, "RADIO", Color3.fromRGB(110, 225, 150))
 	sandbags(map, -62, 346, 90)
 	sandbags(map, -62, 358, 90)
@@ -3824,8 +3824,8 @@ local function buildStadium(map, refs, rng, spawns, config)
 		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76, 0, 345), math.rad(-90))
 		hitbox.Name = "AmmoStation"
 		model.Parent = map
-		label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
 	end
 	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(70, 1.5, 392), C.madera, Enum.Material.Wood)
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(70, 3, 392))

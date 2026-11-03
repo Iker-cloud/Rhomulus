@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local Sfx = require(script.Parent.Sfx)
 local UiFit = require(script.Parent.UiFit)
@@ -72,6 +73,7 @@ local function monogram(id)
 end
 
 local function spaced(text)
+	text = Lang.tr(text) -- se traduce antes de separar las letras
 	local chars = {}
 	for _, codepoint in utf8.codes(text) do
 		table.insert(chars, utf8.char(codepoint))
@@ -129,7 +131,7 @@ function MutatorWheel.start()
 	hubStroke.Parent = hub
 	local hubCount = label(hub, "×2", UDim2.new(1, 0, 0, 86), UDim2.fromOffset(0, 34), 76, CREAM, Enum.TextXAlignment.Center)
 	hubCount.ZIndex = 7
-	local hubText = label(hub, spaced("MUTACIONES"), UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 118), 14, GRAY, Enum.TextXAlignment.Center, OSWALD_LIGHT)
+	local hubText = label(hub, spaced("MUTATIONS"), UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 118), 14, GRAY, Enum.TextXAlignment.Center, OSWALD_LIGHT)
 	hubText.ZIndex = 7
 
 	-- Punteros (arriba y abajo)
@@ -144,8 +146,8 @@ function MutatorWheel.start()
 
 	-- Panel de la derecha
 	local RX, RW = 700, 500
-	label(panel, spaced("INICIO DE PARTIDA"), UDim2.fromOffset(RW, 28), UDim2.fromOffset(RX, 56), 22, TEAL, nil, OSWALD_LIGHT)
-	label(panel, "MUTACIONES", UDim2.fromOffset(RW, 100), UDim2.fromOffset(RX, 84), 96, CREAM)
+	label(panel, spaced("MATCH START"), UDim2.fromOffset(RW, 28), UDim2.fromOffset(RX, 56), 22, TEAL, nil, OSWALD_LIGHT)
+	label(panel, "MUTATIONS", UDim2.fromOffset(RW, 100), UDim2.fromOffset(RX, 84), 96, CREAM)
 
 	local cards = {}
 	for index = 1, 2 do
@@ -154,7 +156,7 @@ function MutatorWheel.start()
 		local stroke = Instance.new("UIStroke")
 		stroke.Thickness = 2
 		stroke.Parent = card
-		label(card, spaced(index == 1 and "PUNTERO SUPERIOR" or "PUNTERO INFERIOR"), UDim2.fromOffset(300, 22), UDim2.fromOffset(18, 14), 17, GRAY, nil, OSWALD_LIGHT)
+		label(card, spaced(index == 1 and "TOP POINTER" or "BOTTOM POINTER"), UDim2.fromOffset(300, 22), UDim2.fromOffset(18, 14), 17, GRAY, nil, OSWALD_LIGHT)
 		local badge = box(card, UDim2.fromOffset(64, 64), UDim2.fromOffset(18, 62), CREAM)
 		Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 8)
 		local badgeText = label(badge, "", UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 32, BG, Enum.TextXAlignment.Center)
@@ -174,7 +176,7 @@ function MutatorWheel.start()
 	end
 
 	box(panel, UDim2.fromOffset(RW, 2), UDim2.fromOffset(RX, 636), RED)
-	label(panel, spaced("BONO XP TOTAL"), UDim2.fromOffset(240, 60), UDim2.fromOffset(RX, 662), 20, GRAY, nil, OSWALD_LIGHT)
+	label(panel, spaced("TOTAL XP BONUS"), UDim2.fromOffset(240, 60), UDim2.fromOffset(RX, 662), 20, GRAY, nil, OSWALD_LIGHT)
 	local totalLabel = label(panel, "", UDim2.fromOffset(300, 70), UDim2.fromOffset(RX + RW - 300, 650), 62, CREAM, Enum.TextXAlignment.Right)
 
 	local continue = Instance.new("TextButton")
@@ -186,7 +188,7 @@ function MutatorWheel.start()
 	continue.FontFace = OSWALD
 	continue.TextSize = 26
 	continue.TextColor3 = CREAM
-	continue.Text = "CONTINUAR"
+	continue.Text = "CONTINUE"
 	continue.Visible = false
 	continue.ZIndex = 9
 	continue.Parent = panel
@@ -279,7 +281,7 @@ function MutatorWheel.start()
 		local bonus = math.floor(def.Bonus * 100 + 0.5)
 		card.bonus.Text = bonus > 0 and `+{bonus}%` or "0%"
 		card.bonus.TextColor3 = bonus > 0 and rarity.Color or GRAY
-		card.fresh.Text = seen[id] and "" or `¡NUEVA! +{Mutators.DiscoveryXp} XP`
+		card.fresh.Text = seen[id] and "" or `NEW! +{Mutators.DiscoveryXp} XP`
 	end
 
 	local function show(ids, angle)
@@ -294,7 +296,7 @@ function MutatorWheel.start()
 		local seen = seenSet()
 		local count = #ids
 		hubCount.Text = `×{count}`
-		hubText.Text = spaced(count == 1 and "MUTACIÓN" or "MUTACIONES")
+		hubText.Text = spaced(count == 1 and "MUTATION" or "MUTATIONS")
 		pointers[1].Visible = count >= 2
 		for index, card in cards do
 			card.frame.Visible = false
@@ -341,7 +343,7 @@ function MutatorWheel.start()
 				local percent = math.floor(total * 100 + 0.5)
 				task.delay(#ids * 0.45 + 0.1, function()
 					if mine == token then
-						totalLabel.Text = `+{percent} % XP`
+						totalLabel.Text = `+{percent}% XP`
 						continue.Visible = true
 					end
 				end)

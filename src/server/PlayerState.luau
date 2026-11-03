@@ -130,7 +130,7 @@ function PlayerState.revive(player, helper)
 	if helper then
 		Stats.add(helper, "Revives")
 		Points.add(Config.Points.Revive, helper)
-		Points.feed(`{helper.DisplayName} revivió a {player.DisplayName}`)
+		Points.feed(`{helper.DisplayName} revived {player.DisplayName}`)
 	end
 end
 
@@ -149,7 +149,7 @@ function PlayerState.selfRevive(player)
 	end
 	player:SetAttribute("SelfRevives", charges - 1)
 	PlayerState.revive(player)
-	Points.feed(`{player.DisplayName} se levantó solo`)
+	Points.feed(`{player.DisplayName} got back up alone`)
 end
 
 -- Se llama al empezar cada zona

@@ -41,15 +41,15 @@ end
 local function denied(player, target)
 	local humanoid = getHumanoid(target)
 	if PlayerState.get(target) ~= "Normal" or not humanoid or humanoid.Health <= 0 then
-		return "No se puede curar ahora"
+		return "Can't heal right now"
 	end
 	if humanoid.Health >= humanoid.MaxHealth then
-		return target == player and "Tienes la vida llena" or `{target.DisplayName} tiene la vida llena`
+		return target == player and "You're at full health" or `{target.DisplayName} is at full health`
 	end
 	if target ~= player then
 		local a, b = getRoot(player), getRoot(target)
 		if not a or not b or (a.Position - b.Position).Magnitude > M.Range + 3 then
-			return "Acércate más para curar"
+			return "Get closer to heal"
 		end
 	end
 	return nil
@@ -100,7 +100,7 @@ local function useMedkit(player, target)
 			end
 			if PlayerState.get(player) ~= "Normal" or denied(player, target) then
 				stopHealing(player)
-				Remotes.Feed:FireClient(player, "Curación interrumpida")
+				Remotes.Feed:FireClient(player, "Healing interrupted")
 				return
 			end
 		end
@@ -111,7 +111,7 @@ local function useMedkit(player, target)
 			Items.healSparkles(target.Character)
 		end
 		Items.add(player, "Medkit", -1)
-		Points.feed(target == player and `{player.DisplayName} se curó` or `{player.DisplayName} curó a {target.DisplayName}`)
+		Points.feed(target == player and `{player.DisplayName} healed up` or `{player.DisplayName} healed {target.DisplayName}`)
 	end)
 end
 
@@ -119,21 +119,21 @@ function Medkits.init(list)
 	pickups = list or {}
 	for _, pickup in pickups do
 		pickup.parent = pickup.model.Parent
-		pickup.prompt.ActionText = "Tomar botiquín"
-		pickup.prompt.ObjectText = `Cura {math.floor(M.Heal * Difficulty.get().MedkitHeal + 0.5)}`
+		pickup.prompt.ActionText = "Take medkit"
+		pickup.prompt.ObjectText = `Heals {math.floor(M.Heal * Difficulty.get().MedkitHeal + 0.5)}`
 		pickup.prompt.HoldDuration = 0.3
 		pickup.prompt.Triggered:Connect(function(player)
 			if not pickup.model.Parent or PlayerState.get(player) ~= "Normal" then
 				return
 			end
 			if not Items.canAdd(player, "Medkit") then
-				Remotes.Feed:FireClient(player, "Ya llevas el máximo de botiquines")
+				Remotes.Feed:FireClient(player, "You're carrying the max medkits")
 				return
 			end
 			pickup.prompt.Enabled = false
 			pickup.model.Parent = nil
 			Items.add(player, "Medkit", 1)
-			Remotes.Feed:FireClient(player, `Botiquín: sácalo con {M.KeyLabel} y haz clic para curarte (o curar al compañero que miras)`)
+			Remotes.Feed:FireClient(player, `Medkit: draw it with {M.KeyLabel} and click to heal yourself (or the teammate you're looking at)`)
 		end)
 	end
 

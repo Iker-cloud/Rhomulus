@@ -1,5 +1,5 @@
 -- Ayuda dentro de la partida:
---   * Panel "CÓMO JUGAR" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (también con la X o
+--   * Panel "HOW TO PLAY" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (también con la X o
 --     un clic fuera; Esc lo reserva Roblox para su menú; flechas izquierda/derecha cambian de pestaña). El juego sigue mientras se lee. Los textos son shared/HelpContent y
 --     shared/Difficulties, los mismos que usa el menú.
 --   * Tarjeta de bienvenida la primera vez que el jugador llega al lobby (server/HelpState guarda que ya la vio).
@@ -148,8 +148,8 @@ buildTab[4] = function(c)
 			stroke(sq, d.Color, 2)
 		end
 		label(c, d.Description, 290, y + 8, 460, 80, 20, PALE, REGULAR, { wrap = true })
-		label(c, "VIDA ×" .. ratio(d.Health) .. "    DAÑO ×" .. ratio(d.Damage), 790, y + 14, 350, 30, 22, GOLD, BOLD)
-		label(c, "PRECIOS ×" .. ratio(d.Cost) .. "    LATAS ×" .. ratio(d.Reward), 790, y + 50, 350, 30, 22, GOLD, BOLD)
+		label(c, "HEALTH ×" .. ratio(d.Health) .. "    DAMAGE ×" .. ratio(d.Damage), 790, y + 14, 350, 30, 22, GOLD, BOLD)
+		label(c, "PRICES ×" .. ratio(d.Cost) .. "    CANS ×" .. ratio(d.Reward), 790, y + 50, 350, 30, 22, GOLD, BOLD)
 		if i < #Difficulties.Order then
 			box(c, 40, y + 98, 1100, 1, PALE, 0.75)
 		end
@@ -195,11 +195,11 @@ function HelpPanel.start()
 	fit()
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 
-	label(panel, "CÓMO JUGAR", 32, 16, 360, 56, 42, GOLD, BOLD)
+	label(panel, "HOW TO PLAY", 32, 16, 360, 56, 42, GOLD, BOLD)
 	box(panel, 0, 86, PANEL_W, 2, GOLD)
-	label(panel, Controls.isTouch() and "Toca fuera para cerrar  ·  Se cierra sola si hay zombies cerca" or "K o clic fuera para cerrar  ·  Se cierra sola si hay zombies cerca", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
+	label(panel, Controls.isTouch() and "Tap outside to close  ·  Closes by itself if zombies are near" or "K or click outside to close  ·  Closes by itself if zombies are near", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
 	if not Controls.isTouch() then
-		label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
+		label(panel, "←  →  switch tab", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
 	end
 
 	local holder = Instance.new("Frame")
@@ -284,7 +284,7 @@ function HelpPanel.start()
 	gotIt.AutoButtonColor = false
 	gotIt.FontFace = BOLD
 	gotIt.TextSize = 24
-	gotIt.Text = "ENTENDIDO"
+	gotIt.Text = "GOT IT"
 	gotIt.TextColor3 = DARK
 	gotIt.BackgroundColor3 = GOLD
 	gotIt.BorderSizePixel = 0
@@ -295,7 +295,7 @@ function HelpPanel.start()
 	more.AutoButtonColor = false
 	more.FontFace = BOLD
 	more.TextSize = 22
-	more.Text = Controls.isTouch() and "VER LA AYUDA COMPLETA" or "K  ·  VER LA AYUDA COMPLETA"
+	more.Text = Controls.isTouch() and "VIEW FULL HELP" or "K  ·  VIEW FULL HELP"
 	more.TextColor3 = GOLD
 	more.BackgroundColor3 = DARK
 	more.BorderSizePixel = 0
@@ -313,7 +313,7 @@ function HelpPanel.start()
 	hint.Parent = gui
 	local hintKey = box(hint, 0, 2, 26, 26, GOLD, 0.2)
 	label(hintKey, "K", 0, 0, 26, 26, 18, DARK, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
-	local hintText = label(hint, "AYUDA", 36, 0, 84, 30, 18, PALE, BOLD, { valign = Enum.TextYAlignment.Center })
+	local hintText = label(hint, "HELP", 36, 0, 84, 30, 18, PALE, BOLD, { valign = Enum.TextYAlignment.Center })
 	hintText.TextTransparency = 0.25
 
 	-- ===== Lógica =====
@@ -350,7 +350,7 @@ function HelpPanel.start()
 		end
 	end
 
-	-- Aviso breve en el centro de abajo ("Ayuda cerrada: hay zombies cerca")
+	-- Aviso breve en el centro de abajo ("Help closed: zombies nearby")
 	local notice = label(gui, "", 0, 0, 640, 36, 24, GOLD, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
 	notice.AnchorPoint = Vector2.new(0.5, 1)
 	notice.Position = UDim2.new(0.5, 0, 1, -64)
@@ -395,7 +395,7 @@ function HelpPanel.start()
 			return -- otra ventana (la tienda) ya tiene el ratón
 		end
 		if open and zombieNear() then
-			showNotice("Hay zombies cerca: la ayuda se abre cuando estés a salvo")
+			showNotice("Zombies nearby: help opens when you're safe")
 			return
 		end
 		panelOpen = open
@@ -450,7 +450,7 @@ function HelpPanel.start()
 			task.wait(0.4)
 			if panelOpen and zombieNear() then
 				setPanel(false)
-				showNotice("Ayuda cerrada: hay zombies cerca")
+				showNotice("Help closed: zombies nearby")
 			end
 		end
 	end)
@@ -468,7 +468,7 @@ function HelpPanel.start()
 		healthConnection = humanoid.HealthChanged:Connect(function(health)
 			if health < lastHealth and panelOpen then
 				setPanel(false)
-				showNotice("Ayuda cerrada: te han herido")
+				showNotice("Help closed: you've been hurt")
 			end
 			lastHealth = health
 		end)

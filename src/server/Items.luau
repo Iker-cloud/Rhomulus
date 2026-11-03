@@ -103,20 +103,20 @@ end
 function Items.tryBuy(player, id)
 	local cfg = I[id]
 	if not cfg then
-		return false, "Objeto desconocido"
+		return false, "Unknown item"
 	end
 	if PlayerState.get(player) ~= "Normal" then
-		return false, "No puedes comprar ahora"
+		return false, "You can't buy right now"
 	end
 	if not Items.canAdd(player, id) then
-		return false, `Ya llevas el máximo de {string.lower(cfg.Name)}`
+		return false, `You're at the max for {string.lower(cfg.Name)}`
 	end
 	local cost = Difficulty.price(cfg.Cost)
 	if not Points.spend(cost) then
-		return false, `Faltan latas: {string.lower(cfg.Name)} cuesta {cost}`
+		return false, `Not enough cans: {string.lower(cfg.Name)} costs {cost}`
 	end
 	Items.add(player, id, 1)
-	Points.feed(`{player.DisplayName} compró {string.lower(cfg.Name)}`)
+	Points.feed(`{player.DisplayName} bought: {string.lower(cfg.Name)}`)
 	return true
 end
 
@@ -568,7 +568,7 @@ function Items.use(player, id, direction)
 	local power = 0
 	if id == "Bandage" then
 		if humanoid.Health >= humanoid.MaxHealth then
-			Remotes.Feed:FireClient(player, "Tienes la vida llena")
+			Remotes.Feed:FireClient(player, "You're at full health")
 			return
 		end
 	else

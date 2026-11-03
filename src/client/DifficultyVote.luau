@@ -66,8 +66,8 @@ function DifficultyVote.start()
 	panelStroke.Color = Color3.fromRGB(246, 196, 70)
 	panelStroke.Thickness = 2
 	panelStroke.Parent = panel
-	label(panel, "DIFICULTAD", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Color3.fromRGB(246, 196, 70))
-	label(panel, Controls.isTouch() and "Toca una dificultad para votar" or "Pulsa 1 a 4 para votar", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
+	label(panel, "DIFFICULTY", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Color3.fromRGB(246, 196, 70))
+	label(panel, Controls.isTouch() and "Tap a difficulty to vote" or "Press 1 to 4 to vote", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
 
 	local rows = {}
 	for i, id in Difficulties.Order do
@@ -106,7 +106,7 @@ function DifficultyVote.start()
 		local mine = player:GetAttribute("DifficultyVote")
 		for id, row in rows do
 			local locked = not Progress.isUnlocked(id, player:GetAttribute("ProgXP"))
-			row.count.Text = locked and `NIVEL {Progress.requiredLevel(id)}` or tostring(workspace:GetAttribute("DiffVotes_" .. id) or 0)
+			row.count.Text = locked and `LEVEL {Progress.requiredLevel(id)}` or tostring(workspace:GetAttribute("DiffVotes_" .. id) or 0)
 			row.count.TextSize = locked and 15 or 22
 			row.stroke.Transparency = (id == mine) and 0 or 1
 			row.nameLabel.TextTransparency = locked and 0.6 or 0
@@ -150,7 +150,7 @@ function DifficultyVote.start()
 		local voting = workspace:GetAttribute("Stage") == "Vote"
 		panel.Visible = voting
 		local d = Difficulties.get(workspace:GetAttribute("Difficulty"))
-		tag.Text = `DIFICULTAD · {d.Upper}`
+		tag.Text = `DIFFICULTY · {d.Upper}`
 		tag.TextColor3 = d.Color
 		-- La etiqueta se esconde con la tarjeta de caído y la del espectador (arriba al centro) y con la pantalla de resultados
 		local stage = workspace:GetAttribute("Stage")

@@ -27,7 +27,7 @@ end
 
 local function setCarrier(player, carrying)
 	player:SetAttribute("Carrying", carrying and "garrafa" or nil)
-	player:SetAttribute("CarryingItem", carrying and "una garrafa" or nil)
+	player:SetAttribute("CarryingItem", carrying and "a gas can" or nil)
 	PlayerState.refreshSpeed(player)
 end
 
@@ -108,7 +108,7 @@ local function deliver(can)
 	place(can, data.depositSpots[delivered] or data.deliverPos)
 	setCarrier(player, false)
 	Points.add(G.DeliverPoints, player)
-	Points.feed(`{player.DisplayName} llevó una garrafa al generador ({delivered}/{G.Count})`)
+	Points.feed(`{player.DisplayName} brought a gas can to the generator ({delivered}/{G.Count})`)
 	if delivered < G.Count then
 		task.spawn(Director.spawnAmbush, G.DeliveryHorde, data.hordePoints)
 	end
@@ -163,7 +163,7 @@ function GasCans.init(gas)
 	end
 	for _, can in data.cans do
 		can.state = "ground"
-		can.prompt.ActionText = "Cargar garrafa"
+		can.prompt.ActionText = "Carry gas can"
 		can.prompt.HoldDuration = G.HoldTime
 		can.prompt.Triggered:Connect(function(player)
 			pickup(player, can)

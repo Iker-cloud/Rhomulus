@@ -57,7 +57,7 @@ function ContribHud.start()
 	title.TextSize = 14
 	title.TextColor3 = YELLOW
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = "APORTE DEL EQUIPO"
+	title.Text = "TEAM CONTRIBUTION"
 	title.Parent = panel
 
 	local rows = {} -- [Player] = { frame, name, number, gain, shown, gainUntil }

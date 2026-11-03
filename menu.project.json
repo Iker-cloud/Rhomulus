@@ -16,6 +16,12 @@
         },
         "Progress": {
           "$path": "src/shared/Progress.luau"
+        },
+        "Lang": {
+          "$path": "src/shared/Lang.luau"
+        },
+        "LangEs": {
+          "$path": "src/shared/LangEs.luau"
         }
       }
     },

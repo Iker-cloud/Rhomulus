@@ -173,7 +173,7 @@ function PhialRoll.start()
 			epicPercent += percent[id]
 		end
 	end
-	local DEFAULT_BANNER = `<font color="#F6C446">{epicPercent} %</font> DE PROBABILIDAD DE SACAR UNA PHIAL <font color="#BE6CFF">ÉPICA</font> <font color="#847E78" size="17">· SOLO UNA ACTIVA A LA VEZ</font>`
+	local DEFAULT_BANNER = `<font color="#F6C446">{epicPercent}%</font> CHANCE OF ROLLING AN <font color="#BE6CFF">EPIC</font> PHIAL <font color="#847E78" size="17">· ONLY ONE ACTIVE AT A TIME</font>`
 	bannerText.Text = DEFAULT_BANNER
 
 	-- Lista de probabilidades (3 × 3)
@@ -219,7 +219,7 @@ function PhialRoll.start()
 	exit.FontFace = OSWALD
 	exit.TextSize = 30
 	exit.TextColor3 = CREAM
-	exit.Text = "SALIR"
+	exit.Text = "EXIT"
 	exit.Parent = panel
 	local exitStroke = Instance.new("UIStroke")
 	exitStroke.Color = EDGE
@@ -358,7 +358,7 @@ function PhialRoll.start()
 				roll.BackgroundColor3 = Color3.fromRGB(70, 20, 22)
 			elseif state == "ready" then
 				local left = math.max(0, readyEnd - os.clock())
-				rollText.Text = "GUARDAR"
+				rollText.Text = "STORE"
 				rollText.TextSize = 38
 				priceText.Text = `{math.ceil(left)} s`
 				priceCoin.Visible = false
@@ -392,7 +392,7 @@ function PhialRoll.start()
 	roll.Activated:Connect(function()
 		if state == "idle" then
 			if (workspace:GetAttribute("Points") or 0) < price then
-				say("FALTAN LATAS", 2)
+				say("NOT ENOUGH CANS", 2)
 				Sfx.play("SkillFail", 0.3)
 				return
 			end
@@ -415,7 +415,7 @@ function PhialRoll.start()
 			open(key, a, b)
 		elseif action == "denied" then
 			if panel.Visible then
-				say(key or "NO SE PUEDE", 2) -- aquí `key` trae el texto
+				say(key or "CAN'T DO THAT", 2) -- aquí `key` trae el texto
 				Sfx.play("SkillFail", 0.3)
 			end
 		elseif not panel.Visible or key ~= machineKey then
@@ -446,10 +446,10 @@ function PhialRoll.start()
 			state = "ready"
 			readyEnd = os.clock() + b
 			local def = P.Effects[a]
-			bannerText.Text = `<font color="#{def.Color:ToHex()}">{def.Upper}</font>  {def.Desc}  <font color="#847E78" size="17">· LUEGO: {def.CrashDesc}</font>`
+			bannerText.Text = `<font color="#{def.Color:ToHex()}">{def.Upper}</font>  {def.Desc}  <font color="#847E78" size="17">· THEN: {def.CrashDesc}</font>`
 		elseif action == "lost" then
 			state = "idle"
-			say("SE PERDIÓ LA PHIAL", 3)
+			say("PHIAL LOST", 3)
 			Sfx.play("SkillFail", 0.3)
 		elseif action == "taken" then
 			setOpen(false)

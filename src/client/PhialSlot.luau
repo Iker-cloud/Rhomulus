@@ -91,7 +91,7 @@ function PhialSlot.start()
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 26
 	limit.Parent = nameLabel
-	local hint = label(card, "TOCA O PULSA Z", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 188), 15, GRAY, nil, OSWALD_LIGHT)
+	local hint = label(card, "TAP OR PRESS Z", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 188), 15, GRAY, nil, OSWALD_LIGHT)
 
 	local shownId = nil
 	local icon = nil
@@ -117,7 +117,7 @@ function PhialSlot.start()
 		end
 		local usable = player:GetAttribute("State") == "Normal" and not player:GetAttribute("Injecting")
 		card.BackgroundTransparency = usable and 0.08 or 0.5
-		hint.Text = usable and "TOCA O PULSA Z" or "NO SE PUEDE AHORA"
+		hint.Text = usable and "TAP OR PRESS Z" or "CAN'T DO THAT NOW"
 	end
 
 	local function use()

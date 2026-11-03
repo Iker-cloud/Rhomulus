@@ -160,33 +160,33 @@ end
 -- ¿Puede `helper` revivir o cargar a `target`? Devuelve (true) o (false, motivo en español)
 local function canHelp(helper, target)
 	if helper == target then
-		return false, "no puedes cargarte a ti mismo"
+		return false, "you can't carry yourself"
 	end
 	if PlayerState.get(helper) ~= "Normal" then
-		return false, "tienes que estar de pie"
+		return false, "you have to be standing"
 	end
 	if carrying[helper] or helper:GetAttribute("Carrying") then
-		return false, "ya llevas algo a cuestas (G para soltar)"
+		return false, "you're already carrying something (G to drop)"
 	end
 	if PlayerState.get(target) ~= "Downed" then
-		return false, "ya no está caído"
+		return false, "they're no longer downed"
 	end
 	if carriedBy[target] then
-		return false, "ya lo está cargando otro"
+		return false, "someone else is already carrying them"
 	end
 	local helperRoot, targetRoot = getRoot(helper), getRoot(target)
 	if not (helperRoot and targetRoot) then
-		return false, "no se encuentra a tu compañero"
+		return false, "your teammate can't be found"
 	end
 	if (helperRoot.Position - targetRoot.Position).Magnitude > Config.Revive.MaxDistance then
-		return false, "estás muy lejos"
+		return false, "you're too far away"
 	end
 	return true
 end
 
 -- Avisa en pantalla a quien intentó cargar y no pudo (si no, el prompt parece no hacer nada)
 local function refuse(helper, reason)
-	Remotes.Feed:FireClient(helper, `No puedes cargar: {reason}`)
+	Remotes.Feed:FireClient(helper, `Can't carry: {reason}`)
 end
 
 local function makePrompt(root, name, action, key, holdTime, offset)
@@ -214,8 +214,8 @@ local function onCharacter(player, character)
 		end
 	end
 
-	local revivePrompt = makePrompt(root, "RevivePrompt", "Revivir", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
-	local carryPrompt = makePrompt(root, "CarryPrompt", "Cargar", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
+	local revivePrompt = makePrompt(root, "RevivePrompt", "Revive", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
+	local carryPrompt = makePrompt(root, "CarryPrompt", "Carry", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
 
 	revivePrompt.ObjectText = player.DisplayName
 	-- E y F tienen el mismo botón de mando por defecto: sin esto, con mando solo saldría uno de los dos
@@ -382,7 +382,7 @@ function Revive.start()
 		drop(player)
 		local carrier = carriedBy[player]
 		if carrier then
-			drop(carrier, `Soltaste a {player.DisplayName}: su personaje cambió`)
+			drop(carrier, `You dropped {player.DisplayName}: their character changed`)
 		end
 	end
 	-- Con el personaje nuevo ya puesto solo se borra el registro (no se toca el cuerpo: está apareciendo y soltarlo lo movería o lo desanclaría)
@@ -419,9 +419,9 @@ function Revive.start()
 		for carrier, target in carrying do
 			local carrierRoot, targetRoot = getRoot(carrier), getRoot(target)
 			if not (carrierRoot and targetRoot and targetRoot:IsDescendantOf(workspace)) then
-				drop(carrier, "Soltaste a tu compañero: ya no se encuentra")
+				drop(carrier, "You dropped your teammate: they can't be found anymore")
 			elseif carrier.Character ~= carrierRoot.Parent or target.Character ~= targetRoot.Parent then
-				drop(carrier, "Soltaste a tu compañero: su personaje cambió")
+				drop(carrier, "You dropped your teammate: their character changed")
 			else
 				targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
 			end

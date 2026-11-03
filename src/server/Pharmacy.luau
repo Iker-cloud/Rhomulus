@@ -410,14 +410,14 @@ local function resetToIdle(machine)
 	machine.light.Enabled = false
 	if machine.uses >= P.MaxUses then
 		machine.prompt.Enabled = false
-		setLabel(machine, "Agotada", Color3.fromRGB(150, 146, 140))
+		setLabel(machine, "Sold out", Color3.fromRGB(150, 146, 140))
 		return
 	end
 	machine.prompt.ActionText = "Phial Roll"
-	machine.prompt.ObjectText = `Farmacia · {Difficulty.price(P.Cost)} latas`
+	machine.prompt.ObjectText = `Pharmacy · {Difficulty.price(P.Cost)} cans`
 	machine.prompt.HoldDuration = 0.25
 	machine.prompt.Enabled = true
-	setLabel(machine, "Farmacia")
+	setLabel(machine, "Pharmacy")
 end
 
 -- Tras tomar o perder la jeringa, la vitrina se repone unos segundos
@@ -426,7 +426,7 @@ local function cooldown(machine)
 	hideSyringe(machine)
 	machine.light.Enabled = false
 	machine.prompt.Enabled = false
-	setLabel(machine, "Reponiendo…", Color3.fromRGB(150, 146, 140))
+	setLabel(machine, "Restocking…", Color3.fromRGB(150, 146, 140))
 	local id = machine.rollId
 	task.delay(P.Cooldown, function()
 		if machines[machine] and machine.rollId == id then
@@ -455,13 +455,13 @@ local function startRoll(machine, player)
 		return
 	end
 	if machine.state ~= "idle" then
-		notify(player, "denied", machine.state == "cooldown" and "REPONIENDO…" or "OCUPADA")
+		notify(player, "denied", machine.state == "cooldown" and "RESTOCKING…" or "BUSY")
 		return
 	end
 	local price = Difficulty.price(P.Cost)
 	if not Points.spend(price) then
-		Remotes.Feed:FireClient(player, `Faltan latas: la Phial cuesta {price}`)
-		notify(player, "denied", "FALTAN LATAS")
+		Remotes.Feed:FireClient(player, `Not enough cans: the Phial costs {price}`)
+		notify(player, "denied", "NOT ENOUGH CANS")
 		return
 	end
 	machine.state = "spinning"
@@ -470,7 +470,7 @@ local function startRoll(machine, player)
 	machine.roller = player
 	local id = machine.rollId
 	machine.prompt.Enabled = false
-	Points.feed(`{player.DisplayName} compró una Phial`)
+	Points.feed(`{player.DisplayName} bought a Phial`)
 
 	-- La ruleta gira unos segundos y se detiene en un efecto al azar (el panel del comprador gira igual)
 	local pick = weightedPick()
@@ -502,11 +502,11 @@ local function startRoll(machine, player)
 	showSyringe(machine, pick)
 	setLabel(machine, `PHIAL {def.Upper}: {def.Desc}`, def.Color)
 	sound(machine, "Revived", 0.9)
-	machine.prompt.ActionText = `Inyectar Phial: {def.Name}`
-	machine.prompt.ObjectText = `{def.Desc} · luego {def.CrashDesc}`
+	machine.prompt.ActionText = `Inject Phial: {def.Name}`
+	machine.prompt.ObjectText = `{def.Desc} · then {def.CrashDesc}`
 	machine.prompt.HoldDuration = 0
 	machine.prompt.Enabled = true
-	Points.feed(`Salió la Phial {def.Name}`)
+	Points.feed(`The {def.Name} Phial came up`)
 	notify(player, "ready", machine.key, pick, P.TakeTime)
 
 	-- Si nadie la toma a tiempo, se pierde
@@ -523,12 +523,12 @@ local function takePhial(machine, player)
 		return
 	end
 	if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
-		Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
+		Remotes.Feed:FireClient(player, "Finish what you're doing before injecting")
 		return
 	end
 	if player:GetAttribute("PhialId") then
-		Remotes.Feed:FireClient(player, "Ya llevas una Phial: úsala con Z o tocando su panel")
-		notify(player, "denied", "YA LLEVAS UNA PHIAL")
+		Remotes.Feed:FireClient(player, "You're already carrying a Phial: use it with Z or by tapping its panel")
+		notify(player, "denied", "ALREADY CARRYING A PHIAL")
 		return
 	end
 	-- La Phial no se inyecta al tomarla: se guarda en el panel de la izquierda (atributo PhialId) y se usa cuando se quiera
@@ -537,7 +537,7 @@ local function takePhial(machine, player)
 	cooldown(machine)
 	sound(machine, "Buy", 0.8)
 	player:SetAttribute("PhialId", pick)
-	Points.feed(`{player.DisplayName} guardó la Phial {P.Effects[pick].Name}`)
+	Points.feed(`{player.DisplayName} stored the {P.Effects[pick].Name} Phial`)
 	notify(machine.roller, "taken", machine.key, player.DisplayName)
 end
 
@@ -548,12 +548,12 @@ local function useStored(player)
 		return
 	end
 	if player:GetAttribute("Injecting") or player:GetAttribute("HealingEnd") or player:GetAttribute("ItemId") then
-		Remotes.Feed:FireClient(player, "Termina lo que estás haciendo antes de inyectarte")
+		Remotes.Feed:FireClient(player, "Finish what you're doing before injecting")
 		return
 	end
 	player:SetAttribute("PhialId", nil)
 	Stats.add(player, "Phials")
-	Points.feed(`{player.DisplayName} se inyectó la Phial {P.Effects[id].Name}`)
+	Points.feed(`{player.DisplayName} injected the {P.Effects[id].Name} Phial`)
 	task.spawn(inject, player, id)
 end
 

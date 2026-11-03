@@ -35,9 +35,9 @@ Mutators.Count = {
 }
 
 Mutators.MunicionEscasa = {
-	Name = "Munición escasa",
-	Upper = "MUNICIÓN ESCASA",
-	Description = "Las armas guardan la mitad de munición de reserva.",
+	Name = "Scarce Ammo",
+	Upper = "SCARCE AMMO",
+	Description = "Weapons hold half the reserve ammo.",
 	Color = Color3.fromRGB(240, 170, 70),
 	Rarity = "Common",
 	Bonus = 0.2,
@@ -45,9 +45,9 @@ Mutators.MunicionEscasa = {
 	Conflicts = { "Generoso", "EconomiaFloja" },
 }
 Mutators.ZombiesRapidos = {
-	Name = "Zombies rápidos",
-	Upper = "ZOMBIES RÁPIDOS",
-	Description = "Los zombies corren más y casi todos son de los rápidos.",
+	Name = "Fast Zombies",
+	Upper = "FAST ZOMBIES",
+	Description = "Zombies run faster and most of them are the fast kind.",
 	Color = Color3.fromRGB(230, 90, 70),
 	Rarity = "Rare",
 	Bonus = 0.25,
@@ -55,9 +55,9 @@ Mutators.ZombiesRapidos = {
 	Set = { FastChance = 0.6 },
 }
 Mutators.DobleTanque = {
-	Name = "Doble Tanque",
-	Upper = "DOBLE TANQUE",
-	Description = "Un Tanque más a la vez, y aparecen más seguidos.",
+	Name = "Double Tank",
+	Upper = "DOUBLE TANK",
+	Description = "One more Tank at a time, and they show up more often.",
 	Color = Color3.fromRGB(190, 70, 50),
 	Rarity = "Epic",
 	Bonus = 0.4,
@@ -66,18 +66,18 @@ Mutators.DobleTanque = {
 	Conflicts = { "Cristal" },
 }
 Mutators.HordasGrandes = {
-	Name = "Hordas grandes",
-	Upper = "HORDAS GRANDES",
-	Description = "Las hordas son un 50 % mayores, pero llegan menos seguido.",
+	Name = "Big Hordes",
+	Upper = "BIG HORDES",
+	Description = "Hordes are 50% bigger, but come less often.",
 	Color = Color3.fromRGB(210, 110, 60),
 	Rarity = "Common",
 	Bonus = 0.2,
 	Mul = { Horde = 1.5, SpawnInterval = 1.25 },
 }
 Mutators.EconomiaFloja = {
-	Name = "Economía floja",
-	Upper = "ECONOMÍA FLOJA",
-	Description = "Las latas que se ganan valen la mitad.",
+	Name = "Weak Economy",
+	Upper = "WEAK ECONOMY",
+	Description = "Cans you earn are worth half.",
 	Color = Color3.fromRGB(180, 160, 90),
 	Rarity = "Common",
 	Bonus = 0.2,
@@ -85,9 +85,9 @@ Mutators.EconomiaFloja = {
 	Conflicts = { "Generoso", "MunicionEscasa" },
 }
 Mutators.Cristal = {
-	Name = "Cristal",
-	Upper = "CRISTAL",
-	Description = "Todos tienen 50 de vida, pero botiquines y vendas curan el doble.",
+	Name = "Glass",
+	Upper = "GLASS",
+	Description = "Everyone has 50 health, but medkits and bandages heal double.",
 	Color = Color3.fromRGB(150, 200, 230),
 	Rarity = "Rare",
 	Bonus = 0.3,
@@ -96,18 +96,18 @@ Mutators.Cristal = {
 	Conflicts = { "DobleTanque" },
 }
 Mutators.Apagon = {
-	Name = "Apagón total",
-	Upper = "APAGÓN TOTAL",
-	Description = "Los faroles están apagados: solo queda tu linterna.",
+	Name = "Total Blackout",
+	Upper = "TOTAL BLACKOUT",
+	Description = "The streetlights are out: only your flashlight is left.",
 	Color = Color3.fromRGB(110, 120, 170),
 	Rarity = "Rare",
 	Bonus = 0.25,
 	Flags = { Blackout = true },
 }
 Mutators.Generoso = {
-	Name = "Generoso",
-	Upper = "GENEROSO",
-	Description = "Todo cuesta menos, se ganan más latas y la curación rinde más.",
+	Name = "Generous",
+	Upper = "GENEROUS",
+	Description = "Everything costs less, you earn more cans and healing goes further.",
 	Color = Color3.fromRGB(110, 190, 140),
 	Rarity = "Relief",
 	Bonus = 0,
@@ -116,9 +116,9 @@ Mutators.Generoso = {
 }
 
 Mutators.NieblaDensa = {
-	Name = "Niebla densa",
-	Upper = "NIEBLA DENSA",
-	Description = "La niebla es tan espesa que apenas se ve a unos 60 studs.",
+	Name = "Dense Fog",
+	Upper = "DENSE FOG",
+	Description = "The fog is so thick you can barely see 60 studs.",
 	Color = Color3.fromRGB(170, 180, 190),
 	Rarity = "Common",
 	Bonus = 0.15,
@@ -126,36 +126,36 @@ Mutators.NieblaDensa = {
 	Conflicts = { "Apagon" },
 }
 Mutators.Explosivos = {
-	Name = "Explosivos",
-	Upper = "EXPLOSIVOS",
-	Description = "Algunos zombies explotan al morir: aléjate unos segundos.",
+	Name = "Explosives",
+	Upper = "EXPLOSIVES",
+	Description = "Some zombies explode when they die: back away for a few seconds.",
 	Color = Color3.fromRGB(255, 120, 40),
 	Rarity = "Rare",
 	Bonus = 0.3,
 	Flags = { Explosive = true },
 }
 Mutators.Ruidoso = {
-	Name = "Ruidoso",
-	Upper = "RUIDOSO",
-	Description = "Cada disparo atrae zombies cercanos. La pistola no hace ruido.",
+	Name = "Noisy",
+	Upper = "NOISY",
+	Description = "Every shot draws nearby zombies. The pistol is silent.",
 	Color = Color3.fromRGB(240, 210, 80),
 	Rarity = "Rare",
 	Bonus = 0.25,
 	Flags = { Noisy = true },
 }
 Mutators.Sangrado = {
-	Name = "Sangrado",
-	Upper = "SANGRADO",
-	Description = "Con menos de 40 de vida pierdes 1 por segundo (sin llegar a caer). Véndate.",
+	Name = "Bleeding",
+	Upper = "BLEEDING",
+	Description = "Below 40 health you lose 1 per second (without going down). Bandage up.",
 	Color = Color3.fromRGB(190, 40, 60),
 	Rarity = "Rare",
 	Bonus = 0.3,
 	Flags = { Bleed = true },
 }
 Mutators.CabezasDuras = {
-	Name = "Cabezas duras",
-	Upper = "CABEZAS DURAS",
-	Description = "El tiro a la cabeza hace x1,5 en vez de x2.",
+	Name = "Tough Skulls",
+	Upper = "TOUGH SKULLS",
+	Description = "Headshots deal x1.5 instead of x2.",
 	Color = Color3.fromRGB(150, 150, 160),
 	Rarity = "Common",
 	Bonus = 0.15,
@@ -164,9 +164,9 @@ Mutators.CabezasDuras = {
 
 -- Combinaciones épicas y la legendaria: reúnen reglas de otras en una sola casilla de la ruleta
 Mutators.Caceria = {
-	Name = "Cacería",
-	Upper = "CACERÍA",
-	Description = "Zombies rápidos y cada disparo los atrae: no hay dónde esconderse.",
+	Name = "The Hunt",
+	Upper = "THE HUNT",
+	Description = "Fast zombies and every shot draws them: there's nowhere to hide.",
 	Color = Color3.fromRGB(255, 120, 60),
 	Rarity = "Epic",
 	Bonus = 0.45,
@@ -176,9 +176,9 @@ Mutators.Caceria = {
 	Conflicts = { "ZombiesRapidos", "Ruidoso", "Generoso" },
 }
 Mutators.MalaSangre = {
-	Name = "Mala sangre",
-	Upper = "MALA SANGRE",
-	Description = "50 de vida y sangrado con poca vida, pero las curas valen el doble.",
+	Name = "Bad Blood",
+	Upper = "BAD BLOOD",
+	Description = "50 health and bleeding when low, but healing is worth double.",
 	Color = Color3.fromRGB(200, 40, 70),
 	Rarity = "Epic",
 	Bonus = 0.45,
@@ -187,9 +187,9 @@ Mutators.MalaSangre = {
 	Conflicts = { "Cristal", "Sangrado", "DobleTanque", "Generoso" },
 }
 Mutators.NocheSinFin = {
-	Name = "Noche sin fin",
-	Upper = "NOCHE SIN FIN",
-	Description = "Los faroles se apagan y una niebla espesa lo cubre todo.",
+	Name = "Endless Night",
+	Upper = "ENDLESS NIGHT",
+	Description = "The streetlights go out and thick fog covers everything.",
 	Color = Color3.fromRGB(120, 130, 200),
 	Rarity = "Epic",
 	Bonus = 0.4,
@@ -197,9 +197,9 @@ Mutators.NocheSinFin = {
 	Conflicts = { "Apagon", "NieblaDensa" },
 }
 Mutators.Apocalipsis = {
-	Name = "Apocalipsis",
-	Upper = "APOCALIPSIS",
-	Description = "Más Tanques, zombies rápidos, hordas enormes, explosiones y sangrado. Solo para valientes.",
+	Name = "Apocalypse",
+	Upper = "APOCALYPSE",
+	Description = "More Tanks, fast zombies, huge hordes, explosions and bleeding. Only for the brave.",
 	Color = Color3.fromRGB(255, 196, 60),
 	Rarity = "Legendary",
 	Bonus = 1,
@@ -214,11 +214,11 @@ Mutators.Apocalipsis = {
 -- Rareza: cuánto pesa en la ruleta (suman 100 con todas las rarezas) y cómo se ve. La ruleta reparte sus casillas según este peso entre
 -- las mutaciones de cada rareza, así que las raras ocupan tajadas finas. El Alivio (Generoso) sale poco y no da XP.
 Mutators.Rarities = {
-	Common = { Text = "COMÚN", Color = Color3.fromRGB(176, 176, 182), Weight = 52 },
-	Rare = { Text = "RARA", Color = Color3.fromRGB(78, 160, 255), Weight = 29 },
-	Epic = { Text = "ÉPICA", Color = Color3.fromRGB(190, 108, 255), Weight = 12 },
-	Legendary = { Text = "LEGENDARIA", Color = Color3.fromRGB(255, 196, 60), Weight = 3 },
-	Relief = { Text = "ALIVIO", Color = Color3.fromRGB(110, 190, 140), Weight = 4 },
+	Common = { Text = "COMMON", Color = Color3.fromRGB(176, 176, 182), Weight = 52 },
+	Rare = { Text = "RARE", Color = Color3.fromRGB(78, 160, 255), Weight = 29 },
+	Epic = { Text = "EPIC", Color = Color3.fromRGB(190, 108, 255), Weight = 12 },
+	Legendary = { Text = "LEGENDARY", Color = Color3.fromRGB(255, 196, 60), Weight = 3 },
+	Relief = { Text = "RELIEF", Color = Color3.fromRGB(110, 190, 140), Weight = 4 },
 }
 Mutators.RarityOrder = { "Common", "Rare", "Epic", "Legendary", "Relief" }
 

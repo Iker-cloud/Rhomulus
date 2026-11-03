@@ -168,7 +168,7 @@ local function buildUi()
 	keycap(row, "◄ A", 0)
 	keycap(row, "D ►", 1000)
 
-	local hint = label(gui, "Reaparecerás en el siguiente punto seguro", UDim2.fromOffset(420, 18), UDim2.new(0.5, -210, 1, -106), 15, Color3.fromRGB(190, 185, 176))
+	local hint = label(gui, "You'll respawn at the next safe room", UDim2.fromOffset(420, 18), UDim2.new(0.5, -210, 1, -106), 15, Color3.fromRGB(190, 185, 176))
 	hint.TextStrokeTransparency = 0.6
 
 	-- Fundido a negro para los cambios largos
@@ -257,7 +257,7 @@ local function refreshUi(list)
 		local selected = other == target
 		chip.fill.Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1)
 		chip.fill.BackgroundColor3 = downed and ORANGE or RED
-		chip.state.Text = downed and "CAÍDO" or "EN PIE"
+		chip.state.Text = downed and "DOWN" or "STANDING"
 		chip.state.TextColor3 = downed and ORANGE or GREEN
 		chip.stroke.Color = selected and GOLD or Color3.fromRGB(70, 66, 62)
 		chip.frame.BackgroundTransparency = selected and 0.05 or 0.3
@@ -278,15 +278,15 @@ local function refreshUi(list)
 		if downed then
 			local bleedEnd = target:GetAttribute("BleedEnd")
 			local left = bleedEnd and math.max(0, bleedEnd - workspace:GetServerTimeNow()) or 0
-			ui.status.Text = `CAÍDO · SE DESANGRA EN {math.ceil(left)} s`
+			ui.status.Text = `DOWN · BLEEDING OUT IN {math.ceil(left)} s`
 			ui.status.TextColor3 = ORANGE
 		else
 			local percent = humanoid and math.floor(humanoid.Health / humanoid.MaxHealth * 100 + 0.5) or 0
-			ui.status.Text = `EN PIE · VIDA {percent}%`
+			ui.status.Text = `STANDING · HEALTH {percent}%`
 			ui.status.TextColor3 = GREEN
 		end
 	end
-	ui.eyebrow.Text = #list > 1 and "E S P E C T A N D O" or "E S P E C T A N D O  ·  ÚNICO COMPAÑERO"
+	ui.eyebrow.Text = #list > 1 and "E S P E C T A N D O" or "S P E C T A T I N G  ·  ONLY TEAMMATE"
 end
 
 -- Cámara ----------------------------------------------------------------------------------------------------------------------

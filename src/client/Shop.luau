@@ -42,7 +42,7 @@ function Shop.start()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local rows = {} -- { id, cost, button, count, max }
-	local entries = { { id = "Ammo", name = "MUNICIÓN", cost = Config.WeaponBox.AmmoCost, note = "Recarga la reserva del arma" } }
+	local entries = { { id = "Ammo", name = "AMMO", cost = Config.WeaponBox.AmmoCost, note = "Refills the weapon's reserve" } }
 	for _, id in Config.Items.Order do
 		local cfg = Config.Items[id]
 		table.insert(entries, { id = id, name = string.upper(cfg.Name), cost = cfg.Cost, max = cfg.Max })
@@ -63,7 +63,7 @@ function Shop.start()
 	stroke.Thickness = 2
 	stroke.Parent = panel
 
-	label(panel, "SUMINISTROS", UDim2.new(1, -60, 0, 34), UDim2.fromOffset(16, 8), 28, GOLD)
+	label(panel, "SUPPLIES", UDim2.new(1, -60, 0, 34), UDim2.fromOffset(16, 8), 28, GOLD)
 	local latas = label(panel, "", UDim2.new(1, -60, 0, 18), UDim2.fromOffset(16, 40), 16, Color3.fromRGB(215, 210, 200))
 	local close = Instance.new("TextButton")
 	close.Size = UDim2.fromOffset(34, 34)
@@ -85,7 +85,7 @@ function Shop.start()
 		row.Parent = panel
 		label(row, entry.name, UDim2.fromOffset(150, 24), UDim2.fromOffset(12, 4), 20, Color3.new(1, 1, 1))
 		local count = label(row, entry.note or "", UDim2.fromOffset(160, 16), UDim2.fromOffset(12, 26), 13, Color3.fromRGB(150, 146, 140))
-		local cost = label(row, `{entry.cost} LATAS`, UDim2.fromOffset(90, 46), UDim2.fromOffset(176, 0), 18, GOLD, Enum.TextXAlignment.Right)
+		local cost = label(row, `{entry.cost} CANS`, UDim2.fromOffset(90, 46), UDim2.fromOffset(176, 0), 18, GOLD, Enum.TextXAlignment.Right)
 		local button = Instance.new("TextButton")
 		button.Size = UDim2.fromOffset(86, 32)
 		button.Position = UDim2.new(1, -96, 0, 7)
@@ -94,7 +94,7 @@ function Shop.start()
 		button.FontFace = OSWALD
 		button.TextSize = 18
 		button.TextColor3 = Color3.fromRGB(16, 16, 16)
-		button.Text = "COMPRAR"
+		button.Text = "BUY"
 		button.Parent = row
 		button.Activated:Connect(function()
 			Remotes.Buy:FireServer(entry.id)
@@ -120,18 +120,18 @@ function Shop.start()
 					return
 				end
 				local points = workspace:GetAttribute("Points") or 0
-				latas.Text = `Latas del equipo: {points}`
+				latas.Text = `Team cans: {points}`
 				for _, r in rows do
 					local entry = r.entry
 					local owned = entry.max and (player:GetAttribute("Item_" .. entry.id) or 0) or nil
 					local full = owned ~= nil and owned >= entry.max
 					if owned ~= nil then
-						r.count.Text = `Llevas {owned} de {entry.max}`
+						r.count.Text = `You have {owned} of {entry.max}`
 					end
 					local price = Difficulties.price(entry.cost, workspace:GetAttribute("Difficulty")) -- el precio base sube o baja con la dificultad
-					r.cost.Text = `{price} LATAS`
+					r.cost.Text = `{price} CANS`
 					local affordable = points >= price
-					r.button.Text = full and "LLENO" or "COMPRAR"
+					r.button.Text = full and "MAX" or "BUY"
 					r.button.BackgroundColor3 = (full or not affordable) and Color3.fromRGB(80, 78, 74) or GOLD
 					r.cost.TextColor3 = affordable and GOLD or Color3.fromRGB(200, 90, 80)
 				end

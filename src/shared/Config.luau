@@ -2,7 +2,7 @@
 return {
 	Weapons = {
 		Pistol = {
-			Name = "Pistola",
+			Name = "Pistol",
 			AmmoStyle = "Ring", -- anillo de balas
 			Damage = 20,
 			Pellets = 1,
@@ -31,11 +31,11 @@ return {
 			Auto = true,
 			ReserveStart = 90,
 			MaxReserve = 150,
-			Rarity = "Común",
+			Rarity = "Common",
 			Weight = 40, -- probabilidad relativa en la caja
 		},
 		Shotgun = {
-			Name = "Escopeta",
+			Name = "Shotgun",
 			AmmoStyle = "Shells", -- casquillos y cinta
 			Damage = 8, -- por perdigón
 			Pellets = 8,
@@ -47,11 +47,11 @@ return {
 			Auto = false,
 			ReserveStart = 32,
 			MaxReserve = 56,
-			Rarity = "Común",
+			Rarity = "Common",
 			Weight = 35,
 		},
 		SMG = {
-			Name = "Subfusil",
+			Name = "SMG",
 			AmmoStyle = "Magazine", -- cargador transparente
 			Damage = 14,
 			Pellets = 1,
@@ -64,7 +64,7 @@ return {
 			Auto = true,
 			ReserveStart = 120,
 			MaxReserve = 200,
-			Rarity = "Rara",
+			Rarity = "Rare",
 			Weight = 25,
 		},
 	},
@@ -329,50 +329,50 @@ return {
 		-- MaxUses: Phials por vitrina y ronda.
 		MaxUses = 2,
 		Rarities = {
-			Common = { Text = "COMÚN", Color = Color3.fromRGB(176, 176, 182) },
-			Rare = { Text = "RARA", Color = Color3.fromRGB(78, 160, 255) },
-			Epic = { Text = "ÉPICA", Color = Color3.fromRGB(190, 108, 255) },
-			Cursed = { Text = "MALDITA", Color = Color3.fromRGB(150, 205, 60) },
+			Common = { Text = "COMMON", Color = Color3.fromRGB(176, 176, 182) },
+			Rare = { Text = "RARE", Color = Color3.fromRGB(78, 160, 255) },
+			Epic = { Text = "EPIC", Color = Color3.fromRGB(190, 108, 255) },
+			Cursed = { Text = "CURSED", Color = Color3.fromRGB(150, 205, 60) },
 		},
 		-- Textos del panel PHIAL ROLL
 		Ui = { Title = "PHIAL ROLL", Subtitle = "FARMÁCIA POPULAR · MORRO ESPERANZA" },
 		Order = { "Furia", "Impulso", "Adrenalina", "Pulso", "PielDura", "Regeneracion", "Vision", "Sigilo", "SueroMalo" },
 		Effects = {
 			Furia = {
-				Name = "Furia", Category = "DAÑO", Rarity = "Epic", Weight = 7, Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
-				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25 % de daño",
+				Name = "Fury", Category = "DAMAGE", Rarity = "Epic", Weight = 7, Upper = "FURY", Color = Color3.fromRGB(220, 50, 55), Desc = "+30% damage",
+				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25% damage",
 			},
 			Impulso = {
-				Name = "Impulso", Category = "VELOCIDAD", Rarity = "Common", Weight = 16, Upper = "IMPULSO", Color = Color3.fromRGB(80, 220, 110), Desc = "+25 % de velocidad",
-				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25 % de velocidad",
+				Name = "Rush", Category = "SPEED", Rarity = "Common", Weight = 16, Upper = "RUSH", Color = Color3.fromRGB(80, 220, 110), Desc = "+25% speed",
+				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25% speed",
 			},
 			Adrenalina = {
-				Name = "Adrenalina", Category = "VIDA", Rarity = "Common", Weight = 16, Upper = "ADRENALINA", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 de vida máxima",
-				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15 % de velocidad",
+				Name = "Adrenaline", Category = "HEALTH", Rarity = "Common", Weight = 16, Upper = "ADRENALINE", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 max health",
+				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15% speed",
 			},
 			Pulso = {
-				Name = "Pulso", Category = "RECARGA", Rarity = "Rare", Weight = 12, Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
-				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "recarga más lenta",
+				Name = "Pulse", Category = "RELOADING", Rarity = "Rare", Weight = 12, Upper = "PULSE", Color = Color3.fromRGB(70, 150, 255), Desc = "Reloads twice as fast",
+				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "slower reload",
 			},
 			PielDura = {
-				Name = "Piel dura", Category = "ARMADURA", Rarity = "Rare", Weight = 12, Upper = "PIEL DURA", Color = Color3.fromRGB(190, 150, 110), Desc = "-30 % de daño recibido",
-				Mods = { Defense = 0.7 }, Crash = { Defense = 1.2 }, CrashDesc = "+20 % de daño recibido",
+				Name = "Thick Skin", Category = "ARMOR", Rarity = "Rare", Weight = 12, Upper = "THICK SKIN", Color = Color3.fromRGB(190, 150, 110), Desc = "-30% damage taken",
+				Mods = { Defense = 0.7 }, Crash = { Defense = 1.2 }, CrashDesc = "+20% damage taken",
 			},
 			Regeneracion = {
-				Name = "Regeneración", Category = "CURACIÓN", Rarity = "Common", Weight = 18, Upper = "REGENERACIÓN", Color = Color3.fromRGB(120, 230, 170), Desc = "recuperas 2 de vida por segundo",
-				Mods = { Regen = 2 }, Crash = { Regen = -1 }, CrashDesc = "pierdes 1 de vida por segundo",
+				Name = "Regeneration", Category = "HEALING", Rarity = "Common", Weight = 18, Upper = "REGENERATION", Color = Color3.fromRGB(120, 230, 170), Desc = "you recover 2 health per second",
+				Mods = { Regen = 2 }, Crash = { Regen = -1 }, CrashDesc = "you lose 1 health per second",
 			},
 			Vision = {
-				Name = "Visión", Category = "VISIÓN", Rarity = "Epic", Weight = 6, Upper = "VISIÓN", Color = Color3.fromRGB(190, 120, 255), Desc = "ves a los zombies a través de las paredes",
-				Mods = { Vision = true }, Crash = { Reload = 1.3 }, CrashDesc = "manos temblorosas: recarga más lenta",
+				Name = "Vision", Category = "SIGHT", Rarity = "Epic", Weight = 6, Upper = "VISION", Color = Color3.fromRGB(190, 120, 255), Desc = "you see zombies through walls",
+				Mods = { Vision = true }, Crash = { Reload = 1.3 }, CrashDesc = "shaky hands: slower reload",
 			},
 			Sigilo = {
-				Name = "Sigilo", Category = "SIGILO", Rarity = "Rare", Weight = 8, Upper = "SIGILO", Color = Color3.fromRGB(110, 120, 140), Desc = "los zombies a más de 20 studs no te notan",
-				Mods = { Stealth = 20 }, Crash = { Speed = 0.9 }, CrashDesc = "-10 % de velocidad",
+				Name = "Stealth", Category = "STEALTH", Rarity = "Rare", Weight = 8, Upper = "STEALTH", Color = Color3.fromRGB(110, 120, 140), Desc = "zombies farther than 20 studs don't notice you",
+				Mods = { Stealth = 20 }, Crash = { Speed = 0.9 }, CrashDesc = "-10% speed",
 			},
 			SueroMalo = {
-				Name = "Suero malo", Category = "RIESGO", Rarity = "Cursed", Weight = 5, Upper = "SUERO MALO", Color = Color3.fromRGB(150, 200, 60), Desc = "+60 % de daño, pero -30 de vida máxima",
-				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15 % de daño",
+				Name = "Bad Serum", Category = "RISK", Rarity = "Cursed", Weight = 5, Upper = "BAD SERUM", Color = Color3.fromRGB(150, 200, 60), Desc = "+60% damage, but -30 max health",
+				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15% damage",
 			},
 		},
 	},
@@ -430,9 +430,9 @@ return {
 	-- de FpsBelow durante Seconds (nunca sube solo). El jugador puede fijar el nivel en AJUSTES.
 	Performance = {
 		Levels = {
-			{ Name = "ALTA", LampDistance = 110, FlashlightShadows = true, GlobalShadows = true },
-			{ Name = "MEDIA", LampDistance = 70, FlashlightShadows = false, GlobalShadows = true },
-			{ Name = "BAJA", LampDistance = 40, FlashlightShadows = false, GlobalShadows = false },
+			{ Name = "HIGH", LampDistance = 110, FlashlightShadows = true, GlobalShadows = true },
+			{ Name = "MEDIUM", LampDistance = 70, FlashlightShadows = false, GlobalShadows = true },
+			{ Name = "LOW", LampDistance = 40, FlashlightShadows = false, GlobalShadows = false },
 		},
 		PcDefault = 1,
 		TouchDefault = 2,
@@ -473,13 +473,13 @@ return {
 		BubbleTime = 2.5,
 		-- Frases provisionales: la lista final sigue abierta en el GDD
 		ReviverPhrases = {
-			"¡Arriba, que todavía no es tu hora!",
-			"¿Otra vez en el piso?",
-			"Me debes una",
+			"Up you get, it's not your time yet!",
+			"Back on the floor again?",
+			"You owe me one, amigo",
 		},
 		DownedPhrases = {
-			"Ya me andaba",
-			"Tardaste muchísimo",
+			"About time, hermano",
+			"Took you long enough, compa",
 		},
 	},
 
@@ -496,7 +496,7 @@ return {
 		Tolerance = 0.12, -- segundos de margen por latencia
 		Delay = 0.3, -- la aguja arranca esto después de aparecer el aro
 		RetryDelay = 0.8, -- tras fallar, segundos antes de poder volver a intentar
-		FailPhrases = { "¡Se me resbaló!", "Otra vez, aguanta", "Casi..." },
+		FailPhrases = { "It slipped!", "Again, hold on", "Almost..." },
 	},
 
 	Zombie = {
@@ -527,7 +527,7 @@ return {
 		},
 
 		Fast = {
-			DisplayName = "Zombie rápido",
+			DisplayName = "Fast Zombie",
 			Health = 30,
 			Speed = 20,
 			Damage = 10,
@@ -538,7 +538,7 @@ return {
 
 		-- El Tanque (zombie-el-tanque.glb): grande, lento y muy resistente. Aparece en la horda del generador y en la extracción.
 		Tank = {
-			DisplayName = "Tanque",
+			DisplayName = "Tank",
 			Health = 1500, -- la dificultad lo multiplica (Calma x0,8 ... Colapso x2)
 			Speed = 7,
 			Damage = 35,
@@ -657,11 +657,11 @@ return {
 		Loft = 14,
 		-- Anim = { Release, End }: segundos del gesto al usar el objeto (client/ItemPoses). En Release sale de la mano (se lanza o se
 		-- cura) y en End termina el gesto. Si se cambian, ajustar también las fracciones de ItemPoses (Release / End).
-		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Throwable = true, Anim = { Release = 0.2, End = 0.55 }, Damage = 130, Radius = 14, Fuse = 2, ThrowMin = 26, ThrowSpeed = 100, Color = Color3.fromRGB(86, 104, 52) },
-		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit); el gesto dura Config.Medkit.Time
+		Grenade = { Name = "Grenade", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Throwable = true, Anim = { Release = 0.2, End = 0.55 }, Damage = 130, Radius = 14, Fuse = 2, ThrowMin = 26, ThrowSpeed = 100, Color = Color3.fromRGB(86, 104, 52) },
+		Medkit = { Name = "Medkit", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit); el gesto dura Config.Medkit.Time
 		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Throwable = true, Anim = { Release = 0.25, End = 0.65 }, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowMin = 24, ThrowSpeed = 90, Color = Color3.fromRGB(150, 96, 40) },
-		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.3, End = 1.6 } },
-		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Throwable = true, Anim = { Release = 0.12, End = 0.6 }, Duration = 15, LureRange = 75, ThrowMin = 30, ThrowSpeed = 105, Color = Color3.fromRGB(235, 70, 55) },
+		Bandage = { Name = "Bandages", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.3, End = 1.6 } },
+		Flare = { Name = "Flare", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Throwable = true, Anim = { Release = 0.12, End = 0.6 }, Duration = 15, LureRange = 75, ThrowMin = 30, ThrowSpeed = 105, Color = Color3.fromRGB(235, 70, 55) },
 	},
 
 	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas
@@ -684,7 +684,7 @@ return {
 
 	-- Mapas que se pueden votar al inicio de cada ronda (server/VoteRoom). id = clave que usa GameState para elegir el constructor.
 	Maps = {
-		{ id = "Morro", name = "Morro Esperanza", desc = "El barrio de Rhomulus: 3 rutas, 3 tramos, iglesia, estadio y furgoneta.", color = Color3.fromRGB(190, 70, 50) },
+		{ id = "Morro", name = "Morro Esperanza", desc = "The Rhomulus barrio: 3 routes, 3 sections, iglesia, stadium and van.", color = Color3.fromRGB(190, 70, 50) },
 	},
 	Vote = {
 		Time = 20, -- segundos máximos de votación
