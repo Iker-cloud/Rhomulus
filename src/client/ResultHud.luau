@@ -347,7 +347,7 @@ function ResultHud.start()
 				local levelBefore, intoBefore, needBefore = Progress.fromTotal(info.before)
 				local levelAfter, intoAfter, needAfter = Progress.fromTotal(info.after)
 				barBack.Visible = true
-				xpText.Text = `+{info.gained} XP`
+				xpText.Text = (info.rhoms or 0) > 0 and `+{info.gained} XP  ·  +{info.rhoms} RHOMS` or `+{info.gained} XP`
 				levelText.Text = `LEVEL {levelBefore}`
 				barFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
 				task.spawn(function()

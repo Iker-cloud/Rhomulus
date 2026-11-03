@@ -48,6 +48,8 @@ end
 local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Difficulties"))
 local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent")).get(TOUCH)
 local Progress = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Progress"))
+local Cosmetics = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Cosmetics"))
+local profileRequest = ReplicatedStorage:WaitForChild("ProfileRequest")
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
 local roomState -- última foto de la sala en la que estamos (nil = ninguna)
@@ -425,6 +427,28 @@ end
 player:GetAttributeChangedSignal("ProgXP"):Connect(refreshLevel)
 refreshLevel()
 
+-- Título y marco que lleva puestos (se eligen en PROFILE), y las Rhoms que tiene. Sin datos guardados no se ven.
+local profileTitle = text(main, "", OSW_BOLD, 26, Vector2.new(TEXT_RIGHT, 190), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 640, color = RED })
+local rhomsText = text(main, "", OSW_BOLD, 30, Vector2.new(TEXT_RIGHT, 436), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+local profileLink = text(main, spaced("PROFILE", 4) .. " →", ANTON, 40, Vector2.new(TEXT_RIGHT, 492), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+local function refreshLook()
+	local frame = Cosmetics.get("frame", player:GetAttribute("FrameId"))
+	local title = Cosmetics.get("title", player:GetAttribute("TitleId"))
+	profileRing.BackgroundColor3 = frame and frame.Color or RED
+	profileTitle.Text = title and spaced(upperEs(title.Name), 3) or ""
+	local coins = player:GetAttribute("Rhoms")
+	rhomsText.Visible = typeof(coins) == "number"
+	rhomsText.Text = typeof(coins) == "number" and spaced(`{coins} RHOMS`, 3) or ""
+end
+for _, name in { "FrameId", "TitleId", "Rhoms" } do
+	player:GetAttributeChangedSignal(name):Connect(refreshLook)
+end
+refreshLook()
+button(main, TEXT_RIGHT - 340, 462, 340, 60, function()
+	setStatus(nil)
+	show("profile")
+end).Name = "Perfil"
+
 -- Las tres opciones: numeradas, y la elegida (la de debajo del ratón) se rellena de rojo con una flecha
 local items = {
 	{ "PLAY", function()
@@ -614,6 +638,96 @@ builders.help = function()
 	backButton(s, "main")
 	smallVersion(s, 1800, 960)
 	showTab(1)
+end
+
+-- 5) Perfil: marco del avatar y título --------------------------------------------------------------------------------------------
+-- Se desbloquean con el nivel (shared/Cosmetics). Tocar uno que ya se tiene lo pone; el servidor vuelve a comprobar el nivel.
+local profileScreen = newScreen("profile")
+local profileConns = {} -- las conexiones de la pantalla actual (se sueltan al volver a armarla)
+builders.profile = function()
+	local s = profileScreen
+	for _, c in profileConns do
+		c:Disconnect()
+	end
+	table.clear(profileConns)
+	clear(s)
+	header(s, "PROFILE")
+	local level = player:GetAttribute("ProgLevel") or 1
+	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
+	local function equip(kind, id)
+		task.spawn(function()
+			local okCall, done, why = pcall(function()
+				return profileRequest:InvokeServer("equip", kind, id)
+			end)
+			note.Text = (okCall and done) and "" or spaced(string.upper((okCall and why) or "Couldn't connect. Try again"), 2)
+		end)
+	end
+
+	text(s, spaced("FRAMES", 5), OSW_BOLD, 26, Vector2.new(120, 366), { width = 600, color = RED })
+	rule(s, 120, 392, 780)
+	local frameParts = {}
+	for i, f in Cosmetics.Frames do
+		local col, row = (i - 1) % 4, (i - 1) // 4
+		local cx, cy = 195 + 195 * col, 490 + 235 * row
+		local ring = make("Frame", { BackgroundColor3 = f.Color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(130, 130) }, s)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, ring)
+		local hole = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(106, 106) }, s)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, hole)
+		local label = text(s, "", OSW_BOLD, 24, Vector2.new(cx, cy + 92), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 180 })
+		local locked = level < f.Level
+		label.Text = locked and spaced(`LEVEL {f.Level}`, 2) or spaced(upperEs(f.Name), 2)
+		label.TextColor3 = locked and DIM or INK
+		ring.BackgroundTransparency = locked and 0.7 or 0
+		frameParts[f.Id] = hole
+		button(s, cx - 90, cy - 70, 180, 190, function()
+			equip("frame", f.Id)
+		end).Name = "Marco_" .. f.Id
+	end
+
+	text(s, spaced("TITLES", 5), OSW_BOLD, 26, Vector2.new(1000, 366), { width = 600, color = RED })
+	rule(s, 1000, 392, 800)
+	local titleRows = {}
+	for i, t in Cosmetics.Titles do
+		local y = 438 + 50 * (i - 1)
+		local locked = level < t.Level
+		local label = text(s, spaced(upperEs(t.Name), 2), ANTON, 38, Vector2.new(1020, y), { width = 560, color = locked and DIM or INK })
+		local state = text(s, locked and spaced(`LEVEL {t.Level}`, 2) or "", OSW_BOLD, 24, Vector2.new(1800, y),
+			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, color = DIM })
+		titleRows[t.Id] = { label = label, state = state, locked = locked }
+		button(s, 1000, y - 24, 800, 48, function()
+			equip("title", t.Id)
+		end).Name = "Titulo_" .. t.Id
+	end
+
+	-- Lo que lleva puesto: el marco con un punto central rojo y el título con ✔
+	local function paintLook()
+		local frameId = player:GetAttribute("FrameId")
+		local titleId = player:GetAttribute("TitleId")
+		for id, hole in frameParts do
+			hole.BackgroundColor3 = id == frameId and RED or PANEL
+		end
+		for id, r in titleRows do
+			if not r.locked then
+				r.state.Text = id == titleId and spaced("EQUIPPED", 2) or ""
+				r.state.TextColor3 = RED
+				r.label.TextColor3 = id == titleId and RED or INK
+			end
+		end
+	end
+	paintLook()
+	for _, name in { "FrameId", "TitleId" } do
+		table.insert(profileConns, player:GetAttributeChangedSignal(name):Connect(paintLook))
+	end
+
+	local coins = player:GetAttribute("Rhoms")
+	if typeof(coins) == "number" then
+		text(s, spaced(`{coins} RHOMS`, 3), ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
+	end
+	text(s, spaced(`LEVEL {level}`, 3), OSW_BOLD, 30, Vector2.new(1800, 262), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = RED })
+	backButton(s, "main")
+	smallVersion(s, 1800, 1010)
 end
 
 -- Salas -----------------------------------------------------------------------------------------------------------------------

@@ -17,6 +17,9 @@
         "Progress": {
           "$path": "src/shared/Progress.luau"
         },
+        "Cosmetics": {
+          "$path": "src/shared/Cosmetics.luau"
+        },
         "Lang": {
           "$path": "src/shared/Lang.luau"
         },

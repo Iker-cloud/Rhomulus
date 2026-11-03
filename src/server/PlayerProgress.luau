@@ -1,22 +1,27 @@
 -- Progresión del jugador entre partidas (XP y nivel), guardada por jugador con DataStore. El servidor calcula el XP con sus propias
 -- estadísticas (Stats): nunca acepta un número del cliente. Se reparte al terminar la partida (PlayerProgress.award) y, si alguien se
 -- va a mitad, se le da lo que llevaba sin los bonos de terminar o ganar.
--- Atributos del jugador que lee la interfaz: ProgXP (XP total) y ProgLevel. El menú los pone con su propio script (src-menu).
+-- Atributos del jugador que lee la interfaz: ProgXP (XP total), ProgLevel, Rhoms (la moneda permanente), FrameId y TitleId (el marco y
+-- el título del perfil que lleva puestos). El menú los pone con su propio script (src-menu), que además guarda lo que elige.
 -- Si el guardado no está disponible (Studio sin publicar) todo funciona pero no se recuerda nada.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Progress = require(ReplicatedStorage.Shared.Progress)
+local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
 local Stats = require(script.Parent.Stats)
+local Awards = require(script.Parent.Awards)
 
 local PlayerProgress = {}
 
 local KEY_PREFIX = "p_"
 local totals = {} -- [Player] = XP total (ya con lo repartido en esta sesión)
+local rhoms = {} -- [Player] = Rhoms que tiene (ya con las de esta sesión)
+local look = {} -- [Player] = { frame, title }: el marco y el título que lleva puestos
 local seen = {} -- [Player] = { [id de mutación] = true }: las mutaciones que ya le salieron alguna vez (dan XP único la primera vez)
 
 local store
@@ -32,7 +37,12 @@ end
 local function publish(player)
 	local total = totals[player] or 0
 	player:SetAttribute("ProgXP", total)
-	player:SetAttribute("ProgLevel", (Progress.fromTotal(total)))
+	local level = (Progress.fromTotal(total))
+	player:SetAttribute("ProgLevel", level)
+	player:SetAttribute("Rhoms", rhoms[player] or 0)
+	local chosen = look[player] or {}
+	player:SetAttribute("FrameId", Cosmetics.valid("frame", chosen.frame, level))
+	player:SetAttribute("TitleId", Cosmetics.valid("title", chosen.title, level))
 	local ids = {}
 	for id in seen[player] or {} do
 		table.insert(ids, id)
@@ -41,13 +51,16 @@ local function publish(player)
 end
 
 local function load(player)
-	local total = 0
+	local total, coins = 0, 0
+	local chosen
 	if store then
 		local ok, value = pcall(function()
 			return store:GetAsync(KEY_PREFIX .. player.UserId)
 		end)
 		if ok and typeof(value) == "table" and typeof(value.xp) == "number" then
 			total = value.xp
+			coins = typeof(value.rhoms) == "number" and value.rhoms or 0
+			chosen = { frame = value.frame, title = value.title }
 			if typeof(value.seen) == "table" then
 				seen[player] = {}
 				for id, flag in value.seen do
@@ -60,19 +73,22 @@ local function load(player)
 	end
 	if player.Parent == Players then
 		totals[player] = (totals[player] or 0) + total -- por si ya se le dio XP mientras cargaba
+		rhoms[player] = (rhoms[player] or 0) + coins
+		look[player] = chosen
 		publish(player)
 	end
 end
 
 -- Suma lo ganado en una partida a lo guardado (UpdateAsync: seguro aunque el menú u otro servidor lo lea a la vez)
-local function save(userId, gained, stats, won, finished, discovered)
-	if not store or gained <= 0 then
+local function save(userId, gained, stats, won, finished, discovered, coins)
+	if not store or (gained <= 0 and (coins or 0) <= 0) then
 		return
 	end
 	pcall(function()
 		store:UpdateAsync(KEY_PREFIX .. userId, function(old)
 			old = typeof(old) == "table" and old or {}
 			old.xp = (old.xp or 0) + gained
+			old.rhoms = (old.rhoms or 0) + (coins or 0)
 			old.games = (old.games or 0) + (finished and 1 or 0)
 			old.wins = (old.wins or 0) + (won and finished and 1 or 0)
 			old.kills = (old.kills or 0) + (stats.Kills or 0)
@@ -94,6 +110,16 @@ function PlayerProgress.award(won)
 	local difficultyId = Difficulty.id()
 	local bonus = Mutators.xpBonus(Difficulty.mutators())
 	local list = {}
+	local rarities = {}
+	for _, id in Difficulty.mutators() do
+		table.insert(rarities, Mutators[id] and Mutators[id].Rarity)
+	end
+	local rewarded = {} -- [userId] = true: quienes recibieron un reconocimiento
+	for _, award in Awards.compute(Stats.all()) do
+		for _, winner in award.winners do
+			rewarded[winner.userId] = true
+		end
+	end
 	for _, player in Players:GetPlayers() do
 		local stats = Stats.get(player)
 		local gained = Progress.roundXp(stats, won, true, difficultyId, bonus)
@@ -107,11 +133,13 @@ function PlayerProgress.award(won)
 				gained += Mutators.DiscoveryXp
 			end
 		end
+		local coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId])
 		local before = totals[player] or 0
 		totals[player] = before + gained
+		rhoms[player] = (rhoms[player] or 0) + coins
 		publish(player)
-		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player] })
-		task.spawn(save, player.UserId, gained, stats, won, true, discovered)
+		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player], rhoms = coins })
+		task.spawn(save, player.UserId, gained, stats, won, true, discovered, coins)
 	end
 	Remotes.XpGain:FireAllClients(list)
 end
@@ -136,6 +164,8 @@ function PlayerProgress.start()
 			task.spawn(save, player.UserId, gained, stats, false, false)
 		end
 		totals[player] = nil
+		rhoms[player] = nil
+		look[player] = nil
 		seen[player] = nil
 	end)
 end
