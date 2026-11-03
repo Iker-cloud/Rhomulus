@@ -449,7 +449,7 @@ return {
 	{ "FULL", "LLENA" },
 	{ "THAT ROOM IS FULL", "ESA SALA ESTÁ LLENA" },
 	{ "NEW ROOM", "NUEVA SALA" },
-	{ "THIS IS HOW IT WILL SHOW IN THE LIST", "ASÍ APARECERÁ EN LA LISTA" },
+	{ "PREVIEW IN THE LIST", "ASÍ APARECERÁ EN LA LISTA" },
 	{ "Anyone can join with a tap.", "Entra cualquiera con un toque." },
 	{ "Asks for a 4-letter code that we'll give you when you create the room.", "Pedirá un código de 4 letras que te daremos al crear la sala." },
 	{ "WHO CAN JOIN", "QUIÉN PUEDE ENTRAR" },

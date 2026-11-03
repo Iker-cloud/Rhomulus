@@ -977,7 +977,7 @@ builders.setup = function()
 	header(s, "NEW ROOM")
 
 	-- Vista previa: así se verá tu sala en la lista (se actualiza al cambiar las opciones)
-	tag(s, "THIS IS HOW IT WILL SHOW IN THE LIST", 1020, 356)
+	tag(s, "PREVIEW IN THE LIST", 1020, 356)
 	local previewHolder = make("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(1020, 380), Size = UDim2.fromOffset(780, 260) }, s)
 	local function drawPreview()
 		for _, c in previewHolder:GetChildren() do

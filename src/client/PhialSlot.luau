@@ -48,6 +48,10 @@ function PhialSlot.start()
 	card.AutoButtonColor = false
 	card.AnchorPoint = Vector2.new(0, 0.5)
 	card.Position = UDim2.new(0, 16, 0.42, 0)
+	if workspace.CurrentCamera.ViewportSize.Y < 900 then
+		-- en pantallas bajas las fichas de mutaciones (borde izquierdo, arriba) taparían la tarjeta: se corre a su derecha
+		card.Position = UDim2.new(0, 14 + math.ceil(244 * UiFit.factor()) + 10, 0.42, 0)
+	end
 	card.Size = UDim2.fromOffset(168, 218)
 	card.BackgroundColor3 = BG
 	card.BackgroundTransparency = 0.08

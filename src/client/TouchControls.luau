@@ -218,7 +218,10 @@ local function bindPromptButton(name, keyCode, keyText)
 		end
 		if current then
 			local action = current.ActionText ~= "" and current.ActionText or keyText
-			button.label.Text = `{keyText}\n{Lang.upper(Lang.tr(action))}`
+			local shown = `{keyText}\n{Lang.upper(Lang.tr(action))}`
+			if button.label.Text ~= shown then
+				button.label.Text = shown
+			end
 		end
 		button.visible = current ~= nil
 	end
@@ -394,6 +397,7 @@ function TouchControls.start()
 	end)
 
 	-- Listo en el lobby (abajo al centro, sobre el inventario)
+	local readyShown = nil
 	local ready = Instance.new("TextButton")
 	ready.Name = "Ready"
 	ready.AnchorPoint = Vector2.new(0.5, 1)
@@ -465,7 +469,11 @@ function TouchControls.start()
 			buttons[name].frame.Visible = playing
 		end
 		-- con un objeto en la mano el botón de disparo lo usa; recargar y apuntar se quedan para el arma
-		fire.label.Text = itemInHand and (itemInHand == "Medkit" and "HEAL" or (itemInHand == "Bandage" and "BANDAGE" or "THROW")) or "FIRE"
+		local fireText = itemInHand and (itemInHand == "Medkit" and "HEAL" or (itemInHand == "Bandage" and "BANDAGE" or "THROW")) or "FIRE"
+		if fire.fireText ~= fireText then
+			fire.fireText = fireText
+			fire.label.Text = fireText
+		end
 		setLit(sprint, Sprint.isHeld())
 		reload.frame.Visible = playing and itemInHand == nil
 		aim.frame.Visible = playing and itemInHand == nil
@@ -494,7 +502,11 @@ function TouchControls.start()
 
 		local inLobby = stage == "Lobby" and not Spectator.isActive() and not player:GetAttribute("UiOpen")
 		ready.Visible = inLobby
-		ready.Text = player:GetAttribute("Ready") and "✔ READY" or "I'M READY"
+		local readyText = player:GetAttribute("Ready") and "✔ READY" or "I'M READY"
+		if readyShown ~= readyText then
+			readyShown = readyText
+			ready.Text = readyText
+		end
 		readyStroke.Color = player:GetAttribute("Ready") and Color3.fromRGB(110, 210, 110) or GOLD
 	end
 
