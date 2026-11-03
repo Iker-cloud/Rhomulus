@@ -88,7 +88,8 @@ local function setCollisionGroup(character, group)
 	end
 end
 
-local function drop(carrier)
+-- `reason` (opcional): por qué se soltó solo, para avisar a quien cargaba (si no, parece que el juego lo soltó sin motivo)
+local function drop(carrier, reason)
 	local target = carrying[carrier]
 	if not target then
 		return
@@ -98,6 +99,9 @@ local function drop(carrier)
 
 	carrier:SetAttribute("Carrying", nil)
 	PlayerState.refreshSpeed(carrier)
+	if typeof(reason) == "string" and carrier.Parent then
+		Remotes.Feed:FireClient(carrier, reason)
+	end
 
 	local character = target.Character
 	if character then
@@ -367,13 +371,58 @@ function Revive.start()
 		updatePrompts(player)
 	end)
 
-	Remotes.Drop.OnServerEvent:Connect(RateLimit.wrap("DropCarry", 0.3, drop))
+	local dropOnRequest = RateLimit.wrap("DropCarry", 0.3, function(carrier)
+		drop(carrier) -- sin motivo: lo pidió el jugador (el cliente no puede mandar texto)
+	end)
+	Remotes.Drop.OnServerEvent:Connect(dropOnRequest)
+
+	-- Si alguien reaparece (nuevo personaje) o su personaje desaparece, nada de lo que cargaba o de quien lo cargaba sigue valiendo:
+	-- sin esto quedaba el registro viejo, el compañero pegado al cuerpo anterior y su prompt de cargar apagado para siempre
+	local function release(player)
+		drop(player)
+		local carrier = carriedBy[player]
+		if carrier then
+			drop(carrier, `Soltaste a {player.DisplayName}: su personaje cambió`)
+		end
+	end
+	-- Con el personaje nuevo ya puesto solo se borra el registro (no se toca el cuerpo: está apareciendo y soltarlo lo movería o lo desanclaría)
+	local function forget(player)
+		local target = carrying[player]
+		if target then
+			carrying[player] = nil
+			carriedBy[target] = nil
+		end
+		local carrier = carriedBy[player]
+		if carrier then
+			carriedBy[player] = nil
+			carrying[carrier] = nil
+			carrier:SetAttribute("Carrying", nil)
+			PlayerState.refreshSpeed(carrier)
+		end
+		updatePrompts(player) -- el prompt de cargar del personaje nuevo puede haber quedado apagado por el registro viejo
+	end
+	local function watchCharacterChanges(player)
+		player.CharacterRemoving:Connect(function()
+			release(player)
+		end)
+		player.CharacterAdded:Connect(function()
+			forget(player)
+		end)
+	end
+	Players.PlayerAdded:Connect(watchCharacterChanges)
+	for _, player in Players:GetPlayers() do
+		watchCharacterChanges(player)
+	end
 
 	-- El caído a cuestas sigue a quien lo carga (en el servidor, para que la zona, la furgoneta y los demás sistemas lo vean donde está)
 	RunService.Heartbeat:Connect(function()
 		for carrier, target in carrying do
 			local carrierRoot, targetRoot = getRoot(carrier), getRoot(target)
-			if carrierRoot and targetRoot then
+			if not (carrierRoot and targetRoot and targetRoot:IsDescendantOf(workspace)) then
+				drop(carrier, "Soltaste a tu compañero: ya no se encuentra")
+			elseif carrier.Character ~= carrierRoot.Parent or target.Character ~= targetRoot.Parent then
+				drop(carrier, "Soltaste a tu compañero: su personaje cambió")
+			else
 				targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
 			end
 		end
