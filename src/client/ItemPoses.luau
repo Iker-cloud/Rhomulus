@@ -185,6 +185,71 @@ local POSES = {
 			key(1, V(-0.15, -0.35, -0.90), 0.1),
 		},
 	},
+	-- Estocada (cuchillo): la mano se recoge a la cadera y se lanza recta hacia delante; la izquierda cubre.
+	MeleeStab = {
+		ready = { r = V(0.30, -0.30, -0.90), rt = 0.3, l = V(-0.25, -0.40, -0.85), lt = 0 },
+		right = {
+			key(0, START),
+			key(0.20, V(0.40, -0.50, -0.30), 0.55), -- se recoge
+			key(0.45, V(0.10, -0.10, -2.10), 0.10), -- clava
+			key(0.65, V(0.12, -0.12, -1.95), 0.10),
+			key(1, V(0.30, -0.30, -0.90), 0.3),
+		},
+		left = {
+			key(0, START),
+			key(0.20, V(-0.35, -0.25, -0.70), 0.1),
+			key(0.45, V(-0.50, -0.15, -1.05), 0),
+			key(1, V(-0.25, -0.40, -0.85), 0),
+		},
+	},
+	-- Sartenazo: un brazo, desde arriba en diagonal con todo el peso, y rebota un poco al chocar.
+	MeleeBash = {
+		ready = { r = V(0.30, -0.30, -0.90), rt = 0.3, l = V(-0.25, -0.40, -0.85), lt = 0 },
+		right = {
+			key(0, START),
+			key(0.28, V(0.50, 0.85, -0.40), 1.35), -- por encima del hombro
+			key(0.46, V(0.00, -0.30, -1.85), -0.85), -- golpe
+			key(0.54, V(0.02, -0.22, -1.70), -0.55), -- rebote
+			key(0.74, V(0.05, -0.50, -1.50), -0.70),
+			key(1, V(0.30, -0.30, -0.90), 0.3),
+		},
+		left = {
+			key(0, START),
+			key(0.28, V(-0.30, -0.10, -0.80), 0.2),
+			key(0.46, V(-0.45, -0.30, -1.00), 0),
+			key(1, V(-0.25, -0.40, -0.85), 0),
+		},
+	},
+	-- Motosierra: dos manos, la echa atrás a la derecha y la lleva al frente en un barrido bajo; tiembla mientras corta.
+	MeleeSaw = {
+		ready = { r = V(0.30, -0.35, -0.95), rt = 0.2, l = V(-0.10, -0.40, -1.15), lt = 0.1 },
+		right = {
+			key(0, START),
+			key(0.22, V(0.65, -0.20, -0.75), 0.40),
+			key(0.45, V(-0.05, -0.25, -1.90), 0.05), -- entra al frente
+			key(0.75, V(-0.40, -0.30, -1.70), 0.00), -- sigue cortando a la izquierda
+			key(1, V(0.30, -0.35, -0.95), 0.2),
+		},
+		left = {
+			key(0, START),
+			key(0.22, V(0.15, -0.30, -1.00), 0.2),
+			key(0.45, V(-0.25, -0.35, -1.55), 0.05),
+			key(0.75, V(-0.55, -0.35, -1.35), 0),
+			key(1, V(-0.10, -0.40, -1.15), 0.1),
+		},
+		wobbleR = function(t)
+			if t < 0.35 or t > 0.85 then
+				return Vector3.zero
+			end
+			return V(0.022 * math.sin(t * 420), 0.016 * math.sin(t * 370), 0.012 * math.sin(t * 510))
+		end,
+		wobbleL = function(t)
+			if t < 0.35 or t > 0.85 then
+				return Vector3.zero
+			end
+			return V(0.018 * math.sin(t * 390 + 1), 0.014 * math.sin(t * 450), 0.01 * math.sin(t * 330))
+		end,
+	},
 	-- Botiquín (5 s): lo sube al pecho con la derecha, la izquierda abre la tapa, saca gasa y cura (la mano entra y sale del
 	-- maletín), y al final cierra la tapa y lo baja.
 	Medkit = {

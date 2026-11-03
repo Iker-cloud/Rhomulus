@@ -56,6 +56,7 @@ function MeleeModel.hold(player, skinId)
 	end
 	local model, gripOffset, spin = MeleeModel.build(skinId)
 	local root = model.PrimaryPart
+	model:SetAttribute("SkinId", skinId) -- client/MeleeFx pinta la estela según la skin
 	-- la mano apunta a las puntas de los dedos por -Y: la cabeza del arma sale por ahí, con el agarre en la palma
 	local palm = CFrame.new(0, -0.2, 0) * CFrame.Angles(math.pi, spin, 0)
 	model:PivotTo(hand.CFrame * palm * CFrame.new(0, -gripOffset, 0))

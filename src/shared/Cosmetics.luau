@@ -64,7 +64,7 @@ end
 
 -- Armas cuerpo a cuerpo ----------------------------------------------------------------------------------------------------------
 -- Rarity: Common, Rare, Epic o Legendary (Cosmetics.Rarities). Price: Rhoms (el cuchillo es gratis y siempre se tiene).
--- Style: el gesto de los brazos (client/ItemPoses: "MeleeSlash" tajo en diagonal, "MeleeChop" golpe desde arriba, "MeleeSweep" barrido).
+-- Style: el gesto de los brazos (client/ItemPoses: "MeleeSlash" tajo en diagonal, "MeleeChop" golpe desde arriba, "MeleeSweep" barrido, "MeleeStab" estocada, "MeleeBash" sartenazo, "MeleeSaw" motosierra).
 -- Desc: la línea del panel de la armería (en inglés; la traduce LangEs).
 -- Pitch / Volume: cómo suena el golpe (el mismo sonido a otro tono). Model: cada skin usa su modelo 3D de ZombieData (Melee<Id>, server/MeleeModel); si falta sale un bloque de color; cuando
 -- no hay modelo se usa Size (largo, ancho y grosor del bloque).
@@ -76,9 +76,9 @@ Cosmetics.Rarities = {
 }
 
 Cosmetics.MeleeSkins = {
-	{ Id = "Knife", Desc = "Standard issue. Quick and quiet.", Name = "Combat Knife", Rarity = "Common", Price = 0, Style = "MeleeSlash", Pitch = 1.0, Volume = 0.5,
+	{ Id = "Knife", Desc = "Standard issue. Quick and quiet.", Name = "Combat Knife", Rarity = "Common", Price = 0, Style = "MeleeStab", Pitch = 1.0, Volume = 0.5,
 		Color = Color3.fromRGB(170, 174, 180), Size = Vector3.new(0.14, 0.5, 1.5) },
-	{ Id = "Pan", Desc = "Cast iron. Rings like a church bell.", Name = "Frying Pan", Rarity = "Common", Price = 3, Style = "MeleeSweep", Pitch = 0.7, Volume = 0.6,
+	{ Id = "Pan", Desc = "Cast iron. Rings like a church bell.", Name = "Frying Pan", Rarity = "Common", Price = 3, Style = "MeleeBash", Pitch = 0.7, Volume = 0.6,
 		Color = Color3.fromRGB(70, 72, 78), Size = Vector3.new(0.2, 1.2, 1.9) },
 	{ Id = "Bat", Desc = "Studded with nails. Leaves a mark.", Name = "Baseball Bat", Rarity = "Common", Price = 6, Style = "MeleeSweep", Pitch = 0.85, Volume = 0.6,
 		Color = Color3.fromRGB(190, 140, 80), Size = Vector3.new(0.3, 0.3, 2.6) },
@@ -86,7 +86,7 @@ Cosmetics.MeleeSkins = {
 		Color = Color3.fromRGB(120, 130, 135), Size = Vector3.new(0.12, 0.6, 2.2) },
 	{ Id = "Axe", Desc = "Fire station red. Heavy and final.", Name = "Fire Axe", Rarity = "Epic", Price = 25, Style = "MeleeChop", Pitch = 0.6, Volume = 0.7,
 		Color = Color3.fromRGB(200, 40, 36), Size = Vector3.new(0.3, 0.9, 2.4) },
-	{ Id = "Chainsaw", Desc = "Loud, brutal and unforgettable.", Name = "Chainsaw", Rarity = "Legendary", Price = 50, Style = "MeleeChop", Pitch = 0.45, Volume = 0.8,
+	{ Id = "Chainsaw", Desc = "Loud, brutal and unforgettable.", Name = "Chainsaw", Rarity = "Legendary", Price = 50, Style = "MeleeSaw", Pitch = 0.45, Volume = 0.8,
 		Color = Color3.fromRGB(255, 150, 30), Size = Vector3.new(0.6, 0.9, 2.6) },
 }
 Cosmetics.DefaultMelee = "Knife"
