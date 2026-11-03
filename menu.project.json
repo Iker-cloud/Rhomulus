@@ -25,6 +25,18 @@
         },
         "LangEs": {
           "$path": "src/shared/LangEs.luau"
+        },
+        "WeaponModel": {
+          "$path": "src/server/WeaponModel.luau"
+        },
+        "MeleeData": {
+          "$className": "Folder",
+          "MeleeKnife": { "$path": "src/server/ZombieData/MeleeKnife.luau" },
+          "MeleePan": { "$path": "src/server/ZombieData/MeleePan.luau" },
+          "MeleeBat": { "$path": "src/server/ZombieData/MeleeBat.luau" },
+          "MeleeMachete": { "$path": "src/server/ZombieData/MeleeMachete.luau" },
+          "MeleeAxe": { "$path": "src/server/ZombieData/MeleeAxe.luau" },
+          "MeleeChainsaw": { "$path": "src/server/ZombieData/MeleeChainsaw.luau" }
         }
       }
     },

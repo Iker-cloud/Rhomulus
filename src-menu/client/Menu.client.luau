@@ -737,7 +737,38 @@ end
 
 -- 6) Armería: las armas cuerpo a cuerpo --------------------------------------------------------------------------------------------
 -- El cuchillo es el básico y las demás se compran con Rhoms; todas hacen lo mismo en la partida, solo cambia cómo se ven y suenan
--- (shared/Cosmetics). Tocar una que se tiene la pone; tocar una que no, la compra (el servidor cobra y comprueba).
+-- (shared/Cosmetics). Se elige una tarjeta y el panel de la derecha la muestra en 3D con su botón: comprar (el servidor cobra y
+-- comprueba), poner o ya puesta. Los modelos son los mismos de la partida (Shared.MeleeData + Shared.WeaponModel) dibujados en un ViewportFrame.
+local WeaponModel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponModel"))
+local meleeData = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MeleeData")
+local MELEE_TILT = math.rad(-55) -- la cabeza del arma queda arriba a la derecha
+
+-- Dibuja el modelo de la skin en un visor del tamaño dado. Devuelve el visor, `sway(t)` (lo hace girar despacio) y el largo del arma.
+local function weaponView(parent, x, y, w, h, skin)
+	local view = make("ViewportFrame", {
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h),
+		Ambient = Color3.fromRGB(150, 146, 140), LightColor = Color3.fromRGB(255, 244, 228), LightDirection = Vector3.new(-0.5, -0.8, -0.6),
+	}, parent)
+	local module = meleeData:FindFirstChild("Melee" .. skin.Id)
+	if not module then
+		return view, function() end, 0
+	end
+	local data = require(module)
+	local model = WeaponModel.build(data, 1)
+	model.Parent = view
+	local length = data.bounds.max.Y - data.bounds.min.Y
+	local fov = 25
+	local aspect = w / h
+	local dist = math.max(length * 0.9 / aspect, length * 0.68) / (2 * math.tan(math.rad(fov / 2))) * 1.22
+	local camera = make("Camera", { FieldOfView = fov, CFrame = CFrame.lookAt(Vector3.new(0, 0, dist), Vector3.zero) }, view)
+	view.CurrentCamera = camera
+	local function sway(t)
+		model:PivotTo(CFrame.Angles(0, math.sin(t * 0.9) * 0.45, 0) * CFrame.Angles(0, 0, MELEE_TILT))
+	end
+	sway(0)
+	return view, sway, length
+end
+
 local armoryScreen = newScreen("armory")
 local armoryConns = {}
 builders.armory = function()
@@ -751,65 +782,134 @@ builders.armory = function()
 	local note = text(s, "", OSW_BOLD, 28, Vector2.new(1800, 960), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
 	local coinsLabel = text(s, "", ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
 	local cards = {}
+	local swayers = {}
+	local selected = Cosmetics.validMelee(player:GetAttribute("MeleeOwned"), player:GetAttribute("MeleeSkin"))
 
 	local function ownedNow(id)
 		return Cosmetics.ownsMelee(player:GetAttribute("MeleeOwned"), id)
 	end
+	local function equippedNow()
+		return Cosmetics.validMelee(player:GetAttribute("MeleeOwned"), player:GetAttribute("MeleeSkin"))
+	end
+
+	-- Panel de detalle (derecha)
+	local PX, PY, PW, PH = 1220, 360, 580, 516
+	local detail = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(PX, PY), Size = UDim2.fromOffset(PW, PH) }, s)
+	make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 5) }, detail)
+	local dEyebrow = text(detail, "", OSW_BOLD, 22, Vector2.new(35, 38), { width = 510, color = DIM })
+	local dName = text(detail, "", ANTON, 76, Vector2.new(35, 94), { width = 510, color = INK })
+	local dDesc = text(detail, "", OSW, 26, Vector2.new(35, 158), { width = 510, color = DIM })
+	local dView, dSway
+	local dRarity = text(detail, "", OSW_BOLD, 22, Vector2.new(35, 368), { width = 510 })
+	text(detail, "ALL MELEE WEAPONS HIT THE SAME. ONLY LOOK AND SOUND CHANGE.", OSW, 18, Vector2.new(35, 408), { width = 510, color = DIM })
+	local action = make("Frame", { BackgroundColor3 = RED, BorderSizePixel = 0, Position = UDim2.fromOffset(35, 440), Size = UDim2.fromOffset(510, 64) }, detail)
+	local actionLabel = text(action, "", ANTON, 38, Vector2.new(255, 32), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 500, color = BLACK })
+
+	local function showDetail()
+		local skin = Cosmetics.melee(selected)
+		if dView then
+			dView:Destroy()
+		end
+		local length
+		dView, dSway, length = weaponView(detail, 35, 190, 510, 170, skin)
+		local number = string.format("%02d", table.find(Cosmetics.MeleeSkins, skin) or 0)
+		dEyebrow.Text = spaced(`{Lang.tr("NO.")} {number} · {string.format("%.1f", length)} STUDS`, 2)
+		dName.Text = upperEs(skin.Name)
+		dDesc.Text = Lang.tr(skin.Desc or "")
+		local rarity = Cosmetics.Rarities[skin.Rarity]
+		dRarity.Text = spaced(rarity.Text, 3)
+		dRarity.TextColor3 = rarity.Color
+	end
+
 	local function paint()
 		local coins = player:GetAttribute("Rhoms")
 		coinsLabel.Text = typeof(coins) == "number" and spaced(`{coins} RHOMS`, 3) or ""
-		local equipped = Cosmetics.validMelee(player:GetAttribute("MeleeOwned"), player:GetAttribute("MeleeSkin"))
+		local equipped = equippedNow()
 		for id, card in cards do
 			local skin = card.skin
 			local owned = ownedNow(id)
 			local isOn = id == equipped
-			card.stroke.Thickness = isOn and 5 or 2
-			card.stroke.Color = isOn and RED or Cosmetics.Rarities[skin.Rarity].Color
+			local isSel = id == selected
+			card.frame.BackgroundColor3 = isSel and Color3.fromRGB(40, 11, 13) or PANEL
+			card.stroke.Thickness = isSel and 4 or 2
+			card.stroke.Color = isSel and RED or LINE
 			card.state.TextColor3 = isOn and RED or INK
 			if isOn then
-				card.state.Text = spaced("EQUIPPED", 3)
+				card.state.Text = spaced("EQUIPPED", 2)
 			elseif owned then
-				card.state.Text = spaced("OWNED", 3)
+				card.state.Text = spaced("OWNED", 2)
 			elseif skin.Price <= 0 then
-				card.state.Text = spaced("FREE", 3)
+				card.state.Text = spaced("FREE", 2)
 			else
-				card.state.Text = spaced(`{skin.Price} RHOMS`, 3)
-				card.state.TextColor3 = (typeof(coins) == "number" and coins >= skin.Price) and INK or DIM
+				card.state.Text = spaced(`{skin.Price} RHOMS`, 1)
+				card.state.TextColor3 = (typeof(coins) == "number" and coins >= skin.Price) and Color3.fromRGB(255, 196, 60) or DIM
 			end
+		end
+		local skin = Cosmetics.melee(selected)
+		if selected == equipped then
+			actionLabel.Text = spaced("EQUIPPED", 3)
+			action.BackgroundColor3 = LINE
+		elseif ownedNow(selected) then
+			actionLabel.Text = spaced("EQUIP", 3)
+			action.BackgroundColor3 = RED
+		else
+			actionLabel.Text = spaced(`{Lang.tr("BUY")} · {skin.Price} RHOMS`, 2)
+			action.BackgroundColor3 = RED
 		end
 	end
 
+	local CW, CH, GAP = 520, 160, 18
 	for i, skin in Cosmetics.MeleeSkins do
-		local col, row = (i - 1) % 3, (i - 1) // 3
-		local x, y = 120 + 560 * col, 350 + 270 * row
-		local card = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(520, 240) }, s)
-		local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, card)
-		-- Lugar de la imagen del arma (hasta que haya modelos 3D: una barra con el color y la proporción del arma)
-		local well = make("Frame", { BackgroundColor3 = Color3.fromRGB(10, 10, 10), BorderSizePixel = 0, Position = UDim2.fromOffset(20, 20), Size = UDim2.fromOffset(150, 200) }, card)
-		local length = math.clamp(skin.Size.Z / 2.6, 0.4, 1) * 170
-		local thick = math.clamp(skin.Size.Y * 28, 10, 34)
-		local bar = make("Frame", { BackgroundColor3 = skin.Color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(thick, length), Rotation = 35 }, well)
-		make("UICorner", { CornerRadius = UDim.new(0, 4) }, bar)
-		text(card, upperEs(skin.Name), ANTON, 38, Vector2.new(190, 64), { width = 320 })
-		local rarity = Cosmetics.Rarities[skin.Rarity]
-		text(card, spaced(rarity.Text, 3), OSW_BOLD, 22, Vector2.new(190, 110), { width = 320, color = rarity.Color })
-		local state = text(card, "", OSW_BOLD, 28, Vector2.new(190, 196), { width = 320, color = INK })
-		cards[skin.Id] = { skin = skin, stroke = stroke, state = state }
-		button(s, x, y, 520, 240, function()
-			task.spawn(function()
-				local action = ownedNow(skin.Id) and "equipSkin" or "buySkin"
-				local okCall, done, why = pcall(function()
-					return profileRequest:InvokeServer(action, skin.Id)
-				end)
-				note.Text = (okCall and done) and "" or spaced(string.upper((okCall and why) or "Couldn't connect. Try again"), 2)
-			end)
+		local col, row = (i - 1) % 2, (i - 1) // 2
+		local x, y = 120 + (CW + 20) * col, 360 + (CH + GAP) * row
+		local frame = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(CW, CH), ClipsDescendants = true }, s)
+		local stroke = make("UIStroke", { Color = LINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, frame)
+		local _, sway = weaponView(frame, 0, 0, CW, CH - 30, skin)
+		table.insert(swayers, sway)
+		local tag = make("TextLabel", {
+			BackgroundColor3 = INK, BorderSizePixel = 0, Position = UDim2.fromOffset(14, CH - 46), Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X,
+			Text = `{string.format("%02d", i)} · {upperEs(skin.Name)}`, FontFace = OSW_BOLD, TextSize = 22, TextColor3 = BLACK,
+		}, frame)
+		make("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, tag)
+		local state = text(frame, "", OSW_BOLD, 28, Vector2.new(CW - 16, CH - 30), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200, color = INK })
+		cards[skin.Id] = { skin = skin, frame = frame, stroke = stroke, state = state }
+		button(s, x, y, CW, CH, function()
+			selected = skin.Id
+			showDetail()
+			paint()
 		end).Name = "Skin_" .. skin.Id
 	end
+
+	button(s, PX + 35, PY + 440, 510, 64, function()
+		if selected == equippedNow() then
+			return
+		end
+		local id = selected
+		task.spawn(function()
+			local act = ownedNow(id) and "equipSkin" or "buySkin"
+			local okCall, done, why = pcall(function()
+				return profileRequest:InvokeServer(act, id)
+			end)
+			note.Text = (okCall and done) and "" or spaced(string.upper((okCall and why) or "Couldn't connect. Try again"), 2)
+		end)
+	end).Name = "SkinAction"
+
+	showDetail()
 	paint()
 	for _, name in { "Rhoms", "MeleeOwned", "MeleeSkin" } do
 		table.insert(armoryConns, player:GetAttributeChangedSignal(name):Connect(paint))
 	end
+	-- las armas giran despacio mientras la pantalla se ve
+	table.insert(armoryConns, RunService.RenderStepped:Connect(function()
+		if not s.Visible then
+			return
+		end
+		local t = os.clock()
+		for i, sway in swayers do
+			sway(t + i * 0.7)
+		end
+		dSway(t)
+	end))
 	backButton(s, "main")
 	smallVersion(s, 1800, 1010)
 end
