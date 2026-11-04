@@ -1,10 +1,11 @@
--- Contador de latas del equipo: cartel con franjas de peligro, inclinado.
+-- Contador de latas del equipo: el círculo con la lata (client/CanIcon) y la cuenta en una píldora.
 -- Animado: el número sube/baja contando, rebota al ganar, tiembla al gastar y suelta un "+25" flotante.
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local CanIcon = require(script.Parent.CanIcon)
 local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
@@ -14,6 +15,7 @@ local BLACK = Color3.fromRGB(18, 18, 18)
 local LatasHud = {}
 
 local italic = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy, Enum.FontStyle.Italic)
+local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
 
 function LatasHud.start()
 	local gui = Instance.new("ScreenGui")
@@ -22,56 +24,69 @@ function LatasHud.start()
 	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- Marco con franjas amarillas y negras
+	-- Círculo con la lata y, a su lado, la cuenta en una píldora ("× 0")
+	local CREAM = Color3.fromRGB(214, 208, 196)
 	local frame = Instance.new("Frame")
 	frame.AnchorPoint = Vector2.new(1, 0)
 	frame.Position = UDim2.new(1, -24, 0, 90) -- debajo de la barra de vida de Roblox
-	frame.Size = UDim2.fromOffset(210, 50)
-	frame.Rotation = -3
-	frame.BackgroundColor3 = YELLOW
-	frame.BorderSizePixel = 0
+	frame.Size = UDim2.fromOffset(190, 72)
+	frame.BackgroundTransparency = 1
 	frame.Parent = gui
 	UiFit.scale(frame)
 
-	local stripes = {}
-	local count = 9 -- máx. 20 puntos por degradado (2 por franja)
-	for i = 0, count - 1 do
-		local color = i % 2 == 0 and YELLOW or BLACK
-		table.insert(stripes, ColorSequenceKeypoint.new(i / count, color))
-		table.insert(stripes, ColorSequenceKeypoint.new(i == count - 1 and 1 or (i + 1) / count - 0.0001, color))
-	end
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new(stripes)
-	gradient.Rotation = 45
-	gradient.Parent = frame
+	local pill = Instance.new("Frame")
+	pill.Position = UDim2.fromOffset(48, 13)
+	pill.Size = UDim2.fromOffset(140, 46)
+	pill.BackgroundColor3 = Color3.fromRGB(28, 26, 24)
+	pill.BorderSizePixel = 0
+	pill.Parent = frame
+	Instance.new("UICorner", pill).CornerRadius = UDim.new(0.5, 0)
+	local pillStroke = Instance.new("UIStroke")
+	pillStroke.Color = CREAM
+	pillStroke.Thickness = 5
+	pillStroke.Parent = pill
 
-	local inner = Instance.new("Frame")
-	inner.Position = UDim2.fromOffset(5, 5)
-	inner.Size = UDim2.new(1, -10, 1, -10)
-	inner.BackgroundColor3 = BLACK
-	inner.BorderSizePixel = 0
-	inner.Parent = frame
+	local badge = Instance.new("Frame")
+	badge.Size = UDim2.fromOffset(72, 72)
+	badge.BackgroundColor3 = Color3.fromRGB(28, 26, 24)
+	badge.BorderSizePixel = 0
+	badge.ZIndex = 2
+	badge.Parent = frame
+	Instance.new("UICorner", badge).CornerRadius = UDim.new(0.5, 0)
+	local badgeStroke = Instance.new("UIStroke")
+	badgeStroke.Color = CREAM
+	badgeStroke.Thickness = 5
+	badgeStroke.Parent = badge
+	local can = CanIcon.make(badge, 44)
+	can.ZIndex = 3
+	for _, child in can:GetDescendants() do
+		if child:IsA("GuiObject") then
+			child.ZIndex = 3
+		end
+	end
+
+	local inner = pill -- el texto va dentro de la píldora
 
 	local title = Instance.new("TextLabel")
 	title.BackgroundTransparency = 1
-	title.Position = UDim2.fromOffset(12, 0)
-	title.Size = UDim2.new(0.5, 0, 1, 0)
-	title.FontFace = italic
-	title.TextSize = 24
-	title.TextColor3 = YELLOW
+	title.Position = UDim2.fromOffset(34, 0)
+	title.Size = UDim2.fromOffset(24, 46)
+	title.FontFace = OSWALD
+	title.TextSize = 26
+	title.TextColor3 = CREAM
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = "LATAS"
+	title.Text = "×"
 	title.Parent = inner
 
 	local number = Instance.new("TextLabel")
-	number.AnchorPoint = Vector2.new(1, 0.5)
+	number.AnchorPoint = Vector2.new(0, 0.5)
 	number.BackgroundTransparency = 1
-	number.Position = UDim2.new(1, -12, 0.5, 0)
-	number.Size = UDim2.new(0.5, 0, 1, 0)
-	number.FontFace = italic
-	number.TextSize = 32
+	number.Position = UDim2.new(0, 62, 0.5, 0)
+	number.Size = UDim2.fromOffset(70, 46)
+	number.FontFace = OSWALD
+	number.TextSize = 34
 	number.TextColor3 = Color3.new(1, 1, 1)
-	number.TextXAlignment = Enum.TextXAlignment.Right
+	number.TextXAlignment = Enum.TextXAlignment.Left
 	number.Parent = inner
 	local numberScale = Instance.new("UIScale")
 	numberScale.Parent = number

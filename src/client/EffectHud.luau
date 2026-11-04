@@ -68,6 +68,34 @@ function EffectHud.start()
 	fill.BorderSizePixel = 0
 	fill.Parent = back
 
+	-- Phial de Visión: los zombies se resaltan a través de las paredes (Roblox dibuja como mucho unos 31 resaltados a la vez)
+	task.spawn(function()
+		local zombies = workspace:WaitForChild("Zombies")
+		while true do
+			task.wait(0.4)
+			local on = player:GetAttribute("FxVision") == true
+			local count = 0
+			for _, zombie in zombies:GetChildren() do
+				local mark = zombie:FindFirstChild("VisionMark")
+				local alive = zombie:GetAttribute("DeadAt") == nil
+				if on and alive and count < 28 then
+					count += 1
+					if not mark then
+						mark = Instance.new("Highlight")
+						mark.Name = "VisionMark"
+						mark.FillColor = Color3.fromRGB(190, 120, 255)
+						mark.FillTransparency = 0.6
+						mark.OutlineColor = Color3.fromRGB(225, 190, 255)
+						mark.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+						mark.Parent = zombie
+					end
+				elseif mark then
+					mark:Destroy()
+				end
+			end
+		end
+	end)
+
 	RunService.RenderStepped:Connect(function()
 		local id = player:GetAttribute("FxId")
 		local def = id and P.Effects[id]
@@ -82,7 +110,7 @@ function EffectHud.start()
 		root.Visible = true
 		stripe.BackgroundColor3 = color
 		fill.BackgroundColor3 = color
-		name.Text = crash and "BAJÓN" or def.Upper
+		name.Text = crash and "CRASH" or def.Upper
 		name.TextColor3 = color
 		desc.Text = crash and def.CrashDesc or def.Desc
 		seconds.Text = `{math.ceil(left)}`

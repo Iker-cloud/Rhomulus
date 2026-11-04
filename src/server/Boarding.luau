@@ -146,7 +146,7 @@ local function board(player, side)
 	local carried = Revive.carriedBy(player)
 	local need = carried and 2 or 1
 	if freeSeatCount() < need then
-		Remotes.Feed:FireClient(player, "No hay asientos libres en la furgoneta")
+		Remotes.Feed:FireClient(player, "No free seats in the van")
 		return
 	end
 	local def = takeSeat(side, player)
@@ -194,8 +194,8 @@ function Boarding.open(vanModel)
 		if anchor then
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "BoardPrompt"
-			prompt.ActionText = "Subir a la furgoneta"
-			prompt.ObjectText = "Rescate"
+			prompt.ActionText = "Board the van"
+			prompt.ObjectText = "Rescue"
 			prompt.KeyboardKeyCode = Enum.KeyCode.E
 			prompt.HoldDuration = B.HoldTime
 			prompt.MaxActivationDistance = B.PromptDistance

@@ -9,6 +9,9 @@
 --   FastChance                     probabilidad de que un zombie común sea rápido (en vez de 0.2 fijo)
 --   ExtraTanks                     Tanques vivos a la vez de más (se suman al máximo según el número de jugadores)
 --   TankEvery                      multiplica el tiempo entre Tanques de la extracción (menos = más seguidos)
+--   ExtraGrabbers                  Atrapadores vivos a la vez de más (el máximo base es 1, 2 con 3 o más jugadores)
+--   GrabberEvery                   multiplica la espera entre lenguetazos y entre Atrapadores (menos = más seguidos)
+--   ExtractPressure                multiplica la presión de la extracción (tope de vivos, tamaño y frecuencia de oleadas, ritmo de aparición)
 --   SpawnInterval                  multiplica la pausa entre apariciones (menos = llegan más rápido)
 --   Cost                           multiplica los precios (caja, munición y objetos)
 --   Reward                         multiplica las latas que se ganan
@@ -21,9 +24,9 @@ local Difficulties = {
 	MaxAliveCap = 32, -- tope de zombies vivos a la vez en cualquier dificultad (rendimiento en celular)
 
 	Calma = {
-		Name = "Calma",
-		Upper = "CALMA",
-		Description = "Para conocer el barrio: menos zombies, más débiles y lentos. Todo cuesta menos y aguantas más caído.",
+		Name = "Calm",
+		Upper = "CALM",
+		Description = "To get to know the barrio: fewer zombies, weaker and slower. Everything costs less and you last longer downed.",
 		Color = Color3.fromRGB(110, 190, 140),
 		Health = 0.8,
 		Speed = 0.9,
@@ -33,6 +36,9 @@ local Difficulties = {
 		FastChance = 0.1,
 		ExtraTanks = 0,
 		TankEvery = 1.5,
+		ExtraGrabbers = 0,
+		GrabberEvery = 1.4,
+		ExtractPressure = 0.9,
 		SpawnInterval = 1.3,
 		Cost = 0.8,
 		Reward = 1,
@@ -42,9 +48,9 @@ local Difficulties = {
 	},
 
 	Tension = {
-		Name = "Tensión",
-		Upper = "TENSIÓN",
-		Description = "La experiencia pensada: hordas medianas, zombies normales y precios justos. Hay que cuidarse las espaldas.",
+		Name = "Tension",
+		Upper = "TENSION",
+		Description = "The intended experience: medium hordes, normal zombies and fair prices. Watch your back.",
 		Color = Color3.fromRGB(240, 200, 80),
 		Health = 1,
 		Speed = 1,
@@ -54,6 +60,9 @@ local Difficulties = {
 		FastChance = 0.2,
 		ExtraTanks = 0,
 		TankEvery = 1,
+		ExtraGrabbers = 0,
+		GrabberEvery = 1,
+		ExtractPressure = 1.3,
 		SpawnInterval = 1,
 		Cost = 1,
 		Reward = 1,
@@ -65,7 +74,7 @@ local Difficulties = {
 	Crisis = {
 		Name = "Crisis",
 		Upper = "CRISIS",
-		Description = "Más zombies, más duros y más rápidos. Los Tanques llegan seguido y hay menos ayuda; las latas rinden algo más.",
+		Description = "More zombies, tougher and faster. Tanks show up often and there's less help; cans go a bit further.",
 		Color = Color3.fromRGB(235, 130, 55),
 		Health = 1.5,
 		Speed = 1.08,
@@ -75,6 +84,9 @@ local Difficulties = {
 		FastChance = 0.3,
 		ExtraTanks = 1,
 		TankEvery = 0.75,
+		ExtraGrabbers = 0,
+		GrabberEvery = 0.85,
+		ExtractPressure = 1.7,
 		SpawnInterval = 0.8,
 		Cost = 1.25,
 		Reward = 1.15,
@@ -84,9 +96,9 @@ local Difficulties = {
 	},
 
 	Colapso = {
-		Name = "Colapso",
-		Upper = "COLAPSO",
-		Description = "El barrio ya cayó: hordas enormes de zombies que muerden fuerte, Tanques sin descanso y casi nada de ayuda.",
+		Name = "Collapse",
+		Upper = "COLLAPSE",
+		Description = "The barrio has fallen: huge hordes of hard-biting zombies, relentless Tanks and almost no help.",
 		Color = Color3.fromRGB(226, 38, 44),
 		Health = 2,
 		Speed = 1.15,
@@ -96,6 +108,9 @@ local Difficulties = {
 		FastChance = 0.4,
 		ExtraTanks = 2,
 		TankEvery = 0.55,
+		ExtraGrabbers = 1,
+		GrabberEvery = 0.7,
+		ExtractPressure = 2.1,
 		SpawnInterval = 0.65,
 		Cost = 1.5,
 		Reward = 1.3,

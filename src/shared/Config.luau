@@ -2,7 +2,7 @@
 return {
 	Weapons = {
 		Pistol = {
-			Name = "Pistola",
+			Name = "Pistol",
 			AmmoStyle = "Ring", -- anillo de balas
 			Damage = 20,
 			Pellets = 1,
@@ -31,11 +31,11 @@ return {
 			Auto = true,
 			ReserveStart = 90,
 			MaxReserve = 150,
-			Rarity = "Común",
+			Rarity = "Common",
 			Weight = 40, -- probabilidad relativa en la caja
 		},
 		Shotgun = {
-			Name = "Escopeta",
+			Name = "Shotgun",
 			AmmoStyle = "Shells", -- casquillos y cinta
 			Damage = 8, -- por perdigón
 			Pellets = 8,
@@ -47,11 +47,11 @@ return {
 			Auto = false,
 			ReserveStart = 32,
 			MaxReserve = 56,
-			Rarity = "Común",
+			Rarity = "Common",
 			Weight = 35,
 		},
 		SMG = {
-			Name = "Subfusil",
+			Name = "SMG",
 			AmmoStyle = "Magazine", -- cargador transparente
 			Damage = 14,
 			Pellets = 1,
@@ -64,7 +64,7 @@ return {
 			Auto = true,
 			ReserveStart = 120,
 			MaxReserve = 200,
-			Rarity = "Rara",
+			Rarity = "Rare",
 			Weight = 25,
 		},
 	},
@@ -214,6 +214,15 @@ return {
 			ZombieDeath = { "rbxassetid://138338177111300", 0.6, 0.85 }, -- 3D
 			TankRoar = { "rbxassetid://9113980319", 0.9, 0.55 }, -- 3D, al aparecer un Tanque
 			TankDeath = { "rbxassetid://94978851787238", 1, 1 }, -- 3D, al caer un Tanque
+			TankSlam = { "rbxassetid://126212934401370", 1, 0.55 }, -- 3D, el Tanque golpea el suelo (explosión grave; sin oír todavía)
+			AlertTank = { "rbxassetid://9113980319", 0.6, 0.8 }, -- 2D, aviso de que salió un Tanque
+			AlertGrabber = { "rbxassetid://9113980319", 0.45, 1.9 }, -- 2D, aviso de que salió un Atrapador
+			-- Atrapador (ids reutilizados con otro tono: sin oír todavía)
+			GrabberAim = { "rbxassetid://9113980319", 0.5, 1.9 }, -- 3D, empieza a apuntar
+			TongueShot = { "rbxassetid://75492070005287", 0.8, 1.6 }, -- 3D, sale la lengua
+			TongueHit = { "rbxassetid://138338177111300", 0.9, 1.3 }, -- 3D / 2D, agarra
+			TongueSnap = { "rbxassetid://75492070005287", 0.8, 0.7 }, -- 3D, la lengua se recoge tras soltar
+			Struggle = { "rbxassetid://75492070005287", 0.35, 1.8 }, -- 2D, cada pulsación al forcejear
 			Hurt = { -- el jugador recibe un golpe
 				{ "rbxassetid://9120417632", 0.7, 1 },
 				{ "rbxassetid://9120417141", 0.7, 1 },
@@ -309,8 +318,10 @@ return {
 	Pharmacy = {
 		Cost = 250, -- latas por probar suerte (la dificultad lo multiplica)
 		SpinTime = 3.2, -- segundos girando la ruleta
-		TakeTime = 8, -- segundos para tomar la jeringa antes de que se pierda
-		Cooldown = 3, -- pausa tras tomar o perder una jeringa
+		TakeTime = 8, -- segundos para tomar la Phial antes de que se pierda
+		Cooldown = 3, -- pausa tras tomar o perder una Phial
+		-- Animación de inyectarse (fracciones de Duration; deben coincidir con las claves de client/ItemPoses.Syringe)
+		Anim = { Duration = 2.8, Prick = 0.44, PushStart = 0.50, PushEnd = 0.78, Apply = 0.80 },
 		Duration = 75, -- segundos de efecto
 		CrashDuration = 10, -- segundos de bajón
 		-- Lugares de las vitrinas: { posición del suelo, giro en grados (el frente del modelo mira a -Z) }
@@ -321,30 +332,63 @@ return {
 		},
 		-- Efectos. Mods: Damage, Speed y Reload multiplican; MaxHealth suma vida máxima (y cura lo mismo al inyectarse).
 		-- Crash: lo que queda al acabar el efecto, durante CrashDuration.
-		Order = { "Furia", "Impulso", "Adrenalina", "Pulso" },
+		-- Mods extra: Defense (multiplica el daño recibido), Stealth (alcance en studs a partir del cual los zombies no te notan),
+		-- Regen (vida por segundo; negativa = sangrado) y Vision (los zombies se ven a través de las paredes).
+		-- Weight: probabilidad en el sorteo (suman 100, así se muestran en el panel). Category y Rarity salen en las cartas del panel PHIAL ROLL.
+		-- MaxUses: Phials por vitrina y ronda.
+		MaxUses = 2,
+		Rarities = {
+			Common = { Text = "COMMON", Color = Color3.fromRGB(176, 176, 182) },
+			Rare = { Text = "RARE", Color = Color3.fromRGB(78, 160, 255) },
+			Epic = { Text = "EPIC", Color = Color3.fromRGB(190, 108, 255) },
+			Cursed = { Text = "CURSED", Color = Color3.fromRGB(150, 205, 60) },
+		},
+		-- Textos del panel PHIAL ROLL
+		Ui = { Title = "PHIAL ROLL", Subtitle = "FARMÁCIA POPULAR · MORRO ESPERANZA" },
+		Order = { "Furia", "Impulso", "Adrenalina", "Pulso", "PielDura", "Regeneracion", "Vision", "Sigilo", "SueroMalo" },
 		Effects = {
 			Furia = {
-				Name = "Furia", Upper = "FURIA", Color = Color3.fromRGB(220, 50, 55), Desc = "+30 % de daño",
-				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25 % de daño",
+				Name = "Fury", Category = "DAMAGE", Rarity = "Epic", Weight = 7, Upper = "FURY", Color = Color3.fromRGB(220, 50, 55), Desc = "+30% damage",
+				Mods = { Damage = 1.3 }, Crash = { Damage = 0.75 }, CrashDesc = "-25% damage",
 			},
 			Impulso = {
-				Name = "Impulso", Upper = "IMPULSO", Color = Color3.fromRGB(80, 220, 110), Desc = "+25 % de velocidad",
-				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25 % de velocidad",
+				Name = "Rush", Category = "SPEED", Rarity = "Common", Weight = 16, Upper = "RUSH", Color = Color3.fromRGB(80, 220, 110), Desc = "+25% speed",
+				Mods = { Speed = 1.25 }, Crash = { Speed = 0.75 }, CrashDesc = "-25% speed",
 			},
 			Adrenalina = {
-				Name = "Adrenalina", Upper = "ADRENALINA", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 de vida máxima",
-				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15 % de velocidad",
+				Name = "Adrenaline", Category = "HEALTH", Rarity = "Common", Weight = 16, Upper = "ADRENALINE", Color = Color3.fromRGB(245, 170, 50), Desc = "+40 max health",
+				Mods = { MaxHealth = 40 }, Crash = { Speed = 0.85 }, CrashDesc = "-15% speed",
 			},
 			Pulso = {
-				Name = "Pulso", Upper = "PULSO", Color = Color3.fromRGB(70, 150, 255), Desc = "Recarga el doble de rápido",
-				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "recarga más lenta",
+				Name = "Pulse", Category = "RELOADING", Rarity = "Rare", Weight = 12, Upper = "PULSE", Color = Color3.fromRGB(70, 150, 255), Desc = "Reloads twice as fast",
+				Mods = { Reload = 0.5 }, Crash = { Reload = 1.6 }, CrashDesc = "slower reload",
+			},
+			PielDura = {
+				Name = "Thick Skin", Category = "ARMOR", Rarity = "Rare", Weight = 12, Upper = "THICK SKIN", Color = Color3.fromRGB(190, 150, 110), Desc = "-30% damage taken",
+				Mods = { Defense = 0.7 }, Crash = { Defense = 1.2 }, CrashDesc = "+20% damage taken",
+			},
+			Regeneracion = {
+				Name = "Regeneration", Category = "HEALING", Rarity = "Common", Weight = 18, Upper = "REGENERATION", Color = Color3.fromRGB(120, 230, 170), Desc = "you recover 2 health per second",
+				Mods = { Regen = 2 }, Crash = { Regen = -1 }, CrashDesc = "you lose 1 health per second",
+			},
+			Vision = {
+				Name = "Vision", Category = "SIGHT", Rarity = "Epic", Weight = 6, Upper = "VISION", Color = Color3.fromRGB(190, 120, 255), Desc = "you see zombies through walls",
+				Mods = { Vision = true }, Crash = { Reload = 1.3 }, CrashDesc = "shaky hands: slower reload",
+			},
+			Sigilo = {
+				Name = "Stealth", Category = "STEALTH", Rarity = "Rare", Weight = 8, Upper = "STEALTH", Color = Color3.fromRGB(110, 120, 140), Desc = "zombies farther than 20 studs don't notice you",
+				Mods = { Stealth = 20 }, Crash = { Speed = 0.9 }, CrashDesc = "-10% speed",
+			},
+			SueroMalo = {
+				Name = "Bad Serum", Category = "RISK", Rarity = "Cursed", Weight = 5, Upper = "BAD SERUM", Color = Color3.fromRGB(150, 200, 60), Desc = "+60% damage, but -30 max health",
+				Mods = { Damage = 1.6, MaxHealth = -30 }, Crash = { Damage = 0.85 }, CrashDesc = "-15% damage",
 			},
 		},
 	},
 
 	-- Latas del equipo (la moneda compartida; el módulo se llama Points)
 	Points = {
-		Kill = { Common = 25, Fast = 40, Tank = 150 },
+		Kill = { Common = 25, Fast = 40, Tank = 150, Grabber = 100 },
 		Revive = 50,
 		Carry = 20,
 		ZoneComplete = 100,
@@ -353,6 +397,10 @@ return {
 	-- Tiro a la cabeza: cuenta si el rayo pasa a menos de (tamaño del cráneo * RadiusScale) del centro de la cabeza.
 	-- Depth = cuánto más allá del impacto en la caja del zombie se sigue buscando la cabeza.
 	-- Ojo: el servidor no ve las animaciones de los zombies (se animan en el cliente): la cabeza se toma en su pose base.
+	-- Mutadores con efecto propio (shared/Mutators): ruido de disparos (alcance en studs, segundos que dura, pausa entre ruidos por
+	-- jugador) y sangrado (vida por debajo de la cual sangra, vida por segundo)
+	MutatorRules = { Noise = { Range = 70, Duration = 5, Cooldown = 0.6 }, Bleed = { Below = 40, PerSecond = 1 } },
+
 	Headshot = { Multiplier = 2, RadiusScale = 0.4, Depth = 1.5, PartNames = { "Head", "saco_cabeza" } }, -- saco_cabeza = cabeza del maniquí
 
 	-- Guía de objetivo (client/ObjectiveGuide): columna de luz en el mundo, flecha en el borde de la pantalla y distancia.
@@ -360,12 +408,25 @@ return {
 	Guide = {
 		Enabled = true,
 		Color = Color3.fromRGB(255, 205, 60),
+		ShopColor = Color3.fromRGB(70, 215, 225), -- la guía de la TIENDA va de otro color que la del objetivo
 		ShowBeam = false, -- columna de luz en el mundo (apagada: basta con el cartel de nombre y distancia)
 		BeaconHeight = 140, -- altura de la columna de luz (studs)
 		BeaconWidth = 4,
 		EdgeMargin = 70, -- px que separan la flecha del borde de la pantalla
 		ArrowSize = 64,
 		StudsPerMeter = 3.571, -- para mostrar la distancia en metros (un avatar de 5 studs ~ 1.75 m)
+	},
+
+	-- Golpe cuerpo a cuerpo (tecla X, server/Melee): igual para TODAS las skins de Cosmetics.MeleeSkins, que solo cambian aspecto,
+	-- sonido y gesto. Se golpea a lo que haya delante dentro del cono, sin atravesar paredes.
+	Melee = {
+		Damage = 35, -- por zombie (el común tiene 50: dos golpes)
+		Cooldown = 0.6, -- segundos entre golpes
+		Duration = 0.5, -- lo que dura el gesto (la pose de brazos y el arma en la mano)
+		HitAt = 0.45, -- fracción del gesto en que cae el golpe (coincide con la clave de golpe de client/ItemPoses.Melee*)
+		Range = 6.5, -- studs desde el pecho
+		Arc = 100, -- grados del cono
+		MaxTargets = 2, -- zombies que alcanza un solo golpe
 	},
 
 	-- Tolerancia de puntería: radio (en studs) de la esfera con la que se busca un zombie cuando el rayo no le da.
@@ -390,9 +451,9 @@ return {
 	-- de FpsBelow durante Seconds (nunca sube solo). El jugador puede fijar el nivel en AJUSTES.
 	Performance = {
 		Levels = {
-			{ Name = "ALTA", LampDistance = 110, FlashlightShadows = true, GlobalShadows = true },
-			{ Name = "MEDIA", LampDistance = 70, FlashlightShadows = false, GlobalShadows = true },
-			{ Name = "BAJA", LampDistance = 40, FlashlightShadows = false, GlobalShadows = false },
+			{ Name = "HIGH", LampDistance = 110, FlashlightShadows = true, GlobalShadows = true },
+			{ Name = "MEDIUM", LampDistance = 70, FlashlightShadows = false, GlobalShadows = true },
+			{ Name = "LOW", LampDistance = 40, FlashlightShadows = false, GlobalShadows = false },
 		},
 		PcDefault = 1,
 		TouchDefault = 2,
@@ -426,19 +487,20 @@ return {
 	Revive = {
 		HoldTime = 4, -- segundos manteniendo E
 		CarryHoldTime = 1,
+		CarryOffset = CFrame.new(0.5, 1.5, 0) * CFrame.Angles(0, 0, math.rad(90)), -- el caído acostado sobre los hombros de quien lo carga (marco de quien carga)
 		PromptDistance = 7,
 		MaxDistance = 12, -- validación en el servidor (un poco más holgada que el prompt)
 		ReplyDelay = 1.5, -- el caído responde esto después de la frase de quien revive
 		BubbleTime = 2.5,
 		-- Frases provisionales: la lista final sigue abierta en el GDD
 		ReviverPhrases = {
-			"¡Arriba, que todavía no es tu hora!",
-			"¿Otra vez en el piso?",
-			"Me debes una",
+			"Up you get, it's not your time yet!",
+			"Back on the floor again?",
+			"You owe me one, amigo",
 		},
 		DownedPhrases = {
-			"Ya me andaba",
-			"Tardaste muchísimo",
+			"About time, hermano",
+			"Took you long enough, compa",
 		},
 	},
 
@@ -455,10 +517,11 @@ return {
 		Tolerance = 0.12, -- segundos de margen por latencia
 		Delay = 0.3, -- la aguja arranca esto después de aparecer el aro
 		RetryDelay = 0.8, -- tras fallar, segundos antes de poder volver a intentar
-		FailPhrases = { "¡Se me resbaló!", "Otra vez, aguanta", "Casi..." },
+		FailPhrases = { "It slipped!", "Again, hold on", "Almost..." },
 	},
 
 	Zombie = {
+		Explosive = { Chance = 0.3, Fuse = 0.9, Radius = 10, Damage = 20 }, -- mutador "Explosivos" (nunca el Tanque)
 		ThinkInterval = 0.2, -- cada cuánto decide (ataque, objetivo)
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
 		CorpseTime = 3.6, -- segundos que el cadáver queda antes de borrarse (caída, espasmo y desvanecimiento; ver ZombieAnimator)
@@ -485,7 +548,7 @@ return {
 		},
 
 		Fast = {
-			DisplayName = "Zombie rápido",
+			DisplayName = "Fast Zombie",
 			Health = 30,
 			Speed = 20,
 			Damage = 10,
@@ -496,7 +559,7 @@ return {
 
 		-- El Tanque (zombie-el-tanque.glb): grande, lento y muy resistente. Aparece en la horda del generador y en la extracción.
 		Tank = {
-			DisplayName = "Tanque",
+			DisplayName = "Tank",
 			Health = 1500, -- la dificultad lo multiplica (Calma x0,8 ... Colapso x2)
 			Speed = 7,
 			Damage = 35,
@@ -504,7 +567,66 @@ return {
 			AttackCooldown = 1.6,
 			AgentRadius = 2.2, -- grosor para calcular rutas (los demás usan 1.5)
 			ModelDetail = "full",
+			-- Golpe al suelo (server/Zombies.slam, client/TankSlamFx): levanta los brazos (Windup, con un círculo rojo en el suelo),
+			-- golpea y suelta una onda en área. Se esquiva alejándose del círculo o SALTANDO cuando llega la onda (Airborne).
+			Slam = {
+				FirstCooldown = 4, -- espera tras aparecer
+				Cooldown = 11, -- espera entre golpes
+				TriggerRange = 12, -- lo usa cuando hay alguien a esta distancia o menos
+				Windup = 1.05, -- segundos con los brazos arriba antes de golpear
+				Recover = 0.9, -- segundos quieto tras el golpe
+				Radius = 13, -- radio de la onda
+				DamageMult = 1.3, -- daño = su daño normal x esto (la dificultad ya lo multiplica)
+				Airborne = 3.2, -- quien esté a más de esta altura del suelo cuando llega la onda no recibe daño
+				Knock = 48, -- empujón horizontal que recibe quien lo sufre (cliente)
+				Lift = 26, -- y hacia arriba
+				Shake = 0.9, -- fuerza de la sacudida de cámara (0 a 1) cerca del golpe
+			},
 		},
+
+		-- El Atrapador (zombie-el-atrapador.glb): frágil, se mantiene a media distancia y caza con la lengua (server/Grabber, Config.Grabber).
+		-- WeakPoints: piezas que cuentan como crítico, además de la cabeza (los quistes brillantes y el ojo extra).
+		Grabber = {
+			DisplayName = "Grabber",
+			Health = 150,
+			Speed = 13,
+			Damage = 12,
+			AttackRange = 5,
+			AttackCooldown = 1.2,
+			AgentRadius = 1.8,
+			ModelDetail = "full",
+			WeakPoints = { "ojo_extra", "quiste_0", "quiste_1", "quiste_2", "quiste_3" },
+		},
+	},
+
+	-- El Atrapador (server/Grabber, client/GrabberFx, client/Grabbed): apunta con un láser rojo (Aim), dispara la lengua (Speed) y, si
+	-- acierta, arrastra a su víctima. La víctima puede disparar, moverse flojo (Resist) y forcejear (Struggle); la lengua se corta a tiros
+	-- (TongueHealth). Los tiempos de espera se multiplican por Difficulties.GrabberEvery.
+	Grabber = {
+		Range = 44, -- alcance de la lengua (studs)
+		MinRange = 14, -- más cerca que esto retrocede en vez de apuntar
+		Aim = 0.85, -- segundos de aviso (láser rojo y cabeza hacia atrás) antes de disparar
+		TongueSpeed = 75, -- studs por segundo de la lengua en el aire
+		HitRadius = 3.6, -- cuánto se puede haber movido la víctima desde que se fijó el tiro para que aún acierte
+		FirstCooldown = 3, -- espera tras aparecer
+		Cooldown = 9, -- espera tras soltar a una víctima
+		MissCooldown = 4, -- espera tras fallar
+		PullSpeed = 24, -- velocidad a la que arrastra (studs/s)
+		Resist = 0.45, -- fracción de su velocidad de caminar que la víctima puede usar para resistirse
+		MaxPull = 6, -- si en tantos segundos no llega al zombie, la lengua se suelta
+		HoldRange = 6, -- a esta distancia la víctima ya está en sus manos y deja de arrastrarse
+		HoldDamage = 7, -- daño por mordida (se multiplica por la dificultad)
+		HoldInterval = 0.8,
+		MaxHold = 14, -- segundos máximos agarrado
+		StruggleNeeded = 14, -- pulsaciones para soltarse
+		StruggleDecay = 1.6, -- pulsaciones que se pierden por segundo
+		StruggleMaxRate = 12, -- pulsaciones por segundo que el servidor acepta
+		TongueHealth = 30, -- daño de bala para cortar la lengua
+		StunCut = 2.4, -- segundos aturdido si le cortan la lengua
+		StunBreak = 1.3, -- segundos aturdido si la víctima se suelta
+		AmbushChance = 0.3, -- probabilidad de que una emboscada traiga un Atrapador
+		Loose = { Chance = 0.04, Gap = 40, Zones = { Zone2 = true, Zone3 = true, Extraction = true } }, -- apariciones sueltas del director
+		Extraction = { First = 40, Interval = 55 }, -- en la extracción: segundos tras llamar a la radio y entre atrapadores
 	},
 
 	Director = {
@@ -520,16 +642,18 @@ return {
 		--   oleadas: cada WaveEvery segundos sale una horda de WaveSize (al 100%: se escala con jugadores y dificultad);
 		--   en los últimos FinalSeconds salen cada FinalEvery y son de FinalSize
 		Extraction = {
-			CapStart = 0.8,
-			CapEnd = 1.3,
-			IntervalStart = 2.5,
-			IntervalEnd = 1.0,
-			FirstWave = 12, -- segundos después de llamar a la radio
-			WaveEvery = 22,
-			WaveSize = 10,
-			FinalSeconds = 60,
-			FinalEvery = 12,
-			FinalSize = 16,
+			CapStart = 1.0,
+			CapEnd = 1.6,
+			MinAlive = 14, -- suelo del tope de vivos (con pocos jugadores el normal es muy bajo); también se multiplica por la presión
+			MinHordeScale = 0.7, -- las oleadas nunca bajan de esta fracción de su tamaño, aunque juegue 1 solo
+			IntervalStart = 2.0,
+			IntervalEnd = 0.7,
+			FirstWave = 10, -- segundos después de llamar a la radio
+			WaveEvery = 16,
+			WaveSize = 14,
+			FinalSeconds = 70,
+			FinalEvery = 9,
+			FinalSize = 22,
 		},
 		FailedSpawnRetry = 0.4, -- si no hay punto libre, reintenta pronto en vez de esperar la pausa entera
 		MaxFailedSpawns = 4, -- si no hay punto oculto tantas veces seguidas, se relaja la regla de vista
@@ -567,6 +691,7 @@ return {
 			Color = Color3.fromRGB(70, 80, 110),
 			Decay = Color3.fromRGB(25, 28, 40),
 		},
+		FogDense = { Density = 0.62, Haze = 3.2 }, -- mutador "Niebla densa"
 		ColorGrade = { Brightness = -0.02, Contrast = 0.15, Saturation = -0.15, Tint = Color3.fromRGB(210, 220, 255) },
 		Flashlight = { Brightness = 3, Range = 50, Angle = 45, Color = Color3.fromRGB(255, 240, 215), Shadows = true },
 		Lamps = {
@@ -614,11 +739,11 @@ return {
 		Loft = 14,
 		-- Anim = { Release, End }: segundos del gesto al usar el objeto (client/ItemPoses). En Release sale de la mano (se lanza o se
 		-- cura) y en End termina el gesto. Si se cambian, ajustar también las fracciones de ItemPoses (Release / End).
-		Grenade = { Name = "Granada", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Throwable = true, Anim = { Release = 0.2, End = 0.55 }, Damage = 130, Radius = 14, Fuse = 2, ThrowMin = 26, ThrowSpeed = 100, Color = Color3.fromRGB(86, 104, 52) },
-		Medkit = { Name = "Botiquín", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit); el gesto dura Config.Medkit.Time
+		Grenade = { Name = "Grenade", Key = Enum.KeyCode.Three, KeyLabel = "3", Max = 3, Cost = 100, Throwable = true, Anim = { Release = 0.2, End = 0.55 }, Damage = 130, Radius = 14, Fuse = 2, ThrowMin = 26, ThrowSpeed = 100, Color = Color3.fromRGB(86, 104, 52) },
+		Medkit = { Name = "Medkit", Key = Enum.KeyCode.Four, KeyLabel = "4", Max = 2, Cost = 200 }, -- se usa con server/Medkits (Config.Medkit); el gesto dura Config.Medkit.Time
 		Molotov = { Name = "Molotov", Key = Enum.KeyCode.Five, KeyLabel = "5", Max = 2, Cost = 125, Throwable = true, Anim = { Release = 0.25, End = 0.65 }, Radius = 8, Duration = 6, TickDamage = 14, Tick = 0.5, ThrowMin = 24, ThrowSpeed = 90, Color = Color3.fromRGB(150, 96, 40) },
-		Bandage = { Name = "Vendas", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.3, End = 1.6 } },
-		Flare = { Name = "Bengala", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Throwable = true, Anim = { Release = 0.12, End = 0.6 }, Duration = 15, LureRange = 75, ThrowMin = 30, ThrowSpeed = 105, Color = Color3.fromRGB(235, 70, 55) },
+		Bandage = { Name = "Bandages", Key = Enum.KeyCode.Six, KeyLabel = "6", Max = 3, Cost = 60, Heal = 25, Time = 1.2, Anim = { Release = 1.3, End = 1.6 } },
+		Flare = { Name = "Flare", Key = Enum.KeyCode.Seven, KeyLabel = "7", Max = 2, Cost = 75, Throwable = true, Anim = { Release = 0.12, End = 0.6 }, Duration = 15, LureRange = 75, ThrowMin = 30, ThrowSpeed = 105, Color = Color3.fromRGB(235, 70, 55) },
 	},
 
 	-- Garrafas de gas (server/GasCans, mapa nuevo): el generador de la plaza no arranca hasta que le lleven Count garrafas
@@ -641,7 +766,7 @@ return {
 
 	-- Mapas que se pueden votar al inicio de cada ronda (server/VoteRoom). id = clave que usa GameState para elegir el constructor.
 	Maps = {
-		{ id = "Morro", name = "Morro Esperanza", desc = "El barrio de Rhomulus: 3 rutas, 3 tramos, iglesia, estadio y furgoneta.", color = Color3.fromRGB(190, 70, 50) },
+		{ id = "Morro", name = "Morro Esperanza", desc = "The Rhomulus barrio: 3 routes, 3 sections, iglesia, stadium and van.", color = Color3.fromRGB(190, 70, 50) },
 	},
 	Vote = {
 		Time = 20, -- segundos máximos de votación

@@ -30,6 +30,10 @@ local NAMES = {
 	"XpGain", -- servidor -> todos: (lista de { userId, gained, before, after }) el XP de cada jugador al terminar la partida
 	"PlayAgain", -- cliente -> servidor: en la pantalla de resultados, quiere empezar otra partida ya (si todos lo piden se adelanta)
 	"SaveSettings", -- cliente -> servidor: (sensibilidad, modo de calidad) guarda los ajustes del jugador
+	"PhialUi", -- servidor <-> cliente: panel PHIAL ROLL ("open", "spin", "ready", "lost", "taken", "denied" / "roll", "take")
+	"Record", -- servidor -> todos: ({ difficulty, time, best, bestNames, isRecord }) el tiempo de la victoria y el récord de la dificultad
+	"Melee", -- cliente -> servidor: (dirección) golpe cuerpo a cuerpo con la skin equipada
+	"Struggle", -- cliente -> servidor: forcejea para soltarse de la lengua de un Atrapador
 	"SkillCheckPress", -- cliente -> servidor: (id, horaDelServidor) pulsó Espacio durante la prueba
 }
 

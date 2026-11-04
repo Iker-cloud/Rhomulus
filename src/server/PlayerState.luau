@@ -53,6 +53,9 @@ function PlayerState.refreshSpeed(player)
 	if state ~= "Downed" then
 		humanoid.WalkSpeed *= player:GetAttribute("FxSpeed") or 1 -- jeringa Impulso (server/Pharmacy)
 	end
+	if player:GetAttribute("Injecting") then
+		humanoid.WalkSpeed = 0 -- quieto mientras se inyecta (si no, la cámara se tambalea)
+	end
 end
 
 function PlayerState.setSprinting(player, on)
@@ -72,6 +75,7 @@ end
 local function down(player, humanoid)
 	humanoid.Health = 1
 	setState(player, "Downed")
+	Stats.add(player, "Downs")
 	Telemetry.downed(player)
 	PlayerState.refreshSpeed(player)
 
@@ -101,6 +105,7 @@ function PlayerState.damage(player, amount)
 	if not humanoid or humanoid.Health <= 0 then
 		return
 	end
+	amount *= player:GetAttribute("FxDefense") or 1 -- jeringa Piel dura (server/Pharmacy)
 	Stats.add(player, "DamageTaken", math.min(amount, humanoid.Health))
 	if humanoid.Health - amount <= 0 then
 		down(player, humanoid)
@@ -125,7 +130,7 @@ function PlayerState.revive(player, helper)
 	if helper then
 		Stats.add(helper, "Revives")
 		Points.add(Config.Points.Revive, helper)
-		Points.feed(`{helper.DisplayName} revivió a {player.DisplayName}`)
+		Points.feed(`{helper.DisplayName} revived {player.DisplayName}`)
 	end
 end
 
@@ -144,7 +149,7 @@ function PlayerState.selfRevive(player)
 	end
 	player:SetAttribute("SelfRevives", charges - 1)
 	PlayerState.revive(player)
-	Points.feed(`{player.DisplayName} se levantó solo`)
+	Points.feed(`{player.DisplayName} got back up alone`)
 end
 
 -- Se llama al empezar cada zona
@@ -176,7 +181,11 @@ end
 
 local function onCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid")
-	local maxHealth = Difficulty.get().Flags.PlayerHealth -- mutador "Cristal"
+	local flags = Difficulty.get().Flags
+	local maxHealth = flags.PlayerHealth -- mutador "Cristal" (más vida en Colapso)
+	if maxHealth and Difficulty.id() == "Colapso" then
+		maxHealth = flags.PlayerHealthCollapse or maxHealth
+	end
 	if maxHealth then
 		humanoid.MaxHealth = maxHealth
 		humanoid.Health = maxHealth
@@ -191,6 +200,7 @@ local function onCharacter(player, character)
 		bleedTokens[player] = (bleedTokens[player] or 0) + 1
 		player:SetAttribute("BleedEnd", nil)
 		setState(player, "Dead")
+		Stats.add(player, "Deaths")
 		Telemetry.died(player)
 	end)
 
@@ -236,6 +246,21 @@ local function rescue(player)
 end
 
 function PlayerState.start()
+	-- Mutador "Sangrado": con poca vida se pierde vida cada segundo, sin llegar a caer; las vendas y el botiquín lo frenan
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			if Difficulty.get().Flags.Bleed then
+				local rule = Config.MutatorRules.Bleed
+				for _, player in Players:GetPlayers() do
+					local humanoid = getHumanoid(player)
+					if humanoid and PlayerState.get(player) == "Normal" and humanoid.Health > 1 and humanoid.Health < rule.Below and not player:GetAttribute("HealingEnd") then
+						humanoid.Health = math.max(1, humanoid.Health - rule.PerSecond)
+					end
+				end
+			end
+		end
+	end)
 	task.spawn(function()
 		while true do
 			task.wait(0.5)

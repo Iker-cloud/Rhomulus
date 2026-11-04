@@ -29,6 +29,15 @@ local PROFILES = {
 		lungeArmL = 1.3, lungeArmR = 1.3,
 		fall = 1.1,
 	},
+	-- Atrapador: alto y desgarbado, camina agazapado con los brazos largos colgando; apunta con la cabeza hacia atrás y la boca abierta
+	Atrapador = {
+		freq = 0.65,
+		legL = 0.5, legR = 0.5, kneeL = 0.8, kneeR = 0.8,
+		armL = 0.4, armR = 0.4, elbowL = 0.3, elbowR = 0.3,
+		lean = 0.15, twist = 0.14, headBob = 0.08, jaw = 0.15, jawAttack = 0.6,
+		lungeArmL = 1.0, lungeArmR = 1.0,
+		fall = 0.8,
+	},
 	Desbocado = {
 		freq = 0.55,
 		legL = 0.95, legR = 0.95, kneeL = 1.2, kneeR = 1.2,
@@ -61,7 +70,16 @@ local function register(model)
 	if not root or not expected or found < expected then
 		return -- aún no llegan todas las articulaciones
 	end
-	rigs[model] = { motors = motors, root = root, profile = profile, phase = math.random() * 6.28, time = math.random() * 10 }
+	-- La lengua guardada del Atrapador: se esconde mientras la lengua larga (client/GrabberFx) está fuera
+	local tongue = {}
+	if model:GetAttribute("Rig") == "Atrapador" then
+		for _, descendant in model:GetDescendants() do
+			if descendant:IsA("BasePart") and descendant.Name:sub(1, 11) == "lengua_seg_" then
+				table.insert(tongue, descendant)
+			end
+		end
+	end
+	rigs[model] = { motors = motors, root = root, profile = profile, phase = math.random() * 6.28, time = math.random() * 10, tongue = tongue }
 	model.Destroying:Connect(function()
 		rigs[model] = nil
 	end)
@@ -69,6 +87,11 @@ end
 
 local function rot(x, y, z)
 	return CFrame.Angles(x or 0, y or 0, z or 0)
+end
+
+local function smooth(x)
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
 end
 
 local function animate(model, rig, dt)
@@ -123,6 +146,84 @@ local function animate(model, rig, dt)
 	if m.mano_izq then m.mano_izq.Transform = rot(math.sin(t * 3) * 0.06) end
 	if m.mano_der then m.mano_der.Transform = rot(math.sin(t * 2) * 0.05) end
 
+	-- Atrapador (el servidor publica TongueState / TongueT0 / TongueDur / Stunned): apunta con la cabeza hacia atrás y la boca abierta,
+	-- se lanza con la lengua, la sostiene con los brazos adelantados y, aturdido, sacude la cabeza encorvado
+	if #rig.tongue > 0 then
+		local state = model:GetAttribute("TongueState")
+		local hidden = state ~= nil and state ~= "retract"
+		if rig.tongueHidden ~= hidden then
+			rig.tongueHidden = hidden
+			for _, part in rig.tongue do
+				part.LocalTransparencyModifier = hidden and 1 or 0
+			end
+		end
+		local since = workspace:GetServerTimeNow() - (model:GetAttribute("TongueT0") or 0)
+		local dur = model:GetAttribute("TongueDur") or 1
+		if state == "aim" then
+			local u = smooth(since / dur)
+			if m.torso then m.torso.Transform = rot(-0.3 * u + math.sin(t * 30) * 0.015 * u, 0, 0) end
+			if m.cabeza then m.cabeza.Transform = rot(-0.7 * u, 0, 0) end
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.9 * u) end
+			if m.brazo_izq then m.brazo_izq.Transform = rot(-0.4 * u, 0, 0.7 * u) end
+			if m.brazo_der then m.brazo_der.Transform = rot(-0.4 * u, 0, -0.7 * u) end
+		elseif state == "shot" then
+			local u = math.clamp(since / dur, 0, 1)
+			if m.torso then m.torso.Transform = rot(0.28 * (1 - u * 0.5), 0, 0) end
+			if m.cabeza then m.cabeza.Transform = rot(0.25, 0, 0) end
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 1.15) end
+			if m.brazo_izq then m.brazo_izq.Transform = rot(-1.0, 0, 0.3) end
+			if m.brazo_der then m.brazo_der.Transform = rot(-1.0, 0, -0.3) end
+		elseif state == "hold" then
+			local tremble = math.sin(t * 22) * 0.04
+			if m.torso then m.torso.Transform = rot(0.22 + lunge * 0.3, tremble, 0) end
+			if m.cabeza then m.cabeza.Transform = rot(0.05, math.sin(t * 5) * 0.12, 0) end
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.85 + tremble + lunge * 0.3) end
+			if m.brazo_izq then m.brazo_izq.Transform = rot(-1.35 + math.sin(t * 4) * 0.12, 0, 0.25) end
+			if m.brazo_der then m.brazo_der.Transform = rot(-1.35 + math.sin(t * 4 + 1) * 0.12, 0, -0.25) end
+			if m.antebrazo_izq then m.antebrazo_izq.Transform = rot(-0.35) end
+			if m.antebrazo_der then m.antebrazo_der.Transform = rot(-0.35) end
+		elseif state == "retract" then
+			local u = smooth(since / 0.35)
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 1.0 * (1 - u)) end
+			if m.cabeza then m.cabeza.Transform = rot(-0.3 * (1 - u), 0, 0) end
+		end
+		if model:GetAttribute("Stunned") then
+			if m.torso then m.torso.Transform = rot(0.45 + math.sin(t * 9) * 0.03, 0, 0) end
+			if m.cabeza then m.cabeza.Transform = rot(0.2, math.sin(t * 18) * 0.28, math.sin(t * 13) * 0.12) end
+			if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.7 + math.sin(t * 20) * 0.1) end
+			if m.brazo_izq then m.brazo_izq.Transform = rot(0.2, 0, 0.2) end
+			if m.brazo_der then m.brazo_der.Transform = rot(0.2, 0, -0.2) end
+		end
+	end
+
+	-- Golpe al suelo del Tanque (SlamT0 / SlamDur): se inclina hacia atrás con los dos brazos en alto temblando, y baja los puños de
+	-- golpe contra el suelo; después se queda un momento doblado, recuperándose
+	local slamT0 = model:GetAttribute("SlamT0")
+	if slamT0 then
+		local dur = model:GetAttribute("SlamDur") or 1
+		local since = workspace:GetServerTimeNow() - slamT0
+		local up, down, recover = 0, 0, 0
+		if since < dur then
+			up = smooth(since / (dur * 0.8))
+		elseif since < dur + 0.14 then
+			up, down = 1 - (since - dur) / 0.14, (since - dur) / 0.14
+		else
+			down = 1
+			recover = smooth((since - dur - 0.14) / 0.8)
+		end
+		local armAngle = -2.75 * up + (0.25 * down - 0.0) * (1 - recover * 0.6)
+		local tremble = up * math.sin(t * 40) * 0.025
+		if m.torso then m.torso.Transform = rot(-0.28 * up + 0.5 * down * (1 - recover * 0.5), 0, tremble) end
+		if m.cabeza then m.cabeza.Transform = rot(-0.4 * up + 0.2 * down, 0, 0) end
+		if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.9 * up + 0.5 * down * (1 - recover)) end
+		if m.brazo_izq then m.brazo_izq.Transform = rot(armAngle + tremble, 0, 0.15 * up) end
+		if m.brazo_der then m.brazo_der.Transform = rot(armAngle - tremble, 0, -0.15 * up) end
+		if m.antebrazo_izq then m.antebrazo_izq.Transform = rot(-0.5 * up) end
+		if m.antebrazo_der then m.antebrazo_der.Transform = rot(-0.5 * up) end
+		if m.pierna_izq then m.pierna_izq.Transform = rot(0.12 * down) end
+		if m.pierna_der then m.pierna_der.Transform = rot(-0.12 * down) end
+	end
+
 	-- Trepando a un autobús (el servidor publica ClimbStart / ClimbEnd): brazos arriba que se alternan, piernas pisando la
 	-- pared y el cuerpo inclinado hacia ella; al final se impulsa sobre el borde
 	local climbStart, climbEnd = model:GetAttribute("ClimbStart"), model:GetAttribute("ClimbEnd")
@@ -150,11 +251,6 @@ end
 
 -- Muerte: el servidor ancla al zombie y marca "DeadAt". Aquí cae de espaldas girando sobre los pies, rebota, tiene un
 -- espasmo corto con un soplo de polvo, y al final se hunde y se desvanece (el servidor lo borra en CorpseTime).
-local function smooth(x)
-	x = math.clamp(x, 0, 1)
-	return x * x * (3 - 2 * x)
-end
-
 local function deathAnimate(model, rig)
 	local deadAt = model:GetAttribute("DeadAt")
 	local t = workspace:GetServerTimeNow() - deadAt

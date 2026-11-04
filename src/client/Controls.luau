@@ -52,9 +52,9 @@ end
 
 -- Avisos del servidor (radio, equipo) que nombran teclas: igual para todos, así que cada cliente los traduce
 local TOUCH_RULES = {
-	{ "Presionen Y cuando estén listos", "Toquen LISTO cuando estén listos" },
-	{ "la dificultad con 1 a 4", "la dificultad tocando el panel" },
-	{ "sácalo con %d y haz clic para", "tócalo en la barra y pulsa el botón para" },
+	{ "Press Y when you're ready", "Tap READY when you're ready" },
+	{ "the difficulty with 1 to 4", "the difficulty by tapping the panel" },
+	{ "draw it with %d and click to", "tap it on the bar and press the button to" },
 }
 
 function Controls.touchText(message)

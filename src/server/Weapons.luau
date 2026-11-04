@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
+local Grabber = require(script.Parent.Grabber)
+local Zombies = require(script.Parent.Zombies)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -15,6 +17,8 @@ local WeaponRig = require(script.Parent.WeaponRig)
 local states = {} -- [Player] = { pistol, primary, current, reloading, lastShot, token }
 
 local Weapons = {}
+
+local lastNoise = {} -- [Player] = os.clock() del último ruido que hicieron (mutador "Ruidoso")
 
 -- Munición de reserva: el mutador "Munición escasa" la reduce (Flags.AmmoMult)
 local function ammoMult()
@@ -120,21 +124,25 @@ local function spread(direction, degrees)
 	return cf.LookVector
 end
 
--- ¿El rayo pasa por la cabeza del zombie? (la caja invisible del zombie tapa la cabeza, así que se mide la cercanía)
+-- ¿El rayo pasa por la cabeza del zombie (o por uno de sus puntos débiles: Config.Zombie.<tipo>.WeakPoints)? La caja invisible del
+-- zombie tapa la cabeza, así que se mide la cercanía del rayo a la pieza.
 local function isHeadshot(model, origin, direction, hitDistance)
-	local head
-	for _, name in Config.Headshot.PartNames do
-		head = model:FindFirstChild(name)
-		if head then
-			break
+	local names = table.clone(Config.Headshot.PartNames)
+	local kindStats = Config.Zombie[model:GetAttribute("Kind")]
+	if kindStats and kindStats.WeakPoints then
+		table.move(kindStats.WeakPoints, 1, #kindStats.WeakPoints, #names + 1, names)
+	end
+	for _, name in names do
+		local part = model:FindFirstChild(name)
+		if part and part:IsA("BasePart") then
+			local along = math.clamp((part.Position - origin):Dot(direction), 0, hitDistance + Config.Headshot.Depth)
+			local radius = part.Size.Magnitude * Config.Headshot.RadiusScale
+			if (part.Position - (origin + direction * along)).Magnitude <= radius then
+				return true
+			end
 		end
 	end
-	if not (head and head:IsA("BasePart")) then
-		return false
-	end
-	local along = math.clamp((head.Position - origin):Dot(direction), 0, hitDistance + Config.Headshot.Depth)
-	local radius = head.Size.Magnitude * Config.Headshot.RadiusScale
-	return (head.Position - (origin + direction * along)).Magnitude <= radius
+	return false
 end
 
 local function onFire(player, origin, direction)
@@ -142,8 +150,8 @@ local function onFire(player, origin, direction)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local head = character and character:FindFirstChild("Head")
-	if not (state and humanoid and head) or humanoid.Health <= 0 or player:GetAttribute("ItemReady") then
-		return -- con un objeto en la mano (server/Items) no se dispara
+	if not (state and humanoid and head) or humanoid.Health <= 0 or player:GetAttribute("ItemReady") or player:GetAttribute("Injecting") or player:GetAttribute("Swinging") then
+		return -- con un objeto en la mano (server/Items) o golpeando (server/Melee) no se dispara
 	end
 	if not (isValidVector(origin) and isValidVector(direction)) or direction.Magnitude < 0.001 then
 		return
@@ -213,8 +221,11 @@ local function onFire(player, origin, direction)
 		if result then
 			local model = result.Instance:FindFirstAncestorWhichIsA("Model")
 			local target = model and model:FindFirstChildOfClass("Humanoid")
+			if result.Instance.Name == "TongueHitbox" then
+				-- La lengua tensa de un Atrapador: el disparo la corta (no hiere al zombie)
+				Grabber.hitTongue(model, cfg.Damage * (player:GetAttribute("FxDamage") or 1))
 			-- Fuego amigo desactivado: no se daña a otros jugadores
-			if target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
+			elseif target and target.Health > 0 and not Players:GetPlayerFromCharacter(model) then
 				local hit = hits[target]
 				if not hit then
 					hit = { model = model, damage = 0, crit = false }
@@ -222,7 +233,7 @@ local function onFire(player, origin, direction)
 				end
 				local crit = isHeadshot(model, origin, dir, (result.Position - origin).Magnitude)
 				local damage = cfg.Damage * (player:GetAttribute("FxDamage") or 1) -- jeringa Furia (server/Pharmacy)
-				hit.damage += crit and damage * Config.Headshot.Multiplier or damage
+				hit.damage += crit and damage * (Difficulty.get().Flags.HeadshotMult or Config.Headshot.Multiplier) or damage
 				hit.crit = hit.crit or crit
 			end
 		end
@@ -231,6 +242,7 @@ local function onFire(player, origin, direction)
 	for target, hit in hits do
 		target:TakeDamage(hit.damage)
 		if hit.crit then
+			Stats.add(player, "Headshots")
 			Remotes.Crit:FireClient(player, target.Health <= 0)
 		end
 		if target.Health <= 0 and hit.model.Parent == workspace.Zombies then
@@ -240,6 +252,12 @@ local function onFire(player, origin, direction)
 	end
 
 	Remotes.Shot:FireAllClients(player, head.Position, endPoints, slot.name)
+
+	-- Mutador "Ruidoso": los disparos (menos los de la pistola) atraen a los zombies cercanos
+	if Difficulty.get().Flags.Noisy and slot.name ~= "pistol" and os.clock() - (lastNoise[player] or 0) >= Config.MutatorRules.Noise.Cooldown then
+		lastNoise[player] = os.clock()
+		Zombies.noise(head.Position, Config.MutatorRules.Noise.Range, Config.MutatorRules.Noise.Duration)
+	end
 
 	if slot.ammo <= 0 then
 		startReload(player)
@@ -278,10 +296,10 @@ end
 function Weapons.ammoDenied(player)
 	local state = states[player]
 	if not state or not state.primary then
-		return "Necesitas un arma principal"
+		return "You need a primary weapon"
 	end
 	if state.primary.reserve >= maxReserve(Config.Weapons[state.primary.name]) then
-		return "Ya tienes toda la munición"
+		return "You already have full ammo"
 	end
 	return nil
 end

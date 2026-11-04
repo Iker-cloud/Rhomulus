@@ -103,7 +103,7 @@ function SkillCheck.start()
 	keyLabel.Font = Enum.Font.GothamBold
 	keyLabel.TextSize = 15
 	keyLabel.TextColor3 = WHITE
-	keyLabel.Text = "ESPACIO"
+	keyLabel.Text = "SPACE"
 	keyLabel.Parent = keyBox
 
 	-- En celular: tocar el aro
@@ -202,10 +202,10 @@ function SkillCheck.start()
 		ContextActionService:UnbindAction(ACTION)
 		check = nil
 		setRingColor(ok and GREEN or RED)
-		keyLabel.Text = ok and "¡BIEN!" or "¡FALLÓ!"
+		keyLabel.Text = ok and "NICE!" or "MISSED!"
 		keyLabel.TextColor3 = ok and GREEN or RED
 		task.delay(0.6, function()
-			keyLabel.Text = "ESPACIO"
+			keyLabel.Text = "SPACE"
 			keyLabel.TextColor3 = WHITE
 			if not check then
 				root.Visible = false

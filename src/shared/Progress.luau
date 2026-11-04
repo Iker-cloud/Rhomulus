@@ -63,4 +63,38 @@ function Progress.roundXp(stats, won, finished, difficultyId, mutatorBonus)
 	return parts.kills + parts.revives + parts.win + parts.finish, parts
 end
 
+-- Rhoms: la moneda permanente del jugador (se gasta en el menú). Valores sin balancear.
+Progress.Rhoms = {
+	Finish = 1, -- por jugar la partida hasta el final (aunque se pierda)
+	Win = 2, -- extra por ganar
+	WinByDifficulty = { Crisis = 1, Colapso = 2 }, -- extra por ganar en esa dificultad
+	Mutation = 1, -- extra si en la ronda salió una mutación Épica o Legendaria
+	Award = 1, -- extra si recibió un reconocimiento al final
+}
+
+-- Rhoms de una partida. `rarities` es la lista de rarezas de las mutaciones de la ronda ("Epic", "Legendary"...).
+-- Devuelve (total, desglose { finish, win, difficulty, mutation, award }).
+function Progress.roundRhoms(won, finished, difficultyId, rarities, hasAward)
+	local cfg = Progress.Rhoms
+	local parts = { finish = 0, win = 0, difficulty = 0, mutation = 0, award = 0 }
+	if not finished then
+		return 0, parts
+	end
+	parts.finish = cfg.Finish
+	if won then
+		parts.win = cfg.Win
+		parts.difficulty = cfg.WinByDifficulty[difficultyId] or 0
+	end
+	for _, rarity in rarities or {} do
+		if rarity == "Epic" or rarity == "Legendary" then
+			parts.mutation = cfg.Mutation
+			break
+		end
+	end
+	if hasAward then
+		parts.award = cfg.Award
+	end
+	return parts.finish + parts.win + parts.difficulty + parts.mutation + parts.award, parts
+end
+
 return Progress

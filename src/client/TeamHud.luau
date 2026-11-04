@@ -11,6 +11,7 @@ local DownedHud = require(script.Parent.DownedHud)
 local Controls = require(script.Parent.Controls)
 
 local UiFit = require(script.Parent.UiFit)
+local Paper = require(script.Parent.PaperStyle)
 local player = Players.LocalPlayer
 
 local TeamHud = {}
@@ -50,25 +51,23 @@ end
 local function makeRow(parent)
 	local row = Instance.new("Frame")
 	row.Size = UDim2.fromOffset(220, 36)
-	row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	row.BackgroundTransparency = 0.4
-	row.BorderSizePixel = 0
 	row.Parent = parent
+	Paper.paper(row, 2)
 
 	local name = Instance.new("TextLabel")
 	name.BackgroundTransparency = 1
 	name.Position = UDim2.fromOffset(6, 0)
 	name.Size = UDim2.new(1, -12, 0, 20)
-	name.Font = Enum.Font.GothamBold
+	name.FontFace = Paper.Head
 	name.TextSize = 14
-	name.TextColor3 = Color3.new(1, 1, 1)
+	name.TextColor3 = Paper.Ink
 	name.TextXAlignment = Enum.TextXAlignment.Left
 	name.Parent = row
 
 	local back = Instance.new("Frame")
 	back.Position = UDim2.new(0, 6, 1, -12)
 	back.Size = UDim2.new(1, -12, 0, 6)
-	back.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	back.BackgroundColor3 = Color3.fromRGB(184, 168, 132)
 	back.BorderSizePixel = 0
 	back.Parent = row
 
@@ -99,7 +98,7 @@ local function makeMarker(gui, target)
 	text.TextScaled = true
 	text.TextColor3 = Color3.fromRGB(255, 70, 70)
 	text.TextStrokeTransparency = 0.3
-	text.Text = "▼ CAÍDO"
+	text.Text = "▼ DOWN"
 	text.Parent = marker
 
 	marker.Parent = gui
@@ -182,17 +181,17 @@ function TeamHud.start()
 				row.name.Text = other.DisplayName
 				if state == "Downed" then
 					local remaining = bleedRemaining(other)
-					row.name.Text = `{other.DisplayName} — CAÍDO {math.ceil(remaining)}s`
-					row.name.TextColor3 = Color3.fromRGB(255, 120, 60)
-					row.fill.BackgroundColor3 = Color3.fromRGB(255, 140, 40)
+					row.name.Text = `{other.DisplayName} — DOWN {math.ceil(remaining)}s`
+					row.name.TextColor3 = Color3.fromRGB(168, 70, 20)
+					row.fill.BackgroundColor3 = Color3.fromRGB(226, 120, 30)
 					row.fill.Size = UDim2.fromScale(math.clamp(remaining / Config.Player.BleedTime, 0, 1), 1)
 				elseif state == "Dead" then
-					row.name.Text = `{other.DisplayName} — MUERTO`
-					row.name.TextColor3 = Color3.fromRGB(150, 150, 150)
+					row.name.Text = `{other.DisplayName} — DEAD`
+					row.name.TextColor3 = Paper.Soft
 					row.fill.Size = UDim2.fromScale(0, 1)
 				else
-					row.name.TextColor3 = Color3.new(1, 1, 1)
-					row.fill.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+					row.name.TextColor3 = Paper.Ink
+					row.fill.BackgroundColor3 = Color3.fromRGB(176, 48, 44)
 					local ratio = humanoid and humanoid.Health / humanoid.MaxHealth or 0
 					row.fill.Size = UDim2.fromScale(math.clamp(ratio, 0, 1), 1)
 				end
@@ -223,14 +222,14 @@ function TeamHud.start()
 		local carrying = player:GetAttribute("Carrying")
 		if state == "Downed" then
 			-- Tarjeta compacta: segundos de sangre que quedan y qué hacer
-			local hintText = "Un compañero puede revivirte"
+			local hintText = "A teammate can revive you"
 			if player.Character and player.Character:GetAttribute("Carried") then
-				hintText = "Te están cargando"
+				hintText = "You're being carried"
 			elseif canSelfRevive() then
 				if selfReviveStart then
-					hintText = `Levantándote… {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
+					hintText = `Getting up… {math.ceil(Config.Player.SelfReviveTime - (os.clock() - selfReviveStart))}s`
 				else
-					hintText = Controls.isTouch() and "Mantén el botón para levantarte" or "Mantén H para levantarte"
+					hintText = Controls.isTouch() and "Hold the button to get up" or "Hold H to get up"
 				end
 			end
 			local remaining = bleedRemaining(player)
@@ -239,8 +238,8 @@ function TeamHud.start()
 		elseif carrying then
 			downedCard.hide()
 			local item = player:GetAttribute("CarryingItem") -- una garrafa (server/GasCans) en vez de un compañero
-			local dropKey = Controls.isTouch() and "el botón" or "G"
-				notice.Text = item and `Cargando {item} — {dropKey} para soltar` or `Cargando a {carrying} — {dropKey} para soltar`
+			local dropKey = Controls.isTouch() and "the button" or "G"
+				notice.Text = item and `Hauling {item} — {dropKey} to drop` or `Carrying {carrying} — {dropKey} to drop`
 		else
 			downedCard.hide()
 			notice.Text = ""

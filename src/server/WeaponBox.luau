@@ -35,9 +35,9 @@ local RISE_TIME = 0.6 -- segundos que tarda el arma en salir de la caja
 local HEIGHT_START, HEIGHT_END = 0.6, 3.8 -- altura sobre la base: dentro de la caja -> flotando encima
 
 local RARITY_COLOR = {
-	["Común"] = Color3.fromRGB(220, 220, 220),
-	["Rara"] = Color3.fromRGB(90, 170, 255),
-	["Épica"] = Color3.fromRGB(190, 90, 255),
+	["Common"] = Color3.fromRGB(220, 220, 220),
+	["Rare"] = Color3.fromRGB(90, 170, 255),
+	["Epic"] = Color3.fromRGB(190, 90, 255),
 }
 
 local function rollWeapon()
@@ -115,16 +115,23 @@ local function resetToIdle(box)
 	box.pick = nil
 	box.model:SetAttribute("Open", false)
 	hideWeapon(box)
-	box.prompt.ActionText = "Comprar caja de armas"
-	box.prompt.ObjectText = `{Difficulty.price(Config.WeaponBox.Cost)} latas`
+	box.prompt.ActionText = "Buy weapon box"
+	box.prompt.ObjectText = `{Difficulty.price(Config.WeaponBox.Cost)} cans`
 	box.prompt.HoldDuration = 0.5
 	box.prompt.Enabled = true
-	setLabel(box, "Caja de armas")
+	setLabel(box, "Weapon box")
 end
 
-local function build(position)
+local function build(spot)
 	-- La caja misteriosa (modelo de caja-misteriosa.glb). El Hitbox invisible hace de base: colisión, prompt y placa.
-	local model, base = PropModel.build(CajaMisteriosa, position, 0)
+	-- `spot` es un Vector3 (mira al sur) o un CFrame (posición y giro; las Tiendas la ponen mirando a la entrada)
+	local position, yaw = spot, 0
+	if typeof(spot) == "CFrame" then
+		position = spot.Position
+		local _, spotYaw = spot:ToOrientation()
+		yaw = spotYaw
+	end
+	local model, base = PropModel.build(CajaMisteriosa, position, yaw)
 	model.Name = "WeaponBox"
 	base.Name = "Base"
 
@@ -172,7 +179,7 @@ local function onTriggered(box, player)
 
 	if box.state == "idle" then
 		if not Points.spend(Difficulty.price(Config.WeaponBox.Cost)) then
-			Remotes.Feed:FireClient(player, `Faltan latas: la caja cuesta {Difficulty.price(Config.WeaponBox.Cost)}`)
+			Remotes.Feed:FireClient(player, `Not enough cans: the box costs {Difficulty.price(Config.WeaponBox.Cost)}`)
 			return
 		end
 
@@ -181,7 +188,7 @@ local function onTriggered(box, player)
 		box.rollId += 1
 		local id = box.rollId
 		box.prompt.Enabled = false
-		Points.feed(`{player.DisplayName} abrió la caja de armas`)
+		Points.feed(`{player.DisplayName} opened the weapon box`)
 
 		-- Las armas giran unos segundos y se detiene en una al azar
 		local pick = rollWeapon()
@@ -213,11 +220,11 @@ local function onTriggered(box, player)
 		box.pick = pick
 		showWeapon(box, pick)
 		setLabel(box, `{cfg.Name} ({cfg.Rarity})`, RARITY_COLOR[cfg.Rarity])
-		box.prompt.ActionText = `Tomar {cfg.Name}`
+		box.prompt.ActionText = `Take {cfg.Name}`
 		box.prompt.ObjectText = cfg.Rarity
 		box.prompt.HoldDuration = 0
 		box.prompt.Enabled = true
-		Points.feed(`La caja sacó: {cfg.Name} ({cfg.Rarity})`)
+		Points.feed(`The box gave: {cfg.Name} ({cfg.Rarity})`)
 
 		-- Si nadie la toma a tiempo, se pierde
 		task.delay(Config.WeaponBox.TakeTime, function()
@@ -229,7 +236,7 @@ local function onTriggered(box, player)
 		local pick = box.pick
 		resetToIdle(box)
 		Weapons.givePrimary(player, pick)
-		Points.feed(`{player.DisplayName} tomó {Config.Weapons[pick].Name}`)
+		Points.feed(`{player.DisplayName} took {Config.Weapons[pick].Name}`)
 	end
 end
 
@@ -303,9 +310,9 @@ local function onBuy(player, id)
 			task.delay(1.6, function()
 				station.model:SetAttribute("Open", false)
 			end)
-			Points.feed(`{player.DisplayName} compró munición`)
+			Points.feed(`{player.DisplayName} bought ammo`)
 		else
-			Remotes.Feed:FireClient(player, `Faltan latas: la munición cuesta {Difficulty.price(Config.WeaponBox.AmmoCost)}`)
+			Remotes.Feed:FireClient(player, `Not enough cans: ammo costs {Difficulty.price(Config.WeaponBox.AmmoCost)}`)
 		end
 		return
 	end
@@ -325,8 +332,8 @@ function WeaponBox.init(refs)
 		Remotes.Buy.OnServerEvent:Connect(RateLimit.wrap("Buy", 0.25, onBuy))
 	end
 	for _, station in refs.ammoStations do
-		station.prompt.ActionText = "Suministros"
-		station.prompt.ObjectText = "Munición y objetos"
+		station.prompt.ActionText = "Supplies"
+		station.prompt.ObjectText = "Ammo and items"
 		station.prompt.Enabled = true
 		station.prompt.Triggered:Connect(function(player)
 			Remotes.OpenShop:FireClient(player, station.part.Position)

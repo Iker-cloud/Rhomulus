@@ -29,6 +29,8 @@ local Telemetry = require(script.Parent.Telemetry)
 local Pharmacy = require(script.Parent.Pharmacy)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local PlayerProgress = require(script.Parent.PlayerProgress)
+local Awards = require(script.Parent.Awards)
+local Records = require(script.Parent.Records)
 local WeaponBox = require(script.Parent.WeaponBox)
 local Weapons = require(script.Parent.Weapons)
 local Zombies = require(script.Parent.Zombies)
@@ -40,21 +42,22 @@ local BUILDERS = { Morro = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
+local runStart = nil -- os.clock() al salir del lobby: el récord de extracción mide hasta la victoria
 
 -- Hacia dónde debe ir el equipo en cada orden (clave = `tone`): devuelve la posición y el nombre que muestra la guía
 -- (client/ObjectiveGuide). Las órdenes que no están aquí no tienen objetivo.
 local OBJECTIVES = {
 	Advance = function()
-		return map.safeVolume.Position, "PUNTO SEGURO"
+		return map.safeVolume.Position, "SAFE ROOM"
 	end,
 	Generator = function()
-		return map.generator.Position, "GENERADOR"
+		return map.generator.Position, "GENERATOR"
 	end,
 	Gas = function()
 		return map.gas.marketPos, "MERCADO"
 	end,
 	GasCarry = function()
-		return map.generator.Position, "GENERADOR"
+		return map.generator.Position, "GENERATOR"
 	end,
 	Warning = function()
 		return map.gate.Position, map.gateText.label
@@ -75,7 +78,7 @@ local OBJECTIVES = {
 		return map.vanStop.Position, "VAN"
 	end,
 	Stadium = function()
-		return map.stadiumVolume.Position, "ESTADIO"
+		return map.stadiumVolume.Position, "STADIUM"
 	end,
 }
 
@@ -92,6 +95,8 @@ local function setStage(name, message, tone)
 		workspace:SetAttribute("ObjectivePos", nil)
 		workspace:SetAttribute("ObjectiveName", nil)
 	end
+	-- La Tienda de la zona en curso (Zone1 a Zone3) tiene su propia guía en pantalla
+	workspace:SetAttribute("ShopPos", map and map.shopPositions and map.shopPositions[name] or nil)
 	workspace:SetAttribute("Stage", name)
 	workspace:SetAttribute("Tone", tone)
 	workspace:SetAttribute("Message", message)
@@ -240,8 +245,10 @@ end
 
 -- Sortea los mutadores de la ronda (según la dificultad ya elegida) y los deja aplicados antes de construir el mapa
 local function rollMutators()
-	local ids = Mutators.roll(Difficulty.id())
+	local ids, angle = Mutators.roll(Difficulty.id())
+	workspace:SetAttribute("MutatorAngle", angle) -- donde se detiene la ruleta de mutaciones (client/MutatorWheel)
 	Difficulty.setMutators(ids)
+	Atmosphere.refreshFog()
 	Telemetry.mutators(ids)
 end
 
@@ -253,11 +260,11 @@ local function loadMap(id)
 	map = BUILDERS[id].build(Config.Game)
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)
-	Pharmacy.place()
+	Pharmacy.place(map.pharmacySpots)
 	CanPiles.init(map.canPiles)
 	Medkits.init(map.medkits)
 	GasCans.init(map.gas)
-	map.gateText = map.gateText or { label = "PORTÓN", open = "abrir el portón", run = "al portón" }
+	map.gateText = map.gateText or { label = "GATE", open = "open the gate", run = "to the gate" }
 	workspace:SetAttribute("MapId", id)
 	Dummies.setLayout(id)
 end
@@ -303,6 +310,7 @@ local function vote()
 	Pharmacy.clear()
 	workspace:SetAttribute("ObjectivePos", nil)
 	workspace:SetAttribute("ObjectiveName", nil)
+	workspace:SetAttribute("ShopPos", nil)
 	workspace:SetAttribute("ExtractionEnd", nil)
 
 	local fixed = privateMap()
@@ -318,7 +326,7 @@ local function vote()
 	end
 
 	PlayerState.setSafePoint(VoteRoom.build().spawn)
-	setStage("Vote", "Voten la dificultad con 1 a 4", "Vote")
+	setStage("Vote", "Vote on the difficulty with 1 to 4", "Vote")
 	respawn(false)
 
 	local winner, difficulty = VoteRoom.run(function(text)
@@ -332,7 +340,7 @@ local function vote()
 			name = option.name
 		end
 	end
-	setStage("Vote", `Mapa elegido: {name}. Dificultad: {Difficulties.get(difficulty).Name}`, "Vote")
+	setStage("Vote", `Map chosen: {name}. Difficulty: {Difficulties.get(difficulty).Name}`, "Vote")
 	task.wait(1.5)
 	loadMap(winner)
 end
@@ -357,18 +365,8 @@ local function lobby()
 	end
 
 	PlayerState.setSafePoint(map.lobbySpawn)
-	-- Los mutadores de la ronda se anuncian aquí, antes de salir del lobby
-	local mutatorText = ""
-	local ids = Difficulty.mutators()
-	if #ids > 0 then
-		local names = {}
-		for _, id in ids do
-			table.insert(names, Mutators[id].Name)
-		end
-		local bonus = math.floor(Mutators.xpBonus(ids) * 100 + 0.5)
-		mutatorText = ` Mutadores: {table.concat(names, " y ")}{bonus > 0 and ` (+{bonus} % XP)` or ""}.`
-	end
-	setStage("Lobby", `Dificultad {Difficulties.get(Difficulty.id()).Name}.{mutatorText} Practiquen en los maniquíes. Presionen Y cuando estén listos`, "Lobby")
+	-- Las mutaciones de la ronda las muestran la ruleta y las fichas del cliente (no van en este texto: así se puede traducir entero)
+	setStage("Lobby", `Difficulty {Difficulties.get(Difficulty.id()).Name}. Practice on the dummies. Press Y when you're ready`, "Lobby")
 	respawn(false)
 
 	waitUntil(function()
@@ -384,13 +382,14 @@ local function lobby()
 		return true
 	end, false)
 
-	setStage("Lobby", "¡Empezamos!", "Start")
+	setStage("Lobby", "Let's go!", "Start")
+	runStart = os.clock()
 	task.wait(2)
 	setLobbyDoors(true)
 end
 
 local function zone1()
-	setStage("Zone1", "Crucen la calle hasta el punto seguro", "Advance")
+	setStage("Zone1", "Cross the street to the safe room", "Advance")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone1")
 	WeaponBox.place("Zone1")
@@ -415,7 +414,7 @@ local function safeRoom(room)
 	PlayerState.setSafePoint(room.spawn)
 	respawn(true) -- los caídos de antes reaparecen aquí
 	Weapons.refillAll() -- recarga gratis del punto seguro
-	setStage("SafeRoom", "Punto seguro. Descansen", "Safe")
+	setStage("SafeRoom", "Safe room. Catch your breath", "Safe")
 	task.wait(Config.Game.SafeRoomTime)
 
 	setDoor(room.exitDoor, true)
@@ -435,9 +434,9 @@ local function fuelGenerator()
 		if key ~= lastKey then
 			lastKey = key
 			if carried then
-				setStage("Zone2", `Lleven la garrafa al generador ({count}/{Config.Gas.Count})`, "GasCarry")
+				setStage("Zone2", `Bring the gas can to the generator ({count}/{Config.Gas.Count})`, "GasCarry")
 			else
-				setStage("Zone2", `El generador no tiene gas: busquen garrafas en el mercado ({count}/{Config.Gas.Count})`, "Gas")
+				setStage("Zone2", `The generator is out of gas: find gas cans in the mercado ({count}/{Config.Gas.Count})`, "Gas")
 			end
 		end
 		return count >= Config.Gas.Count
@@ -452,18 +451,18 @@ local function zone2()
 	if map.gas and not fuelGenerator() then
 		return false
 	end
-	setStage("Zone2", `Enciendan el generador para {map.gateText.open}`, "Generator")
+	setStage("Zone2", `Turn on the generator to {map.gateText.open}`, "Generator")
 	if not waitForPrompt(map.generatorPrompt) then
 		return false
 	end
 
 	setLight(map.generatorModel, "luz_estado", LIGHT_ON) -- el generador arranca
 	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
-	setStage("Zone2", "¡Se acerca una horda! Prepárense", "Warning")
+	setStage("Zone2", "Horde incoming! Get ready", "Warning")
 	setDoor(map.gate, true)
 	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
 	task.wait(Config.Game.HordeWarning)
-	setStage("Zone2", `¡HORDA! Corran {map.gateText.run}`, "Horde")
+	setStage("Zone2", `HORDE! Run {map.gateText.run}`, "Horde")
 	Atmosphere.blackout(map.generator.Position) -- el generador sobrecarga la red: los faroles cercanos revientan
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
@@ -483,7 +482,7 @@ local function extraction()
 	Director.setZone(nil)
 	Ambushes.disarm()
 	WeaponBox.place("Extraction")
-	setStage("Extraction", "Llamen al rescate con la radio", "Radio")
+	setStage("Extraction", "Call for rescue on the radio", "Radio")
 	PlayerState.resetSelfRevives()
 	if not waitForPrompt(map.radioPrompt) then
 		return false
@@ -494,7 +493,7 @@ local function extraction()
 	setLight(map.radioModel, "led_senal", LIGHT_ON)
 	local arrival = workspace:GetServerTimeNow() + Config.Game.ExtractionTime
 	workspace:SetAttribute("ExtractionEnd", arrival)
-	setStage("Extraction", "¡Aguanten hasta que llegue la van!", "Hold")
+	setStage("Extraction", "Hold out until the van arrives!", "Hold")
 	Director.setBoost(true)
 
 	local survived = waitUntil(function()
@@ -513,14 +512,14 @@ local function extraction()
 	van:SetAttribute("Duration", arrivalTime)
 	van:SetAttribute("Start", workspace:GetServerTimeNow())
 	van.Parent = workspace.Map
-	setStage("Extraction", "¡La van está llegando!", "Van")
+	setStage("Extraction", "The van is arriving!", "Van")
 	task.wait(arrivalTime)
 	van:PivotTo(map.vanStop) -- posición final real (colisiones y detección de quién subió)
 	van:SetAttribute("Arrived", true)
 
 	-- Se abren las puertas y cada quien sube manteniendo E (server/Boarding); con un caído en hombros suben los dos
 	Boarding.open(van)
-	setStage("Extraction", "¡Súbanse a la van! Mantén E en la puerta", "Board")
+	setStage("Extraction", "Get in the van! Hold E at the door", "Board")
 	local reached = waitUntil(function()
 		return Boarding.count() > 0
 	end, true)
@@ -529,7 +528,7 @@ local function extraction()
 	end
 
 	-- Margen para que lleguen los demás; la van sale al subir todos o al acabarse
-	setStage("Extraction", "¡Corran a la van!", "Run")
+	setStage("Extraction", "Run to the van!", "Run")
 	local started = os.clock()
 	while os.clock() - started < Config.Game.VanGrace and not Boarding.allBoarded(livingPlayers()) do
 		task.wait(0.25)
@@ -537,7 +536,7 @@ local function extraction()
 	Boarding.close()
 
 	-- La van arranca: puertas cerradas, marcha atrás, giro y a toda velocidad (client/VanAnimator); la victoria sale mientras se va
-	setStage("Extraction", "¡Arranca, arranca!", "Run")
+	setStage("Extraction", "Go, go, go!", "Run")
 	Boarding.depart()
 	task.wait(Config.Boarding.ResultAfter)
 	return true
@@ -545,7 +544,7 @@ end
 
 -- Mapa nuevo, tramo 3: cruzar la terminal hasta la puerta del estadio (emboscada con Tanque en el camino)
 local function zone3()
-	setStage("Zone3", "Crucen la terminal hasta el estadio", "Stadium")
+	setStage("Zone3", "Cross the terminal to the stadium", "Stadium")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone3")
 	WeaponBox.place("Zone3")
@@ -565,8 +564,21 @@ local function result(won)
 	Director.setBoost(false)
 	Zombies.clear()
 	WeaponBox.clear()
-	setStage("Result", won and "¡Victoria!" or "Derrota", won and "Victory" or "Defeat")
-	Remotes.Results:FireAllClients(won, Stats.all())
+	setStage("Result", won and "Victory!" or "Defeat", won and "Victory" or "Defeat")
+	local stats = Stats.all()
+	Remotes.Results:FireAllClients(won, stats, Awards.compute(stats))
+	-- Récord de extracción rápida: solo cuenta ganar; el DataStore tarda, así que se avisa aparte cuando contesta
+	if won and runStart then
+		local seconds = os.clock() - runStart
+		local names = {}
+		for _, entry in stats do
+			table.insert(names, entry.name)
+		end
+		local difficultyId = Difficulty.id()
+		task.spawn(function()
+			Remotes.Record:FireAllClients(Records.submit(difficultyId, seconds, names))
+		end)
+	end
 	PlayerProgress.award(won)
 	Telemetry.result(won)
 

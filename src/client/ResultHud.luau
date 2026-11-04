@@ -9,13 +9,14 @@ local TeleportService = game:GetService("TeleportService")
 local Icons = require(script.Parent.Icons)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Places = require(ReplicatedStorage.Shared.Places)
+local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local player = Players.LocalPlayer
 
 local PALETTES = {
 	Victory = {
-		title = "VICTORIA",
+		title = "VICTORY",
 		accent = Color3.fromRGB(245, 196, 60),
 		glow = Color3.fromRGB(255, 214, 90),
 		rowTint = Color3.fromRGB(38, 32, 14),
@@ -23,7 +24,7 @@ local PALETTES = {
 		damageColor = Color3.new(1, 1, 1),
 	},
 	Defeat = {
-		title = "DERROTA",
+		title = "DEFEAT",
 		accent = Color3.fromRGB(226, 66, 54),
 		glow = Color3.fromRGB(255, 80, 60),
 		rowTint = Color3.fromRGB(34, 15, 15),
@@ -93,7 +94,10 @@ function ResultHud.start()
 		end
 	end
 
-	local function show(won, stats)
+	local recordSink = nil -- recibe el récord de extracción cuando el servidor lo manda (Remotes.Record)
+
+	local function show(won, stats, awards)
+		recordSink = nil
 		clear()
 		local palette = won and PALETTES.Victory or PALETTES.Defeat
 
@@ -260,7 +264,7 @@ function ResultHud.start()
 		boardLayout.Parent = board
 
 		local gray = Color3.fromRGB(150, 146, 140)
-		tableRow(board, 34, { "JUGADOR", "KILLS", "REVIVIDOS", "DAÑO RECIBIDO" }, { gray, gray, gray, gray }, 12, Enum.Font.GothamBold)
+		tableRow(board, 34, { "PLAYER", "KILLS", "REVIVIDOS", "DAMAGE TAKEN" }, { gray, gray, gray, gray }, 12, Enum.Font.GothamBold)
 
 		table.sort(stats, function(a, b)
 			return a.kills > b.kills
@@ -343,8 +347,9 @@ function ResultHud.start()
 				local levelBefore, intoBefore, needBefore = Progress.fromTotal(info.before)
 				local levelAfter, intoAfter, needAfter = Progress.fromTotal(info.after)
 				barBack.Visible = true
-				xpText.Text = `+{info.gained} XP`
-				levelText.Text = `NIVEL {levelBefore}`
+				local line = (info.rhoms or 0) > 0 and `+{info.gained} XP  ·  +{info.rhoms} RHOMS` or `+{info.gained} XP`
+				xpText.Text = info.crate and `{line}  ·  +1 {string.upper(info.crate)} CRATE` or line
+				levelText.Text = `LEVEL {levelBefore}`
 				barFill.Size = UDim2.fromScale(needBefore > 0 and intoBefore / needBefore or 1, 1)
 				task.spawn(function()
 					task.wait(0.9) -- primero se leen las estadísticas
@@ -355,7 +360,7 @@ function ResultHud.start()
 						if not barFill.Parent then
 							return
 						end
-						levelText.Text = `¡NIVEL {levelAfter}!`
+						levelText.Text = `LEVEL {levelAfter}!`
 						levelText.TextColor3 = palette.accent
 						barFill.Size = UDim2.fromScale(0, 1)
 					end
@@ -374,6 +379,111 @@ function ResultHud.start()
 				if apply then
 					apply(info)
 				end
+			end
+		end
+
+		-- Récord de extracción y reconocimientos ("el que más mató", "el que más murió"…): van juntos entre la tabla y los botones
+		local extras = Instance.new("Frame")
+		extras.BackgroundTransparency = 1
+		extras.Size = UDim2.new(1, 0, 0, 0)
+		extras.AutomaticSize = Enum.AutomaticSize.Y
+		extras.LayoutOrder = 5
+		extras.Parent = content
+		local extrasLayout = Instance.new("UIListLayout")
+		extrasLayout.Padding = UDim.new(0, 8)
+		extrasLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		extrasLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		extrasLayout.Parent = extras
+
+		local function clock(seconds)
+			seconds = math.max(0, math.floor(seconds + 0.5))
+			return string.format("%d:%02d", seconds // 60, seconds % 60)
+		end
+		if won then
+			recordSink = function(info)
+				if not extras.Parent or extras:FindFirstChild("RecordLine") then
+					return
+				end
+				local difficulty = Difficulties.get(info.difficulty)
+				local line = Instance.new("TextLabel")
+				line.Name = "RecordLine"
+				line.LayoutOrder = 1
+				line.BackgroundTransparency = 1
+				line.Size = UDim2.new(1, 0, 0, 26)
+				line.Font = Enum.Font.GothamBold
+				line.TextSize = 15
+				line.RichText = true
+				line.TextColor3 = Color3.fromRGB(190, 184, 176)
+				local accent = string.format("#%02X%02X%02X", palette.accent.R * 255, palette.accent.G * 255, palette.accent.B * 255)
+				if info.isRecord then
+					line.Text = `TIME {clock(info.time)}  ·  <font color="{accent}">NEW {difficulty.Upper} RECORD!</font>`
+				elseif info.best then
+					line.Text = `TIME {clock(info.time)}  ·  {difficulty.Upper} RECORD: <font color="{accent}">{clock(info.best)}</font>`
+				else
+					line.Text = `TIME {clock(info.time)}`
+				end
+				line.Parent = extras
+			end
+		end
+
+		if awards and #awards > 0 then
+			local heading = Instance.new("TextLabel")
+			heading.LayoutOrder = 2
+			heading.BackgroundTransparency = 1
+			heading.Size = UDim2.new(1, 0, 0, 22)
+			heading.Font = Enum.Font.GothamBold
+			heading.TextSize = 12
+			heading.TextColor3 = Color3.fromRGB(150, 146, 140)
+			heading.Text = "R E C O N O C I M I E N T O S"
+			heading.Parent = extras
+			local grid = Instance.new("Frame")
+			grid.LayoutOrder = 3
+			grid.BackgroundTransparency = 1
+			grid.Size = UDim2.new(1, 0, 0, 0)
+			grid.AutomaticSize = Enum.AutomaticSize.Y
+			grid.Parent = extras
+			local cells = Instance.new("UIGridLayout")
+			cells.CellSize = UDim2.fromOffset(176, 76)
+			cells.CellPadding = UDim2.fromOffset(8, 8)
+			cells.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			cells.SortOrder = Enum.SortOrder.LayoutOrder
+			cells.Parent = grid
+			for index, award in awards do
+				local chip = Instance.new("Frame")
+				chip.LayoutOrder = index
+				chip.BackgroundColor3 = Color3.fromRGB(22, 20, 18)
+				chip.BorderSizePixel = 0
+				chip.Parent = grid
+				Instance.new("UICorner", chip).CornerRadius = UDim.new(0, 6)
+				local chipStroke = Instance.new("UIStroke")
+				chipStroke.Color = palette.accent
+				chipStroke.Transparency = 0.45
+				chipStroke.Thickness = 1.5
+				chipStroke.Parent = chip
+				local function chipText(text, y, height, size, color, font)
+					local l = Instance.new("TextLabel")
+					l.BackgroundTransparency = 1
+					l.Position = UDim2.fromOffset(8, y)
+					l.Size = UDim2.new(1, -16, 0, height)
+					l.Font = font
+					l.TextSize = size
+					l.TextColor3 = color
+					l.TextXAlignment = Enum.TextXAlignment.Center
+					l.Text = text
+					l.Parent = chip
+					return l
+				end
+				chipText(award.title, 6, 16, 12, palette.accent, Enum.Font.GothamBlack)
+				local names = {}
+				for _, winner in award.winners do
+					table.insert(names, winner.name)
+				end
+				local nameLabel = chipText(table.concat(names, " y "), 24, 26, 20, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+				nameLabel.TextScaled = true
+				local limit = Instance.new("UITextSizeConstraint")
+				limit.MaxTextSize = 20
+				limit.Parent = nameLabel
+				chipText(`{award.value} {award.unit}`, 54, 16, 13, Color3.fromRGB(176, 170, 162), Enum.Font.GothamBold)
 			end
 		end
 
@@ -399,7 +509,7 @@ function ResultHud.start()
 		again.Font = Enum.Font.GothamBlack
 		again.TextSize = 17
 		again.TextColor3 = Color3.fromRGB(14, 13, 13)
-		again.Text = "OTRA PARTIDA"
+		again.Text = "PLAY AGAIN"
 		again.Parent = buttons
 		Instance.new("UICorner", again).CornerRadius = UDim.new(0, 6)
 		again.Activated:Connect(function()
@@ -418,7 +528,7 @@ function ResultHud.start()
 		back.Font = Enum.Font.GothamBold
 		back.TextSize = 14
 		back.TextColor3 = palette.accent
-		back.Text = "VOLVER AL MENÚ"
+		back.Text = "BACK TO MENU"
 		back.Parent = buttons
 		Instance.new("UICorner", back).CornerRadius = UDim.new(0, 6)
 		local backStroke = Instance.new("UIStroke")
@@ -432,13 +542,13 @@ function ResultHud.start()
 				return
 			end
 			leaving = true
-			back.Text = "VOLVIENDO…"
+			back.Text = "RETURNING…"
 			local ok, err = pcall(function()
 				TeleportService:Teleport(Places.Menu, player)
 			end)
 			if not ok then
 				warn("[ResultHud] No se pudo volver al menú (en Studio no funciona):", err)
-				back.Text = "VOLVER AL MENÚ"
+				back.Text = "BACK TO MENU"
 				leaving = false
 			end
 		end)
@@ -455,11 +565,11 @@ function ResultHud.start()
 						ready += 1
 					end
 				end
-				again.Text = `LISTO {ready}/{total}` .. (seconds and ` · {seconds}` or "")
+				again.Text = `READY {ready}/{total}` .. (seconds and ` · {seconds}` or "")
 				again.BackgroundColor3 = Color3.fromRGB(70, 66, 60)
 				again.TextColor3 = Color3.new(1, 1, 1)
 			else
-				again.Text = "OTRA PARTIDA" .. (seconds and ` · {seconds}` or "")
+				again.Text = "PLAY AGAIN" .. (seconds and ` · {seconds}` or "")
 			end
 		end
 		refreshAgain()
@@ -507,6 +617,11 @@ function ResultHud.start()
 	end
 
 	Remotes.Results.OnClientEvent:Connect(show)
+	Remotes.Record.OnClientEvent:Connect(function(info)
+		if recordSink then
+			recordSink(info)
+		end
+	end)
 	Remotes.XpGain.OnClientEvent:Connect(function(list)
 		if current then
 			current.applyXp(list)

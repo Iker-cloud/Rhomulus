@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulty = require(script.Parent.Difficulty)
+local Grabber = require(script.Parent.Grabber)
 local PlayerState = require(script.Parent.PlayerState)
 local ZombieModel = require(script.Parent.ZombieModel)
 
@@ -16,6 +17,7 @@ local MODELS = {
 	Common = require(script.Parent.ZombieData.Brotado),
 	Fast = require(script.Parent.ZombieData.Desbocado),
 	Tank = require(script.Parent.ZombieData.Tanque),
+	Grabber = require(script.Parent.ZombieData.Atrapador),
 }
 
 local folder = Instance.new("Folder")
@@ -31,6 +33,11 @@ local function nearestTarget(fromPosition)
 		-- Los caídos no son objetivo: los zombies van por los que siguen de pie
 		if humanoid and root and humanoid.Health > 0 and PlayerState.get(player) == "Normal" and not player:GetAttribute("Boarded") and not player:GetAttribute("Boarding") then
 			local distance = (root.Position - fromPosition).Magnitude
+			-- Jeringa Sigilo: los zombies lejanos no la notan
+			local stealth = player:GetAttribute("FxStealth")
+			if stealth and distance > stealth then
+				continue
+			end
 			if not bestDistance or distance < bestDistance then
 				best, bestDistance = { player = player, root = root, character = character }, distance
 			end
@@ -39,20 +46,69 @@ local function nearestTarget(fromPosition)
 	return best, bestDistance
 end
 
--- La bengala más cercana dentro de su alcance (las pone server/Items en workspace.Flares)
-local function findLure(position)
-	local flares = workspace:FindFirstChild("Flares")
-	if not flares then
-		return nil
+-- Ruidos recientes (mutador "Ruidoso"): { Position, Range, Expires }
+local noises = {}
+
+-- Un ruido que atrae a los zombies cercanos unos segundos
+function Zombies.noise(position, range, duration)
+	local now = os.clock()
+	for i = #noises, 1, -1 do
+		if noises[i].Expires < now then
+			table.remove(noises, i)
+		end
 	end
+	if #noises < 12 then
+		table.insert(noises, { Position = position, Range = range, Expires = now + duration })
+	end
+end
+
+-- La bengala o el ruido más cercano dentro de su alcance (las bengalas las pone server/Items en workspace.Flares)
+local function findLure(position)
 	local best, bestDistance = nil, Config.Items.Flare.LureRange
-	for _, flare in flares:GetChildren() do
-		local distance = (flare.Position - position).Magnitude
-		if distance < bestDistance then
-			best, bestDistance = flare, distance
+	local flares = workspace:FindFirstChild("Flares")
+	if flares then
+		for _, flare in flares:GetChildren() do
+			local distance = (flare.Position - position).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = flare, distance
+			end
+		end
+	end
+	local now = os.clock()
+	for _, noise in noises do
+		local distance = (noise.Position - position).Magnitude
+		if noise.Expires >= now and distance < noise.Range and distance < bestDistance then
+			best, bestDistance = noise, distance
 		end
 	end
 	return best
+end
+
+-- Mutador "Explosivos": algunos zombies explotan un instante después de morir y hieren a quien esté cerca
+local function explode(model, root)
+	local position = root.Position
+	local E = Config.Zombie.Explosive
+	local highlight = Instance.new("Highlight")
+	highlight.FillColor = Color3.fromRGB(255, 70, 30)
+	highlight.OutlineColor = Color3.fromRGB(255, 190, 80)
+	highlight.FillTransparency = 0.25
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Parent = model
+	task.wait(E.Fuse)
+	local blast = Instance.new("Explosion")
+	blast.Position = position
+	blast.BlastRadius = E.Radius
+	blast.BlastPressure = 0
+	blast.DestroyJointRadiusPercent = 0
+	blast.ExplosionType = Enum.ExplosionType.NoCraters
+	blast.Parent = workspace
+	for _, player in Players:GetPlayers() do
+		local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if playerRoot and (playerRoot.Position - position).Magnitude <= E.Radius then
+			PlayerState.damage(player, E.Damage * Difficulty.get().Damage)
+		end
+	end
+	highlight:Destroy()
 end
 
 -- El autobús sobre cuyo techo está `position` (nil si no está sobre ninguno)
@@ -170,6 +226,65 @@ local function climbBus(model, humanoid, root, bus, stillWanted)
 	return reached
 end
 
+-- Golpe al suelo del Tanque: se queda quieto con los brazos arriba (el cliente dibuja el círculo rojo y anima el cuerpo con SlamT0 /
+-- SlamDur / SlamPos), golpea (SlamHit) y la onda hiere a todos los que estén dentro del radio y sin estar en el aire.
+-- El empujón lo aplica cada cliente a su propio personaje (client/TankSlamFx).
+local function slam(model, humanoid, root, stats)
+	local S = Config.Zombie.Tank.Slam
+	local walkSpeed = humanoid.WalkSpeed
+	humanoid.WalkSpeed = 0
+	humanoid:MoveTo(root.Position)
+
+	local groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Exclude
+	groundParams.FilterDescendantsInstances = { folder }
+	local ground = workspace:Raycast(root.Position, Vector3.new(0, -12, 0), groundParams)
+	local center = ground and ground.Position or (root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0))
+
+	model:SetAttribute("SlamPos", center)
+	model:SetAttribute("SlamDur", S.Windup)
+	model:SetAttribute("SlamT0", workspace:GetServerTimeNow())
+
+	local function finish()
+		model:SetAttribute("SlamT0", nil)
+		if humanoid.Health > 0 then
+			humanoid.WalkSpeed = walkSpeed
+		end
+	end
+
+	local windupEnd = os.clock() + S.Windup
+	while os.clock() < windupEnd do
+		if humanoid.Health <= 0 or not root.Parent then
+			finish()
+			return
+		end
+		task.wait(0.05)
+	end
+
+	model:SetAttribute("SlamHit", workspace:GetServerTimeNow())
+	local sightParams = RaycastParams.new()
+	sightParams.FilterType = Enum.RaycastFilterType.Exclude
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local playerHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+		if playerHumanoid and playerRoot and playerHumanoid.Health > 0 then
+			local flat = Vector3.new(playerRoot.Position.X - center.X, 0, playerRoot.Position.Z - center.Z).Magnitude
+			local airborne = playerHumanoid.FloorMaterial == Enum.Material.Air and playerRoot.Position.Y - center.Y > S.Airborne
+			if flat <= S.Radius and not airborne then
+				sightParams.FilterDescendantsInstances = { folder, character }
+				local blocked = workspace:Raycast(center + Vector3.new(0, 2, 0), playerRoot.Position - (center + Vector3.new(0, 2, 0)), sightParams)
+				if not blocked then
+					PlayerState.damage(player, stats.Damage * S.DamageMult)
+				end
+			end
+		end
+	end
+
+	task.wait(S.Recover)
+	finish()
+end
+
 local function think(humanoid, root, stats)
 	local path = PathfindingService:CreatePath({
 		AgentRadius = stats.AgentRadius or 1.5,
@@ -180,6 +295,8 @@ local function think(humanoid, root, stats)
 	sightParams.FilterType = Enum.RaycastFilterType.Exclude
 
 	local lastAttack = 0
+	local slamConfig = root.Parent:GetAttribute("Kind") == "Tank" and Config.Zombie.Tank.Slam or nil
+	local nextSlam = os.clock() + (slamConfig and slamConfig.FirstCooldown or 0)
 	-- Desfase aleatorio para que 25 zombies no calculen ruta en el mismo frame
 	local lastPath = os.clock() - math.random() * Config.Zombie.RepathInterval
 
@@ -205,6 +322,11 @@ local function think(humanoid, root, stats)
 		if target then
 			local now = os.clock()
 
+			if slamConfig and distance <= slamConfig.TriggerRange and now >= nextSlam then
+				slam(root.Parent, humanoid, root, stats)
+				nextSlam = os.clock() + slamConfig.Cooldown
+				continue
+			end
 			if distance <= stats.AttackRange then
 				humanoid:MoveTo(root.Position) -- se detiene para golpear
 				if now - lastAttack >= stats.AttackCooldown then
@@ -256,7 +378,7 @@ function Zombies.clear()
 	folder:ClearAllChildren()
 end
 
--- Crea un zombie del tipo dado ("Common", "Fast" o "Tank") en la posición (a nivel del suelo). Devuelve el modelo.
+-- Crea un zombie del tipo dado ("Common", "Fast", "Tank" o "Grabber") en la posición (a nivel del suelo). Devuelve el modelo.
 -- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
 function Zombies.spawn(kind, position)
 	local stats = Difficulty.zombieStats(kind) -- vida, velocidad y daño según la dificultad
@@ -266,6 +388,12 @@ function Zombies.spawn(kind, position)
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()
+		if kind == "Grabber" then
+			Grabber.onDeath(model)
+		end
+		if Difficulty.get().Flags.Explosive and kind ~= "Tank" and math.random() < Config.Zombie.Explosive.Chance then
+			task.spawn(explode, model, root)
+		end
 		-- Se queda quieto y deja de recibir balas; el cliente anima la caída, el espasmo y el desvanecimiento
 		root.Anchored = true
 		for _, part in model:GetDescendants() do
@@ -278,7 +406,11 @@ function Zombies.spawn(kind, position)
 		model:Destroy()
 	end)
 
-	task.spawn(think, humanoid, root, stats)
+	if kind == "Grabber" then
+		task.spawn(Grabber.think, model, humanoid, root, stats, { nearestTarget = nearestTarget, folder = folder })
+	else
+		task.spawn(think, humanoid, root, stats)
+	end
 	return model
 end
 

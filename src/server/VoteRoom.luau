@@ -165,10 +165,10 @@ function VoteRoom.build()
 	local title = face(named.letrero_cara, 40)
 	rect(title, UDim2.fromScale(1, 0.03), UDim2.fromScale(0, 0), RED)
 	rect(title, UDim2.fromScale(1, 0.03), UDim2.fromScale(0, 0.97), RED)
-	label(title, "ELIGE CON LAS TECLAS 1 A 4 · PUEDES CAMBIAR TU VOTO", UDim2.fromScale(0.78, 0.13), UDim2.fromScale(0.11, 0.06), Enum.Font.Oswald, PALE)
+	label(title, "CHOOSE WITH KEYS 1 TO 4 · YOU CAN CHANGE YOUR VOTE", UDim2.fromScale(0.78, 0.13), UDim2.fromScale(0.11, 0.06), Enum.Font.Oswald, PALE)
 	rect(title, UDim2.fromScale(0.78, 0.012), UDim2.fromScale(0.11, 0.22), RED)
-	label(title, "VOTEN LA DIFICULTAD", UDim2.fromScale(0.82, 0.46), UDim2.fromScale(0.09, 0.27), Enum.Font.Oswald, RED)
-	label(title, "DÍA 01  ·  ZONA SEGURA", UDim2.fromScale(0.4, 0.1), UDim2.fromScale(0.3, 0.8), Enum.Font.Oswald, RED)
+	label(title, "VOTE ON THE DIFFICULTY", UDim2.fromScale(0.82, 0.46), UDim2.fromScale(0.09, 0.27), Enum.Font.Oswald, RED)
+	label(title, "DAY 01  ·  SAFE ZONE", UDim2.fromScale(0.4, 0.1), UDim2.fromScale(0.3, 0.8), Enum.Font.Oswald, RED)
 
 	-- Pantalla del tótem, agrandada, con el tiempo en números rojos grandes para que todos lo vean
 	local screen = named.totem_pantalla
@@ -180,7 +180,7 @@ function VoteRoom.build()
 	rect(timeGui, UDim2.fromScale(1, 0.04), UDim2.fromScale(0, 0.96), RED)
 	rect(timeGui, UDim2.fromScale(0.02, 1), UDim2.fromScale(0, 0), RED)
 	rect(timeGui, UDim2.fromScale(0.02, 1), UDim2.fromScale(0.98, 0), RED)
-	label(timeGui, "TIEMPO PARA VOTAR", UDim2.fromScale(0.8, 0.12), UDim2.fromScale(0.1, 0.07), Enum.Font.Oswald, PALE)
+	label(timeGui, "TIME TO VOTE", UDim2.fromScale(0.8, 0.12), UDim2.fromScale(0.1, 0.07), Enum.Font.Oswald, PALE)
 	table.insert(timeLabels, label(timeGui, tostring(Config.Vote.Time), UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.2), Enum.Font.Oswald, RED))
 	addLight(screen, Color3.fromRGB(255, 40, 40), 30 * k, 1)
 
@@ -216,7 +216,7 @@ function VoteRoom.build()
 		hitbox.CanQuery = false
 		hitbox.Parent = folder
 		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Votar"
+		prompt.ActionText = "Vote"
 		prompt.ObjectText = map.name
 		prompt.HoldDuration = 0.25
 		prompt.MaxActivationDistance = 12 * k
@@ -304,7 +304,7 @@ function VoteRoom.run(onTick)
 			timeLabel.Text = tostring(left)
 			timeLabel.TextColor3 = urgent and PALE or RED
 		end
-		onTick(`Voten la dificultad con 1 a 4 ({voted}/{#list})`)
+		onTick(`Vote on the difficulty with 1 to 4 ({voted}/{#list})`)
 
 		if #list > 0 and voted == #list then
 			allVotedAt = allVotedAt or os.clock()

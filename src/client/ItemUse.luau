@@ -23,19 +23,19 @@ local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight
 local DOTS = 36
 local STEP = 0.045 -- segundos de cada tramo del arco
 local HINTS = {
-	Grenade = "MANTÉN EL CLIC para cargar la fuerza · SUELTA para lanzar · CLIC DERECHO cancela",
-	Molotov = "MANTÉN EL CLIC para cargar la fuerza · SUELTA para lanzar · CLIC DERECHO cancela",
-	Flare = "MANTÉN EL CLIC para cargar el tiro · SUELTA para disparar la bengala · CLIC DERECHO cancela",
-	Bandage = "CLIC para vendarte (+%d de vida)",
-	Medkit = "CLIC para curarte, o para curar al compañero que miras",
+	Grenade = "HOLD CLICK to charge power · RELEASE to throw · RIGHT CLICK cancels",
+	Molotov = "HOLD CLICK to charge power · RELEASE to throw · RIGHT CLICK cancels",
+	Flare = "HOLD CLICK to charge the shot · RELEASE to fire the flare · RIGHT CLICK cancels",
+	Bandage = "CLICK to bandage yourself (+%d health)",
+	Medkit = "CLICK to heal yourself, or the teammate you're looking at",
 }
 -- En celular el botón de disparo hace de clic
 local TOUCH_HINTS = {
-	Grenade = "MANTÉN el botón para cargar la fuerza · SUELTA para lanzar",
-	Molotov = "MANTÉN el botón para cargar la fuerza · SUELTA para lanzar",
-	Flare = "MANTÉN el botón para cargar el tiro · SUELTA para disparar",
-	Bandage = "TOCA el botón para vendarte (+%d de vida)",
-	Medkit = "TOCA el botón para curarte o curar al compañero que miras",
+	Grenade = "HOLD the button to charge power · RELEASE to throw",
+	Molotov = "HOLD the button to charge power · RELEASE to throw",
+	Flare = "HOLD the button to charge the shot · RELEASE to fire",
+	Bandage = "TAP the button to bandage yourself (+%d health)",
+	Medkit = "TAP the button to heal yourself or the teammate you're looking at",
 }
 
 local ItemUse = {}
@@ -240,7 +240,7 @@ local function buildUi()
 	title.TextSize = 13
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.TextColor3 = Color3.new(1, 1, 1)
-	title.Text = "FUERZA"
+	title.Text = "POWER"
 	title.Parent = bar
 	return { hint = hint, hintText = hintText, bar = bar, fill = fill, title = title }
 end
@@ -343,7 +343,7 @@ function ItemUse.start()
 			ui.bar.Visible = true
 			ui.fill.Size = UDim2.fromScale(power, 1)
 			ui.fill.BackgroundColor3 = GOLD:Lerp(Color3.fromRGB(226, 66, 54), power)
-			ui.title.Text = power >= 1 and "FUERZA · MÁXIMA" or "FUERZA"
+			ui.title.Text = power >= 1 and "POWER · MAX" or "POWER"
 		else
 			ui.bar.Visible = false
 			hidePreview()
@@ -356,7 +356,7 @@ function ItemUse.start()
 			if id == "Bandage" then
 				text = string.format(text, I.Bandage.Heal)
 			end
-			ui.hintText.Text = Controls.isTouch() and text or (text .. `  ·  [{I[id].KeyLabel}] guardar`)
+			ui.hintText.Text = Controls.isTouch() and text or (text .. `  ·  [{I[id].KeyLabel}] put away`)
 			-- en celular el cartel es más estrecho (a los lados están los botones) y sube sobre el inventario
 			local touch = Controls.isTouch()
 			ui.hint.Position = touch and UDim2.new(0.5, 0, 1, -158) or UDim2.new(0.5, 0, 1, -122)

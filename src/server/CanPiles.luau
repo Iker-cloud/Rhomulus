@@ -15,8 +15,8 @@ function CanPiles.init(list)
 	for _, pile in piles do
 		pile.parent = pile.model.Parent
 		local amount = pile.amount or Config.CanPiles.Amount
-		pile.prompt.ActionText = "Recoger latas"
-		pile.prompt.ObjectText = `+{amount} latas`
+		pile.prompt.ActionText = "Pick up cans"
+		pile.prompt.ObjectText = `+{amount} cans`
 		pile.prompt.HoldDuration = Config.CanPiles.HoldTime
 		pile.prompt.Triggered:Connect(function(player)
 			if not pile.model.Parent or PlayerState.get(player) ~= "Normal" then
@@ -25,7 +25,7 @@ function CanPiles.init(list)
 			pile.prompt.Enabled = false
 			pile.model.Parent = nil
 			Points.add(amount, player)
-			Points.feed(`{player.DisplayName} recogió {amount} latas`)
+			Points.feed(`{player.DisplayName} picked up {amount} cans`)
 		end)
 	end
 end

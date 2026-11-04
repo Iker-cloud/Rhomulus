@@ -1,5 +1,5 @@
 -- Ayuda dentro de la partida:
---   * Panel "CÓMO JUGAR" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (también con la X o
+--   * Panel "HOW TO PLAY" con cuatro pestañas (objetivo, controles, consejos, dificultades); se abre y se cierra con K (también con la X o
 --     un clic fuera; Esc lo reserva Roblox para su menú; flechas izquierda/derecha cambian de pestaña). El juego sigue mientras se lee. Los textos son shared/HelpContent y
 --     shared/Difficulties, los mismos que usa el menú.
 --   * Tarjeta de bienvenida la primera vez que el jugador llega al lobby (server/HelpState guarda que ya la vio).
@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local HelpContentBase = require(ReplicatedStorage.Shared.HelpContent)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Controls = require(script.Parent.Controls)
 
@@ -20,13 +21,23 @@ local HelpContent = HelpContentBase.get(Controls.isTouch())
 
 local player = Players.LocalPlayer
 
-local BOLD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local REGULAR = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
-local GOLD = Color3.fromRGB(246, 196, 70)
-local DARK = Color3.fromRGB(18, 18, 20)
-local PANEL = Color3.fromRGB(24, 24, 28)
-local PALE = Color3.fromRGB(215, 210, 200)
-local WHITE = Color3.fromRGB(245, 245, 245)
+-- Estilo "expediente": papel crema con cinta, máquina de escribir, sello rojo y teclas resaltadas con marcador amarillo
+local TYPEWRITER = Font.fromEnum(Enum.Font.SpecialElite)
+local HEAD = (function()
+	local ok, font = pcall(function()
+		return Font.new("rbxasset://fonts/families/Sarpanch.json", Enum.FontWeight.ExtraBold)
+	end)
+	return ok and font or Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
+end)()
+local BOLD = HEAD
+local REGULAR = TYPEWRITER
+local HILITE = Color3.fromRGB(246, 196, 70) -- marcador amarillo (teclas)
+local GOLD = Color3.fromRGB(176, 48, 44) -- acento (títulos, números, sello): rojo tinta
+local DARK = Color3.fromRGB(36, 30, 24) -- tinta
+local PANEL = Color3.fromRGB(228, 214, 178) -- papel
+local PALE = Color3.fromRGB(104, 92, 76) -- tinta suave
+local WHITE = Color3.fromRGB(36, 30, 24) -- texto principal (tinta)
+local LIGHT = Color3.fromRGB(240, 232, 214) -- texto claro sobre fondos oscuros
 
 local PANEL_W, PANEL_H = 1180, 700
 local WELCOME_SECONDS = 30 -- la bienvenida se cierra sola pasado este tiempo
@@ -46,6 +57,7 @@ local function label(parent, str, x, y, w, h, size, color, font, props)
 	l.TextColor3 = color or WHITE
 	l.Text = str
 	l.TextWrapped = props.wrap == true
+	l.RichText = props.rich == true
 	l.TextXAlignment = props.align or Enum.TextXAlignment.Left
 	l.TextYAlignment = props.valign or Enum.TextYAlignment.Top
 	l.LineHeight = props.lineHeight or 1.08
@@ -76,12 +88,16 @@ end
 -- Casilla de tecla (fondo dorado, letras oscuras); devuelve su ancho
 local function keycap(parent, x, y, text)
 	local w = math.max(52, 14 * (utf8.len(text) or #text) + 22)
-	local f = box(parent, x, y, w, 40, GOLD)
-	label(f, text, 0, 0, w, 40, 24, DARK, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
+	local f = box(parent, x, y, w, 40, HILITE)
+	label(f, text, 0, 0, w, 40, 22, DARK, TYPEWRITER, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
 	return w
 end
 
 -- 1.5 -> "1,5"; 1 -> "1"; 1.25 -> "1,25"
+local function onPaper(color)
+	return color:Lerp(DARK, 0.42)
+end
+
 local function ratio(n)
 	local s = string.format("%.2f", n)
 	s = string.gsub(s, "0+$", "")
@@ -97,13 +113,13 @@ local buildTab = {}
 buildTab[1] = function(c)
 	label(c, HelpContent.Headline, 40, 24, 480, 140, 56, WHITE, BOLD, { lineHeight = 1.0 })
 	box(c, 40, 172, 90, 5, GOLD)
-	label(c, HelpContent.Objective[1], 40, 196, 470, 130, 23, PALE, REGULAR, { wrap = true })
-	label(c, HelpContent.Objective[2], 40, 282, 470, 100, 23, WHITE, BOLD, { wrap = true })
+	label(c, HelpContent.Objective[1], 40, 196, 490, 140, 19, PALE, REGULAR, { wrap = true })
+	label(c, HelpContent.Objective[2], 40, 340, 490, 100, 21, WHITE, BOLD, { wrap = true })
 	for i, step in HelpContent.Steps do
 		local y = 20 + 98 * (i - 1)
 		label(c, string.format("%02d", i), 580, y, 50, 40, 32, GOLD, BOLD)
 		label(c, step[1], 640, y, 500, 34, 28, WHITE, BOLD)
-		label(c, step[2], 640, y + 36, 500, 28, 20, PALE, REGULAR)
+		label(c, step[2], 640, y + 36, 500, 44, 16, PALE, REGULAR, { wrap = true })
 		if i < #HelpContent.Steps then
 			box(c, 580, y + 84, 560, 1, PALE, 0.75)
 		end
@@ -142,14 +158,14 @@ buildTab[4] = function(c)
 	for i, id in Difficulties.Order do
 		local d = Difficulties[id]
 		local y = 8 + 110 * (i - 1)
-		label(c, d.Upper, 40, y + 6, 240, 44, 38, d.Color, BOLD)
+		label(c, d.Upper, 40, y + 6, 240, 44, 38, onPaper(d.Color), BOLD)
 		for k = 1, #Difficulties.Order do -- medidor: cuadros llenos hasta el nivel de esta dificultad
-			local sq = box(c, 40 + (k - 1) * 34, y + 58, 28, 12, d.Color, (k <= i) and 0 or 1)
-			stroke(sq, d.Color, 2)
+			local sq = box(c, 40 + (k - 1) * 34, y + 58, 28, 12, onPaper(d.Color), (k <= i) and 0 or 1)
+			stroke(sq, onPaper(d.Color), 2)
 		end
 		label(c, d.Description, 290, y + 8, 460, 80, 20, PALE, REGULAR, { wrap = true })
-		label(c, "VIDA ×" .. ratio(d.Health) .. "    DAÑO ×" .. ratio(d.Damage), 790, y + 14, 350, 30, 22, GOLD, BOLD)
-		label(c, "PRECIOS ×" .. ratio(d.Cost) .. "    LATAS ×" .. ratio(d.Reward), 790, y + 50, 350, 30, 22, GOLD, BOLD)
+		label(c, "HEALTH ×" .. ratio(d.Health) .. "    DAMAGE ×" .. ratio(d.Damage), 790, y + 14, 350, 30, 22, GOLD, BOLD)
+		label(c, "PRICES ×" .. ratio(d.Cost) .. "    CANS ×" .. ratio(d.Reward), 790, y + 50, 350, 30, 22, GOLD, BOLD)
 		if i < #Difficulties.Order then
 			box(c, 40, y + 98, 1100, 1, PALE, 0.75)
 		end
@@ -183,7 +199,8 @@ function HelpPanel.start()
 	panel.BackgroundColor3 = PANEL
 	panel.BorderSizePixel = 0
 	panel.Parent = dim
-	stroke(panel, GOLD, 2)
+	stroke(panel, DARK, 3)
+	panel.Rotation = -0.4
 	local scale = Instance.new("UIScale")
 	scale.Parent = panel
 	local function fit()
@@ -195,11 +212,11 @@ function HelpPanel.start()
 	fit()
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 
-	label(panel, "CÓMO JUGAR", 32, 16, 360, 56, 42, GOLD, BOLD)
-	box(panel, 0, 86, PANEL_W, 2, GOLD)
-	label(panel, Controls.isTouch() and "Toca fuera para cerrar  ·  Se cierra sola si hay zombies cerca" or "K o clic fuera para cerrar  ·  Se cierra sola si hay zombies cerca", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
+	label(panel, "HOW TO PLAY", 32, 16, 360, 56, 42, GOLD, BOLD)
+	box(panel, 0, 86, PANEL_W, 3, DARK)
+	label(panel, Controls.isTouch() and "Tap outside to close  ·  Closes by itself if zombies are near" or "K or click outside to close  ·  Closes by itself if zombies are near", 32, PANEL_H - 36, 640, 26, 18, PALE, REGULAR)
 	if not Controls.isTouch() then
-		label(panel, "←  →  cambiar de pestaña", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
+		label(panel, "←  →  switch tab", 700, PANEL_H - 36, 448, 26, 18, PALE, REGULAR, { align = Enum.TextXAlignment.Right })
 	end
 
 	local holder = Instance.new("Frame")
@@ -225,8 +242,8 @@ function HelpPanel.start()
 		TweenService:Create(content, TweenInfo.new(0.2), { GroupTransparency = 0 }):Play()
 		for index, t in tabButtons do
 			local active = index == i
-			t.button.BackgroundColor3 = active and GOLD or DARK
-			t.button.TextColor3 = active and DARK or GOLD
+			t.button.BackgroundColor3 = active and DARK or PANEL
+			t.button.TextColor3 = active and HILITE or DARK
 		end
 	end
 
@@ -235,14 +252,14 @@ function HelpPanel.start()
 	for i, name in HelpContent.Tabs do
 		local b = Instance.new("TextButton")
 		b.AutoButtonColor = false
-		b.FontFace = BOLD
-		b.TextSize = 22
+		b.FontFace = TYPEWRITER
+		b.TextSize = 19
 		b.Text = name
 		b.Position = UDim2.fromOffset(x, 22)
 		b.Size = UDim2.fromOffset(tabWidths[i], 44)
 		b.BorderSizePixel = 0
 		b.Parent = panel
-		stroke(b, GOLD, 2)
+		stroke(b, DARK, 2)
 		b.Activated:Connect(function()
 			showTab(i)
 		end)
@@ -254,55 +271,80 @@ function HelpPanel.start()
 	closeButton.FontFace = BOLD
 	closeButton.TextSize = 22
 	closeButton.Text = "X"
-	closeButton.TextColor3 = WHITE
-	closeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 66)
+	closeButton.TextColor3 = LIGHT
+	closeButton.BackgroundColor3 = DARK
 	closeButton.BorderSizePixel = 0
 	closeButton.Position = UDim2.fromOffset(PANEL_W - 58, 24)
 	closeButton.Size = UDim2.fromOffset(40, 40)
 	closeButton.Parent = panel
 
-	-- ===== Tarjeta de bienvenida =====
+	-- ===== Tarjeta de bienvenida: expediente de papel con cinta, sello y teclas resaltadas =====
+	local WELCOME_W, WELCOME_H = 760, 590
 	local welcome = Instance.new("Frame")
 	welcome.Active = true
 	welcome.AnchorPoint = Vector2.new(0.5, 0.5)
-	welcome.Position = UDim2.fromScale(0.5, 0.58)
-	welcome.Size = UDim2.fromOffset(700, 370)
-	welcome.BackgroundColor3 = PANEL
+	welcome.Position = UDim2.fromScale(0.5, 0.5)
+	welcome.Size = UDim2.fromOffset(WELCOME_W, WELCOME_H)
+	welcome.BackgroundColor3 = Color3.new(1, 1, 1)
 	welcome.BorderSizePixel = 0
+	welcome.Rotation = -1.2
 	welcome.Visible = false
 	welcome.Parent = gui
-	stroke(welcome, GOLD, 2)
+	local paperShade = Instance.new("UIGradient")
+	paperShade.Color = ColorSequence.new(Color3.fromRGB(238, 226, 194), Color3.fromRGB(212, 194, 156))
+	paperShade.Rotation = 70
+	paperShade.Parent = welcome
+	stroke(welcome, Color3.new(0, 0, 0), 5).Transparency = 0.6
 	local welcomeScale = Instance.new("UIScale")
 	welcomeScale.Parent = welcome
-	label(welcome, HelpContent.Welcome.Title, 32, 24, 640, 50, 38, GOLD, BOLD)
-	box(welcome, 32, 80, 120, 4, GOLD)
+	for _, tape in { { 36, -16, 200, 42, -3 }, { 536, -24, 170, 42, 2 } } do
+		local strip = box(welcome, tape[1], tape[2], tape[3], tape[4], Color3.fromRGB(238, 232, 204), 0.12)
+		strip.Rotation = tape[5]
+		stroke(strip, Color3.fromRGB(190, 180, 150), 1)
+	end
+	label(welcome, "CASE FILE No. 07 · GROUND ZERO", 34, 34, 520, 26, 17, PALE, TYPEWRITER)
+	label(welcome, HelpContent.Welcome.Title, 34, 70, 460, 130, 58, DARK, HEAD, { wrap = true, lineHeight = 0.95 })
+	local stamp = box(welcome, 492, 44, 236, 84, PANEL, 1)
+	stamp.Rotation = 5
+	stroke(stamp, GOLD, 4).Transparency = 0.1
+	label(stamp, "EVACUATION ORDER", 6, 6, 224, 72, 27, GOLD, HEAD, { wrap = true, align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center, lineHeight = 0.95 })
+	box(welcome, 34, 212, 692, 4, DARK)
+	-- Las teclas de cada línea se resaltan con marcador amarillo
+	local HILITES = { "Shift", "3 to 7", "3 a 7", "READY", "FIRE", "AIM", "RELOAD", "R", "E", "F", "Y" }
+	local function highlight(text)
+		for _, token in HILITES do
+			text = string.gsub(text, "%f[%w]" .. token .. "%f[%W]", `<mark color="#f6c446" transparency="0.05">{token}</mark>`)
+		end
+		return text
+	end
 	for i, line in HelpContent.Welcome.Lines do
-		box(welcome, 36, 104 + 52 * (i - 1) + 9, 8, 8, GOLD)
-		label(welcome, line, 60, 104 + 52 * (i - 1), 610, 52, 21, WHITE, REGULAR, { wrap = true })
+		local y = 236 + 64 * (i - 1)
+		label(welcome, string.format("%02d.", i), 34, y, 60, 30, 23, GOLD, TYPEWRITER)
+		label(welcome, highlight(Lang.tr(line)), 100, y, 620, 60, 20, DARK, TYPEWRITER, { wrap = true, rich = true, lineHeight = 1.2 })
 	end
 	local gotIt = Instance.new("TextButton")
 	gotIt.AutoButtonColor = false
-	gotIt.FontFace = BOLD
-	gotIt.TextSize = 24
-	gotIt.Text = "ENTENDIDO"
-	gotIt.TextColor3 = DARK
-	gotIt.BackgroundColor3 = GOLD
+	gotIt.FontFace = HEAD
+	gotIt.TextSize = 28
+	gotIt.Text = "GOT IT"
+	gotIt.TextColor3 = HILITE
+	gotIt.BackgroundColor3 = DARK
 	gotIt.BorderSizePixel = 0
-	gotIt.Position = UDim2.fromOffset(32, 306)
-	gotIt.Size = UDim2.fromOffset(190, 46)
+	gotIt.Position = UDim2.fromOffset(34, 506)
+	gotIt.Size = UDim2.fromOffset(250, 56)
 	gotIt.Parent = welcome
 	local more = Instance.new("TextButton")
 	more.AutoButtonColor = false
-	more.FontFace = BOLD
-	more.TextSize = 22
-	more.Text = Controls.isTouch() and "VER LA AYUDA COMPLETA" or "K  ·  VER LA AYUDA COMPLETA"
-	more.TextColor3 = GOLD
-	more.BackgroundColor3 = DARK
+	more.FontFace = TYPEWRITER
+	more.TextSize = 20
+	more.Text = Controls.isTouch() and "VIEW FULL HELP" or "K  ·  VIEW FULL HELP"
+	more.TextColor3 = DARK
+	more.BackgroundTransparency = 1
 	more.BorderSizePixel = 0
-	more.Position = UDim2.fromOffset(240, 306)
-	more.Size = UDim2.fromOffset(330, 46)
+	more.Position = UDim2.fromOffset(304, 506)
+	more.Size = UDim2.fromOffset(422, 56)
 	more.Parent = welcome
-	stroke(more, GOLD, 2)
+	stroke(more, DARK, 2).Transparency = 0.15
 
 	-- ===== Pista "K · AYUDA" =====
 	local hint = Instance.new("Frame")
@@ -311,9 +353,9 @@ function HelpPanel.start()
 	hint.Size = UDim2.fromOffset(120, 30)
 	hint.BackgroundTransparency = 1
 	hint.Parent = gui
-	local hintKey = box(hint, 0, 2, 26, 26, GOLD, 0.2)
-	label(hintKey, "K", 0, 0, 26, 26, 18, DARK, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
-	local hintText = label(hint, "AYUDA", 36, 0, 84, 30, 18, PALE, BOLD, { valign = Enum.TextYAlignment.Center })
+	local hintKey = box(hint, 0, 2, 26, 26, HILITE, 0.1)
+	label(hintKey, "K", 0, 0, 26, 26, 18, DARK, HEAD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
+	local hintText = label(hint, "HELP", 36, 0, 84, 30, 18, LIGHT, HEAD, { valign = Enum.TextYAlignment.Center })
 	hintText.TextTransparency = 0.25
 
 	-- ===== Lógica =====
@@ -339,19 +381,21 @@ function HelpPanel.start()
 		welcomeOpen = open
 		if open then
 			welcome.Visible = true
-			welcome.BackgroundTransparency = 1
-			TweenService:Create(welcome, TweenInfo.new(0.35), { BackgroundTransparency = 0 }):Play()
 			local view = gui.AbsoluteSize
-			welcomeScale.Scale = math.min(1, view.X / 760, view.Y / (view.Y < 600 and 410 or 440))
-			welcome.Position = UDim2.fromScale(0.5, view.Y < 600 and 0.5 or 0.58) -- en pantallas bajas, al centro
+			local target = math.min(1, view.X / (WELCOME_W + 60), view.Y / (WELCOME_H + 60))
+			-- cae sobre la pantalla como una carpeta lanzada: empieza más grande y torcida, y se asienta
+			welcome.Rotation = -7
+			welcomeScale.Scale = target * 1.12
+			TweenService:Create(welcomeScale, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Scale = target }):Play()
+			TweenService:Create(welcome, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Rotation = -1.2 }):Play()
 		else
 			welcome.Visible = false
 			markSeen()
 		end
 	end
 
-	-- Aviso breve en el centro de abajo ("Ayuda cerrada: hay zombies cerca")
-	local notice = label(gui, "", 0, 0, 640, 36, 24, GOLD, BOLD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
+	-- Aviso breve en el centro de abajo ("Help closed: zombies nearby")
+	local notice = label(gui, "", 0, 0, 640, 36, 24, HILITE, HEAD, { align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center })
 	notice.AnchorPoint = Vector2.new(0.5, 1)
 	notice.Position = UDim2.new(0.5, 0, 1, -64)
 	notice.TextStrokeTransparency = 0.4
@@ -395,7 +439,7 @@ function HelpPanel.start()
 			return -- otra ventana (la tienda) ya tiene el ratón
 		end
 		if open and zombieNear() then
-			showNotice("Hay zombies cerca: la ayuda se abre cuando estés a salvo")
+			showNotice("Zombies nearby: help opens when you're safe")
 			return
 		end
 		panelOpen = open
@@ -450,7 +494,7 @@ function HelpPanel.start()
 			task.wait(0.4)
 			if panelOpen and zombieNear() then
 				setPanel(false)
-				showNotice("Ayuda cerrada: hay zombies cerca")
+				showNotice("Help closed: zombies nearby")
 			end
 		end
 	end)
@@ -468,7 +512,7 @@ function HelpPanel.start()
 		healthConnection = humanoid.HealthChanged:Connect(function(health)
 			if health < lastHealth and panelOpen then
 				setPanel(false)
-				showNotice("Ayuda cerrada: te han herido")
+				showNotice("Help closed: you've been hurt")
 			end
 			lastHealth = health
 		end)

@@ -170,7 +170,7 @@ function Performance.start()
 				instances = Stats.InstanceCount
 			end)
 			label.Text = string.format(
-				"FPS %d (mín %d)  ·  %s\nMemoria %d MB  ·  Instancias %d",
+				"FPS %d (min %d)  ·  %s\nMemory %d MB  ·  Instances %d",
 				fps,
 				minimum,
 				Performance.levelName(),

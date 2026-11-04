@@ -24,6 +24,8 @@ local SAFE = {
 	MedkitHud = true,
 	ItemUse = true,
 	DifficultyVote = true,
+	MutatorHud = true,
+	PhialSlot = true,
 }
 
 local function camera()

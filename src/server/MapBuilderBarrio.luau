@@ -63,6 +63,9 @@ local ROOF_COLORS = { C.oxido, C.concreto }
 local SHOW = { signs = false, floorArrows = false, routeStripes = false }
 local FLOOR_TOP = 0.05 -- los pisos de color quedan apenas sobre la Baseplate (sin parpadeo)
 
+-- Las cajas de armas, estaciones de munición y vitrinas ahora viven solo en las Tiendas (buildShop); con true vuelven los lugares viejos
+local LEGACY_SHOPS = false
+
 local CROSSINGS = { -310, -240, -170 } -- pasajes hacia Callejón (oeste) y Escalera (este); por ahora nichos cerrados
 
 ---------------------------------------------------------------------------------------------------
@@ -1013,14 +1016,18 @@ local function buildStreet(map, refs, rng)
 	floorArrow(map, Vector3.new(0, 0, -158), C.rojo)
 
 	-- Estación de munición en la acera este (z = -220), mirando hacia la calle
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(31.5, 0, -220), math.rad(90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(31.5, 0, -220), math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 
 	-- Lugares posibles de la caja de armas de la ruta Calle (libres de obstáculos); una caja por ruta
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone1, { Vector3.new(0, 0, -286), Vector3.new(-18, 0, -212), Vector3.new(-8, 0, -168) })
+	end
 end
 
 -- Casa genérica (bloque sólido) con puerta y ventanas en las caras que dan a un lugar transitable.
@@ -1086,9 +1093,9 @@ local function canPile(parent, position)
 	deco(pole(model, "Lata", position + Vector3.new(0, 2.2, 0), 1, 0.7, C.concreto))
 	local hitbox = deco(block(model, "Hitbox", Vector3.new(3, 3, 3), position + Vector3.new(0, 1.5, 0)))
 	hitbox.Transparency = 1
-	label(hitbox, "LATAS", C.mostaza, 16)
+	label(hitbox, "CANS", C.mostaza, 16)
 	model.Parent = parent
-	return model, prompt(hitbox, "Recoger latas", 0.5)
+	return model, prompt(hitbox, "Pick up cans", 0.5)
 end
 
 -- Botiquín que se recoge con E (server/Medkits). `position` es el centro de la base (sobre una mesa o el suelo).
@@ -1100,9 +1107,9 @@ local function medkitPickup(parent, position)
 	deco(block(model, "BotiquinCruz", Vector3.new(1.62, 0.7, 0.25), box.Position, C.rojo, Enum.Material.SmoothPlastic))
 	local hitbox = deco(block(model, "Hitbox", Vector3.new(2.5, 2.5, 2.5), position + Vector3.new(0, 1, 0)))
 	hitbox.Transparency = 1
-	label(hitbox, "BOTIQUÍN", C.rojo, 14)
+	label(hitbox, "MEDKIT", C.rojo, 14)
 	model.Parent = parent
-	return model, prompt(hitbox, "Tomar botiquín", 0.3)
+	return model, prompt(hitbox, "Take medkit", 0.3)
 end
 
 -- Parte 4: tramo 1, ruta Callejón (amarilla). Franja de x -120 a -60, entre el borde del mapa y las casas de la calle.
@@ -1115,7 +1122,8 @@ local ALLEY = {
 	{ "C1", -68, -60, -314, -306 }, -- cruce 1 hacia la calle
 	{ "P1", -88, -68, -306, -286 }, -- plazoleta 1
 	{ "L1", -97, -88, -298, -289 },
-	{ "A2", -106, -97, -320, -246 }, -- de z -320 a -298 es el callejón lateral S1
+	{ "A2", -106, -97, -320, -246 }, -- de z -320 a -298 era el callejón lateral S1: ahora entra a la Tienda 1
+	{ "T1", -115, -97, -346, -298 }, -- la Tienda del tramo 1 (buildShop)
 	{ "P2", -106, -86, -246, -226 }, -- plazoleta 2
 	{ "C2", -86, -60, -244, -236 }, -- cruce 2 hacia la calle (también es parte del recorrido)
 	{ "S2", -106, -97, -226, -206 }, -- callejón lateral S2
@@ -1195,6 +1203,142 @@ local function fillHouses(map, rng, band, walkable, isOpen)
 
 end
 
+---------------------------------------------------------------------------------------------------
+-- La Tienda: un rincón (callejón sin salida o patio) donde se junta todo lo que se paga con latas: la caja de armas, la estación de
+-- munición y objetos y la vitrina de la farmacia, bajo un cartel grande que dice TIENDA. Hay una por tramo.
+-- `cfg.origin` = centro de la entrada (en el suelo), `cfg.forward` = hacia dónde se entra (un eje), `cfg.width` el ancho, `cfg.depth`
+-- el fondo y `cfg.zone` la zona de la caja ("Zone1".."Zone3"). Las coordenadas locales son (u a la derecha, v hacia dentro).
+local SHOP_FLOOR = Color3.fromRGB(176, 150, 112)
+local SHOP_FLOOR_DARK = Color3.fromRGB(104, 84, 60)
+local SHOP_GOLD = Color3.fromRGB(246, 196, 58)
+local SHOP_WARM = Color3.fromRGB(255, 205, 140)
+local SHOP_BULB = Color3.fromRGB(170, 124, 78) -- el neón de los focos va apagado: la luz de la tienda es tenue
+
+local function yawFacing(direction)
+	return math.atan2(-direction.X, -direction.Z)
+end
+
+local function shopAwning(map, base, u, v, width, depth, color)
+	local function at(du, dv, y)
+		return base * CFrame.new(u + du, y, -(v + dv))
+	end
+	for _, corner in { { -width / 2, -depth / 2 }, { width / 2, -depth / 2 }, { -width / 2, depth / 2 }, { width / 2, depth / 2 } } do
+		deco(pole(map, "ToldoPalo", at(corner[1], corner[2], 0).Position, 10, 0.4, C.madera, Enum.Material.Wood))
+	end
+	-- Toldo a rayas (lona de dos colores) un poco inclinado hacia el frente
+	local slats = 6
+	for i = 1, slats do
+		local du = -width / 2 + (i - 0.5) * width / slats
+		deco(block(map, "ToldoLona", Vector3.new(width / slats, 0.35, depth + 1.2), at(du, 0, 10.3) * CFrame.Angles(math.rad(5), 0, 0), i % 2 == 0 and C.blanco or color, Enum.Material.Fabric))
+	end
+	-- Bombillo cálido bajo el toldo
+	local bulb = deco(block(map, "ToldoFoco", Vector3.new(0.6, 0.6, 0.6), at(0, 0, 9.4), SHOP_BULB, Enum.Material.Neon))
+	bulb.Shape = Enum.PartType.Ball
+	local light = Instance.new("PointLight")
+	light.Color = SHOP_WARM
+	light.Brightness = 0.28
+	light.Range = 12
+	light.Parent = bulb
+end
+
+local function buildShop(map, refs, cfg)
+	local f = cfg.forward
+	local right = Vector3.new(-f.Z, 0, f.X)
+	local W, D = cfg.width, cfg.depth
+	local base = CFrame.lookAt(cfg.origin, cfg.origin + f)
+	local function at(u, v, y)
+		return base * CFrame.new(u, y or 0, -v)
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "Tienda"
+	folder.Parent = map
+
+	-- Piso: baldosas cálidas con borde oscuro y una alfombra roja al centro que lleva a la caja
+	deco(block(folder, "TiendaPiso", Vector3.new(W, 0.1, D), at(0, D / 2, FLOOR_TOP + 0.08), SHOP_FLOOR, Enum.Material.Slate))
+	for _, side in { -1, 1 } do
+		deco(block(folder, "TiendaBorde", Vector3.new(0.8, 0.12, D), at(side * (W / 2 - 0.4), D / 2, FLOOR_TOP + 0.09), SHOP_FLOOR_DARK, Enum.Material.Slate))
+	end
+	deco(block(folder, "TiendaBorde", Vector3.new(W, 0.12, 0.8), at(0, D - 0.4, FLOOR_TOP + 0.09), SHOP_FLOOR_DARK, Enum.Material.Slate))
+	deco(block(folder, "TiendaAlfombra", Vector3.new(4, 0.12, D - 6), at(0, (D - 6) / 2 + 1, FLOOR_TOP + 0.1), C.rojo, Enum.Material.Fabric))
+
+	-- Pórtico de entrada con el cartel TIENDA
+	local gantryHeight = 14
+	for _, side in { -1, 1 } do
+		deco(pole(folder, "PorticoPoste", at(side * (W / 2 - 0.8), 0.6).Position, gantryHeight, 0.9, C.concreto, Enum.Material.Concrete))
+	end
+	deco(block(folder, "PorticoViga", Vector3.new(W, 0.9, 0.9), at(0, 0.6, gantryHeight), C.concreto, Enum.Material.Concrete))
+	local signWidth = cfg.signWidth or math.min(W - 2, 18)
+	local signU = cfg.signU or 0 -- desplazamiento lateral del cartel (para centrarlo sobre la boca de la entrada)
+	local signSize = Vector3.new(signWidth, signWidth * 0.3, 0.4)
+	local signPosition = at(signU, 0.55, gantryHeight - signSize.Y / 2 - 0.5).Position
+	local _, gui = blankBoard(folder, "CartelTienda", signSize, CFrame.lookAt(signPosition, signPosition - f), RHO_BLACK, 55)
+	boardRect(gui, 0.025, 0.07, 0.95, 0.86, SHOP_GOLD)
+	boardText(gui, "TIENDA", 0.06, 0.07, 0.88, 0.62, RHO_BLACK, Enum.TextXAlignment.Center)
+	boardRect(gui, 0.06, 0.72, 0.88, 0.012, RHO_BLACK)
+	boardText(gui, "WEAPONS  ·  AMMO  ·  PHARMACY", 0.06, 0.745, 0.88, 0.17, RHO_BLACK, Enum.TextXAlignment.Center)
+	for _, side in { -1, 1 } do
+		deco(block(folder, "CartelCadena", Vector3.new(0.15, 1.6, 0.15), at(signU + side * (signWidth / 2 - 1), 0.6, gantryHeight - 0.8), C.oscuro, Enum.Material.Metal))
+	end
+
+	-- Guirnaldas de focos de pared a pared
+	for _, v in { D * 0.3, D * 0.68 } do
+		for _, side in { -1, 1 } do
+			deco(pole(folder, "GuirnaldaPoste", at(side * (W / 2 - 0.3), v).Position, 11, 0.3, C.concreto))
+		end
+		local count = math.max(6, math.floor(W / 3))
+		for i = 0, count do
+			local u = -W / 2 + 0.3 + (W - 0.6) * i / count
+			local sag = math.sin(i / count * math.pi) * 1.3
+			local bulb = deco(block(folder, "GuirnaldaFoco", Vector3.new(0.5, 0.5, 0.5), at(u, v, 10.8 - sag), SHOP_BULB, Enum.Material.Neon))
+			bulb.Shape = Enum.PartType.Ball
+		end
+		local lamp = deco(block(folder, "GuirnaldaLuz", Vector3.one * 0.5, at(0, v, 10.5)))
+		lamp.Transparency = 1
+		local light = Instance.new("PointLight")
+		light.Color = SHOP_WARM
+		light.Brightness = 0.3
+		light.Range = 18
+		light.Parent = lamp
+	end
+
+	-- Centro de la Tienda: la guía de pantalla la señala (GameState publica Workspace.ShopPos en cada zona)
+	refs.shopPositions = refs.shopPositions or {}
+	refs.shopPositions[cfg.zone] = at(0, D / 2).Position
+
+	-- Caja de armas al fondo, mirando a la entrada, sobre una tarima
+	local boxCenter = at(0, D - 4)
+	deco(block(folder, "TarimaCaja", Vector3.new(9, 0.5, 6), boxCenter * CFrame.new(0, 0.25, 0), C.madera, Enum.Material.WoodPlanks))
+	local boxPosition = (boxCenter * CFrame.new(0, 0.5, 0)).Position
+	refs.boxSpots[cfg.zone] = { { CFrame.new(boxPosition) * CFrame.Angles(0, yawFacing(-f), 0) } }
+	shopAwning(folder, base, 0, D - 4, 11, 8, C.lonaNaranja)
+
+	-- Estación de munición y objetos en la pared derecha, mirando al centro
+	local stationAt = at(W / 2 - 3.2, D * 0.42)
+	local model, hitbox = PropModel.build(CajaMunicion, stationAt.Position, yawFacing(-right))
+	hitbox.Name = "AmmoStation"
+	model.Parent = folder
+	label(hitbox, "AMMO AND ITEMS", Color3.fromRGB(80, 165, 255), 22)
+	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	shopAwning(folder, base, W / 2 - 3.6, D * 0.42, 6, 7, C.lonaAzul)
+
+	-- Vitrina de la farmacia en la pared izquierda, mirando al centro (separada de la pared para que se vea de frente)
+	local pharmacyYaw = yawFacing(right)
+	local pharmacyCenter = at(-(W / 2 - 5.4), D * 0.42).Position
+	local centerOffset = CFrame.Angles(0, pharmacyYaw, 0) * Vector3.new(0.245, 0, 0.67) -- el centro del modelo no es su origen
+	table.insert(refs.pharmacySpots, { pharmacyCenter - centerOffset, math.deg(pharmacyYaw) })
+	shopAwning(folder, base, -(W / 2 - 5.4), D * 0.42, 6, 9, C.lonaVerde)
+
+	-- Cajas y barriles contra las paredes del fondo, sin tapar el paso ni la caja de armas
+	for _, side in { -1, 1 } do
+		local crate = at(side * (W / 2 - 1.8), D - 1.8)
+		block(folder, "CajaTienda", Vector3.new(3, 3, 3), crate * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, math.rad(side * 12), 0), C.madera, Enum.Material.WoodPlanks)
+		block(folder, "CajaTienda", Vector3.new(2, 2, 2), crate * CFrame.new(0, 4, 0) * CFrame.Angles(0, math.rad(-side * 20), 0), C.madera, Enum.Material.WoodPlanks)
+		local drum = at(side * (W / 2 - 1.5), D * 0.78).Position
+		barrel(folder, drum.X, drum.Z, side == 1 and C.lonaVerde or C.oxido)
+	end
+	return folder
+end
+
 local function buildAlley(map, refs, rng, spawns)
 	local rects = {}
 	for _, r in ALLEY do
@@ -1218,6 +1362,9 @@ local function buildAlley(map, refs, rng, spawns)
 
 	-- Relleno de casas
 	fillHouses(map, rng, ALLEY_BAND, ALLEY, isOpen)
+
+	-- La Tienda del tramo 1: el callejón lateral del fondo, con la caja de armas, la munición y la vitrina
+	buildShop(map, refs, { origin = Vector3.new(-106, 0, -300), forward = Vector3.new(0, 0, -1), width = 18, depth = 44, zone = "Zone1", signU = 4.5, signWidth = 12 })
 
 	-- Franjas amarillas en las paredes del recorrido
 	for _, stripe in {
@@ -1280,8 +1427,8 @@ local function buildAlley(map, refs, rng, spawns)
 	end
 
 	-- Puntos de aparición al fondo de los callejones laterales
-	local S1, S2, S3 = Vector3.new(-101.5, 0, -317), Vector3.new(-101.5, 0, -209), Vector3.new(-104, 0, -172)
-	for _, point in { S1, S2, S3 } do
+	local S1, S2, S3 = Vector3.new(-72.5, 0, -336), Vector3.new(-101.5, 0, -209), Vector3.new(-104, 0, -172) -- S1 ahora está en el callejón de entrada (el fondo es la Tienda)
+	for _, point in { S2, S3 } do
 		marker(spawns, point)
 	end
 
@@ -1301,7 +1448,9 @@ local function buildAlley(map, refs, rng, spawns)
 		local model, pilePrompt = canPile(map, position)
 		table.insert(refs.canPiles, { model = model, prompt = pilePrompt })
 	end
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone1, { Vector3.new(-78, 0, -290), Vector3.new(-92, 0, -230), Vector3.new(-83, 0, -164) })
+	end
 end
 
 -- Altura (segunda pasada, solo ruta Escalera): azoteas de 10 de alto junto a los pasillos azules, a las que se sube por
@@ -1494,11 +1643,13 @@ local function buildStairs(map, refs, rng, spawns)
 	end
 
 	-- Estación de munición en el pasaje B1 (pared este, mirando al pasaje)
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -325), math.rad(90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -325), math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 
 	-- Puntos de aparición al fondo de los callejones laterales que rodean la cancha
 	local T1, T2, T3 = Vector3.new(100, 0, -209), Vector3.new(76, 0, -271), Vector3.new(90, 0, -318)
@@ -1521,7 +1672,9 @@ local function buildStairs(map, refs, rng, spawns)
 	end
 
 	-- Caja de armas junto a la cancha (uno de estos lugares, al azar)
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone1, { Vector3.new(88, 0, -250), Vector3.new(88, 0, -229.5), Vector3.new(80, 0, -175) })
+	end
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -2028,11 +2181,13 @@ local function buildSafePoint(map, refs)
 	end
 
 	-- Estación de munición
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25, 0, -108), math.rad(90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25, 0, -108), math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 
 	-- Radio con la primera pista
 	block(map, "MesaRadio", Vector3.new(4, 3, 2.5), Vector3.new(-25, 1.5, -102), C.madera, Enum.Material.Wood)
@@ -2187,21 +2342,25 @@ local function buildTramo2Calle(map, refs, rng, spawns, config)
 	generatorModel.Parent = map
 	refs.generator = generator
 	refs.generatorModel = generatorModel
-	refs.generatorPrompt = prompt(generator, "Encender generador", config.GeneratorHoldTime)
-	label(generator, "GENERADOR", Color3.fromRGB(255, 155, 60))
+	refs.generatorPrompt = prompt(generator, "Start generator", config.GeneratorHoldTime)
+	label(generator, "GENERATOR", Color3.fromRGB(255, 155, 60))
 	sandbags(map, 23, 34, 45)
 	sandbags(map, 37, 47, 45)
 	crates(map, 39, 33)
 
 	-- Estación de munición (acera oeste de la plaza), botiquín en un puesto y caja de armas en la plaza
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-47.5, 0, 20), math.rad(-90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-47.5, 0, 20), math.rad(-90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(-35, 3, 61.2))
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	refs.boxSpots.Zone2 = { { Vector3.new(-30, 0, 45), Vector3.new(0, 0, 95), Vector3.new(20, 0, 0) } }
+	end
 
 	-- Atrio de la iglesia con su escalinata y cruces en z = 120
 	floor(map, "Atrio", -30, 30, 110, 160, Color3.fromRGB(185, 180, 170), Enum.Material.Slate)
@@ -2255,7 +2414,7 @@ local function buildChurch(map, refs)
 	beaconLight.Parent = beacon
 
 	refs.gate = door(map, "ChurchEntryDoor", 161, 24, 14)
-	refs.gateText = { label = "IGLESIA", open = "abrir la iglesia", run = "a la iglesia" }
+	refs.gateText = { label = "IGLESIA", open = "open the iglesia", run = "to the iglesia" }
 	refs.church = {
 		exitDoor = door(map, "ChurchExitDoor", 199, 24, 14),
 		volume = volume(map, "ChurchVolume", -28, 28, 162, 198, 12),
@@ -2286,11 +2445,13 @@ local function buildChurch(map, refs)
 	end
 
 	-- Munición, radio con la segunda pista y el cartel del barrio
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25.5, 0, 170), math.rad(90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(25.5, 0, 170), math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 	block(map, "MesaRadio", Vector3.new(4, 3, 2.5), Vector3.new(-25, 1.5, 166), C.madera, Enum.Material.Wood)
 	deco(block(map, "RadioIglesia", Vector3.new(2.4, 1.4, 1.2), Vector3.new(-25, 3.7, 166), C.oscuro, Enum.Material.Metal))
 	sign(map, "Pista2", "Rhomulus cayó, pero el Refugio Remo sigue en pie", Vector3.new(9, 4, 0.4), CFrame.new(-27.7, 8, 166) * CFrame.Angles(0, -math.pi / 2, 0), C.blanco, C.oscuro)
@@ -2316,7 +2477,7 @@ local MARKET_ROUTE = {
 	{ "Patio2", -86, -60, -124, -108 },
 	{ "D1", -86, -77, -108, -30 },
 	{ "C1b", -77, -60, -44, -36 }, -- cruce hacia la calle
-	{ "S4", -112, -86, -70, -62 }, -- callejón lateral (sin salida)
+	{ "S4", -118, -86, -88, -60 }, -- callejón lateral: la Tienda del tramo 2 (buildShop)
 	{ "Mercado", -118, -68, -30, 76 }, -- el mercado entero (muros, techo y puestos se ponen aparte)
 	{ "C2b", -68, -60, 36, 44 }, -- cruce hacia la plaza
 	{ "D2", -95, -86, 76, 112 },
@@ -2335,9 +2496,9 @@ local function gasCan(parent, position)
 	block(model, "Asa", Vector3.new(0.9, 0.4, 0.2), position + Vector3.new(0, 3.7, 0), C.oscuro, Enum.Material.Metal).CanCollide = false
 	block(model, "Valvula", Vector3.new(0.4, 0.4, 0.4), position + Vector3.new(0, 3.6, 0.35), C.concreto, Enum.Material.Metal).CanCollide = false
 	model.PrimaryPart = body
-	label(body, "GARRAFA", C.lonaNaranja, 18)
+	label(body, "GAS CAN", C.lonaNaranja, 18)
 	model.Parent = parent
-	return model, body, prompt(body, "Cargar garrafa", 0.8)
+	return model, body, prompt(body, "Carry gas can", 0.8)
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -2626,6 +2787,7 @@ local function buildMarket(map, refs, rng, spawns)
 		floor(map, "Piso" .. r[1], r[2], r[3], r[4], r[5], inside and Color3.fromRGB(104, 98, 92) or C.acera, inside and Enum.Material.Cobblestone or Enum.Material.Concrete)
 	end
 	fillHouses(map, rng, MARKET_BAND, MARKET_ROUTE, isOpen)
+	buildShop(map, refs, { origin = Vector3.new(-87, 0, -74), forward = Vector3.new(-1, 0, 0), width = 28, depth = 30, zone = "Zone2" })
 
 	-- Mercado cubierto: muros de 14 con tres puertas (sur, norte y este); el techo lo pone marketDetails
 	local wall = MARKET_PLASTER
@@ -2697,14 +2859,16 @@ local function buildMarket(map, refs, rng, spawns)
 	marketDetails(map, marketRng)
 
 	-- Puntos de aparición: dos en el mercado y dos al fondo de los callejones laterales
-	for _, point in { Vector3.new(-108, 0, -66), Vector3.new(-108, 0, 84), Vector3.new(-112, 0, 58), Vector3.new(-76, 0, -24) } do
+	for _, point in { Vector3.new(-81.5, 0, -100), Vector3.new(-108, 0, 84), Vector3.new(-112, 0, 58), Vector3.new(-76, 0, -24) } do
 		marker(spawns, point)
 	end
 
 	-- Botiquín en un puesto del medio, caja de armas en un pasillo cruzado
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(STALL_COLUMNS.west, 3, 9))
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone2, { Vector3.new(-93, 0, -24), Vector3.new(-93, 0, 70) })
+	end
 
 	-- Garrafas: 3 en 6 lugares posibles de los pasillos (GasCans las reparte al azar en cada partida)
 	local spots = {
@@ -2872,14 +3036,18 @@ local function buildEscalera2(map, refs, rng, spawns)
 	barrel(map, 88, 112)
 
 	-- Estación de munición (pared este de F1), botiquín sobre una mesa en F2 y caja de armas en el atrio
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -80), math.rad(90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76.5, 0, -80), math.rad(90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(106, ROOF_HEIGHT, 14)) -- el botiquín está en la azotea
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone2, { Vector3.new(84, 0, 130), Vector3.new(94, 0, 142), Vector3.new(76, 0, 134) })
+	end
 
 	-- Pocos puntos de aparición: dos alcobas sin salida
 	marker(spawns, Vector3.new(84, 0, -86))
@@ -2942,13 +3110,12 @@ local function buildAvenue(map, refs, rng, spawns)
 	end
 	billboard(map, -110, 240, "REFRESCOS LA ESPERANZA — ¡SIEMPRE FRESCOS!", C.lonaNaranja, 1)
 	billboard(map, -110, 285, "CERVECERÍA EL CERRO", C.cobalto, 1)
-	billboard(map, -110, 318, "VOTE POR DON TEODORO", C.turquesa, 1)
 
 	-- Carros chocados en fila, motos tiradas, postes caídos y cobertura baja cada 20 studs (siempre a ≥ 8 de los cruces)
-	for i, z in { 226, 246, 266, 292, 312 } do
+	for i, z in { 226, 246, 266 } do
 		car(map, -104, z, 90 + rng:NextInteger(-12, 12), ({ C.terracota, C.cobalto, C.mostaza, C.salmon, C.lima })[i])
 	end
-	for i, z in { 228, 248, 268, 288, 308, 326 } do
+	for i, z in { 228, 248, 268, 288, 308 } do
 		local x = -97 + (i % 3) * 7
 		if i % 3 == 0 then
 			sandbags(map, x, z, rng:NextInteger(0, 90))
@@ -2958,13 +3125,12 @@ local function buildAvenue(map, refs, rng, spawns)
 			crates(map, x, z)
 		end
 	end
-	for _, moto in { { -88, 256, 70 }, { -92, 300, 10 }, { -84, 232, 100 } } do
+	for _, moto in { { -88, 256, 70 }, { -84, 232, 100 } } do
 		local cf = CFrame.new(moto[1], 0.6, moto[2]) * CFrame.Angles(0, math.rad(moto[3]), 0)
 		deco(block(map, "Moto", Vector3.new(1.8, 1.2, 5.5), cf, C.rojo, Enum.Material.Metal))
 	end
 	deco(block(map, "PosteCaido", Vector3.new(18, 0.8, 0.8), CFrame.new(-90, 0.4, 276) * CFrame.Angles(0, math.rad(65), 0), C.concreto))
-	deco(block(map, "PosteCaido", Vector3.new(16, 0.8, 0.8), CFrame.new(-100, 0.4, 322) * CFrame.Angles(0, math.rad(-20), 0), C.concreto))
-	for _, lamp in { { -76, 226 }, { -76, 266 }, { -76, 306 }, { -108, 252 }, { -108, 298 } } do
+	for _, lamp in { { -76, 226 }, { -76, 266 }, { -76, 306 }, { -108, 252 } } do
 		plazaLamp(map, lamp[1], lamp[2])
 	end
 
@@ -2978,12 +3144,17 @@ local function buildAvenue(map, refs, rng, spawns)
 	floorArrow(map, Vector3.new(-66, 0, 320), C.amarillo, math.pi / 2)
 	sign(map, "Mural", "LA AVENIDA ES DE TODOS", Vector3.new(16, 5, 0.4), Vector3.new(-92, 8, 329.7), C.mostaza, C.oscuro)
 
+	-- La Tienda del tramo 3, en el rincón suroeste de la avenida (junto a la puerta del estadio)
+	buildShop(map, refs, { origin = Vector3.new(-100, 0, 292), forward = Vector3.new(0, 0, 1), width = 24, depth = 36, zone = "Zone3" })
+
 	-- Botiquín en una mesa, caja de armas, 4 puntos de aparición y 2 montones de latas de 75
 	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(-80, 1.5, 300), C.madera, Enum.Material.Wood)
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(-80, 3, 300))
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone3, { Vector3.new(-92, 0, 276), Vector3.new(-84, 0, 240), Vector3.new(-92, 0, 316) })
-	for _, point in { Vector3.new(-108, 0, 220), Vector3.new(-76, 0, 222), Vector3.new(-108, 0, 326), Vector3.new(-76, 0, 326) } do
+	end
+	for _, point in { Vector3.new(-108, 0, 220), Vector3.new(-76, 0, 222), Vector3.new(-76, 0, 326), Vector3.new(-82, 0, 329) } do
 		marker(spawns, point)
 	end
 	for _, position in { Vector3.new(-108, 0, 264), Vector3.new(-80, 0, 276) } do
@@ -2994,7 +3165,7 @@ local function buildAvenue(map, refs, rng, spawns)
 	-- Emboscada grande a mitad de la avenida (expuesta): sin Tanque
 	table.insert(refs.ambushesZone3, {
 		volume = volume(map, "EmboscadaAvenida", -112, -72, 270, 290, 12),
-		points = { Vector3.new(-108, 0, 220), Vector3.new(-76, 0, 222), Vector3.new(-108, 0, 326), Vector3.new(-76, 0, 326) },
+		points = { Vector3.new(-108, 0, 220), Vector3.new(-76, 0, 222), Vector3.new(-76, 0, 326), Vector3.new(-82, 0, 329) },
 		size = Config.Ambush.FieldSize,
 	})
 end
@@ -3055,7 +3226,9 @@ local function buildAndenes(map, refs, rng, spawns)
 	-- Botiquín en una mesa, caja de armas, 3 puntos de aparición y 2 montones de latas de 75
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(90, ROOF_HEIGHT, 327)) -- el botiquín está en la azotea
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	table.insert(refs.boxSpots.Zone3, { Vector3.new(106, 0, 236), Vector3.new(78, 0, 290), Vector3.new(106, 0, 326) })
+	end
 	for _, point in { Vector3.new(106, 0, 222), Vector3.new(106, 0, 326), Vector3.new(78, 0, 326) } do
 		marker(spawns, point)
 	end
@@ -3433,12 +3606,16 @@ local function buildTerminal(map, refs, rng, spawns)
 	sandbags(map, -14, 316, 0)
 	sandbags(map, 14, 302, 90)
 	container(map, 8, 320, 10)
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-57.5, 0, 258), math.rad(-90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(-57.5, 0, 258), math.rad(-90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
+	if LEGACY_SHOPS then
 	refs.boxSpots.Zone3 = { { Vector3.new(0, 0, 298), Vector3.new(-8, 0, 308), Vector3.new(4, 0, 312) } }
+	end
 
 	terminalDetails(map, Random.new(58))
 
@@ -3639,19 +3816,23 @@ local function buildStadium(map, refs, rng, spawns, config)
 	radioModel.Parent = map
 	refs.radio = radio
 	refs.radioModel = radioModel
-	refs.radioPrompt = prompt(radio, "Llamar a la radio", config.RadioHoldTime)
+	refs.radioPrompt = prompt(radio, "Use the radio", config.RadioHoldTime)
 	label(radio, "RADIO", Color3.fromRGB(110, 225, 150))
 	sandbags(map, -62, 346, 90)
 	sandbags(map, -62, 358, 90)
-	local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76, 0, 345), math.rad(-90))
-	hitbox.Name = "AmmoStation"
-	model.Parent = map
-	label(hitbox, "MUNICIÓN", Color3.fromRGB(80, 165, 255), 18)
-	table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Comprar munición", 0.5) })
+	if LEGACY_SHOPS then
+		local model, hitbox = PropModel.build(CajaMunicion, Vector3.new(76, 0, 345), math.rad(-90))
+		hitbox.Name = "AmmoStation"
+		model.Parent = map
+		label(hitbox, "AMMO", Color3.fromRGB(80, 165, 255), 18)
+		table.insert(refs.ammoStations, { part = hitbox, model = model, prompt = prompt(hitbox, "Buy ammo", 0.5) })
+	end
 	block(map, "Mesa", Vector3.new(3, 3, 3), Vector3.new(70, 1.5, 392), C.madera, Enum.Material.Wood)
 	local kit, kitPrompt = medkitPickup(map, Vector3.new(70, 3, 392))
 	table.insert(refs.medkits, { model = kit, prompt = kitPrompt })
+	if LEGACY_SHOPS then
 	refs.boxSpots.Extraction = { { Vector3.new(-45, 0, 352), Vector3.new(45, 0, 358), Vector3.new(-25, 0, 390) } }
+	end
 
 	-- Llegada, furgoneta y 6 puntos de aparición de la extracción en el perímetro
 	refs.stadiumVolume = volume(map, "StadiumVolume", -20, 20, 332, 346, 12) -- solo es el destino de la guía (la puerta)
@@ -3922,7 +4103,7 @@ function MapBuilderBarrio.build(config)
 	local rng = Random.new(config.Seed)
 	favelaRng = Random.new(config.Seed + 2026)
 	lastFavela = nil
-	local refs = { ammoStations = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {}, medkits = {}, ambushesZone2 = {}, ambushesZone3 = {} }
+	local refs = { ammoStations = {}, pharmacySpots = {}, boxSpots = { Zone1 = {} }, ambushes = {}, canPiles = {}, medkits = {}, ambushesZone2 = {}, ambushesZone3 = {} }
 
 	buildLobby(map, refs)
 	buildStreet(map, refs, rng)
@@ -3957,7 +4138,8 @@ function MapBuilderBarrio.build(config)
 	params.RespectCanCollide = true
 	for _, groups in refs.boxSpots do -- cada zona tiene una lista de lugares por ruta
 		for _, group in groups do
-			for _, spot in group do
+			for _, spotValue in group do
+				local spot = typeof(spotValue) == "CFrame" and spotValue.Position or spotValue
 				if #workspace:GetPartBoundsInBox(CFrame.new(spot + Vector3.new(0, 4, 0)), Vector3.new(9, 6, 7), params) > 0 then
 					warn(`MapBuilderBarrio: el lugar de la caja de armas {spot} está tapado`)
 				end

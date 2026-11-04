@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Lang = require(ReplicatedStorage.Shared.Lang)
 local CameraController = require(script.Parent.CameraController)
 local Controls = require(script.Parent.Controls)
 local GameHud = require(script.Parent.GameHud)
@@ -42,6 +43,7 @@ local LAYOUT = {
 	Fire = { x = -148, y = -58, size = 84 },
 	Aim = { x = -60, y = -135, size = 54 },
 	Reload = { x = -135, y = -140, size = 48 },
+	Melee = { x = -135, y = -205, size = 52 },
 	Sprint = { x = -222, y = -55, size = 50 },
 	Cancel = { x = -60, y = -205, size = 52 },
 	KeyE = { x = -212, y = -140, size = 64 },
@@ -217,7 +219,10 @@ local function bindPromptButton(name, keyCode, keyText)
 		end
 		if current then
 			local action = current.ActionText ~= "" and current.ActionText or keyText
-			button.label.Text = `{keyText}\n{string.upper(action)}`
+			local shown = `{keyText}\n{Lang.upper(Lang.tr(action))}`
+			if button.label.Text ~= shown then
+				button.label.Text = shown
+			end
 		end
 		button.visible = current ~= nil
 	end
@@ -317,7 +322,7 @@ function TouchControls.start()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	-- Disparo -------------------------------------------------------------------------------------------------------
-	local fire = makeButton("Fire", "FUEGO", RED)
+	local fire = makeButton("Fire", "FIRE", RED)
 	track(fire.frame, function()
 		setLit(fire, true)
 		Controls.firing = true
@@ -332,14 +337,14 @@ function TouchControls.start()
 	end, addDrag)
 
 	-- Apuntar (alterna)
-	local aim = makeButton("Aim", "APUNTAR")
+	local aim = makeButton("Aim", "AIM")
 	track(aim.frame, function()
 		Controls.aim = not Controls.aim
 		CameraController.setAiming(Controls.aim)
 		setLit(aim, Controls.aim)
 	end)
 
-	local reload = makeButton("Reload", "RECARGAR")
+	local reload = makeButton("Reload", "RELOAD")
 	track(reload.frame, function()
 		setLit(reload, true)
 		Shooting.reload()
@@ -347,13 +352,22 @@ function TouchControls.start()
 		setLit(reload, false)
 	end)
 
+	-- Golpe cuerpo a cuerpo (la skin equipada en el menú)
+	local melee = makeButton("Melee", "MELEE")
+	track(melee.frame, function()
+		setLit(melee, true)
+		Shooting.melee()
+	end, function()
+		setLit(melee, false)
+	end)
+
 	-- Correr (alterna): se cancela solo al disparar, apuntar o recargar y vuelve al terminar, como con Shift
-	local sprint = makeButton("Sprint", "CORRER")
+	local sprint = makeButton("Sprint", "SPRINT")
 	track(sprint.frame, function()
 		Sprint.setHeld(not Sprint.isHeld())
 	end)
 
-	local cancel = makeButton("Cancel", "CANCELAR", GOLD)
+	local cancel = makeButton("Cancel", "CANCEL", GOLD)
 	track(cancel.frame, function()
 		ItemUse.cancel()
 	end)
@@ -361,12 +375,12 @@ function TouchControls.start()
 	bindPromptButton("KeyE", Enum.KeyCode.E, "E")
 	bindPromptButton("KeyF", Enum.KeyCode.F, "F")
 
-	local drop = makeButton("Drop", "SOLTAR", GOLD)
+	local drop = makeButton("Drop", "DROP", GOLD)
 	track(drop.frame, function()
 		TeamHud.drop()
 	end)
 
-	local selfRevive = makeButton("SelfRevive", "LEVANTAR", GOLD)
+	local selfRevive = makeButton("SelfRevive", "GET UP", GOLD)
 	local selfReviveHeld = false
 	track(selfRevive.frame, function()
 		selfReviveHeld = true
@@ -393,6 +407,7 @@ function TouchControls.start()
 	end)
 
 	-- Listo en el lobby (abajo al centro, sobre el inventario)
+	local readyShown = nil
 	local ready = Instance.new("TextButton")
 	ready.Name = "Ready"
 	ready.AnchorPoint = Vector2.new(0.5, 1)
@@ -464,9 +479,14 @@ function TouchControls.start()
 			buttons[name].frame.Visible = playing
 		end
 		-- con un objeto en la mano el botón de disparo lo usa; recargar y apuntar se quedan para el arma
-		fire.label.Text = itemInHand and (itemInHand == "Medkit" and "CURAR" or (itemInHand == "Bandage" and "VENDAR" or "LANZAR")) or "FUEGO"
+		local fireText = itemInHand and (itemInHand == "Medkit" and "HEAL" or (itemInHand == "Bandage" and "BANDAGE" or "THROW")) or "FIRE"
+		if fire.fireText ~= fireText then
+			fire.fireText = fireText
+			fire.label.Text = fireText
+		end
 		setLit(sprint, Sprint.isHeld())
 		reload.frame.Visible = playing and itemInHand == nil
+		melee.frame.Visible = playing and itemInHand == nil
 		aim.frame.Visible = playing and itemInHand == nil
 		if itemInHand ~= nil and Controls.aim then
 			Controls.aim = false
@@ -493,7 +513,11 @@ function TouchControls.start()
 
 		local inLobby = stage == "Lobby" and not Spectator.isActive() and not player:GetAttribute("UiOpen")
 		ready.Visible = inLobby
-		ready.Text = player:GetAttribute("Ready") and "✔ LISTO" or "ESTOY LISTO"
+		local readyText = player:GetAttribute("Ready") and "✔ READY" or "I'M READY"
+		if readyShown ~= readyText then
+			readyShown = readyText
+			ready.Text = readyText
+		end
 		readyStroke.Color = player:GetAttribute("Ready") and Color3.fromRGB(110, 210, 110) or GOLD
 	end
 

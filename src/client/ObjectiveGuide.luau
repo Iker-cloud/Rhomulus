@@ -1,6 +1,8 @@
 -- Guía de objetivo para no perderse: una columna de luz en el mundo (se ve desde lejos y por encima de las paredes),
 -- un cartel con el nombre y la distancia sobre el objetivo y, cuando el objetivo no está en pantalla, una flecha grande
 -- en el borde que apunta hacia él. El servidor publica la posición (Workspace.ObjectivePos / ObjectiveName, ver GameState).
+-- Hay dos guías con el mismo dibujo: la del objetivo de la orden (amarilla: punto seguro, generador, van…) y la de la TIENDA de la zona
+-- (Workspace.ShopPos, de otro color), para que se sepa dónde comprar.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -14,27 +16,27 @@ local ObjectiveGuide = {}
 
 local italic = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy, Enum.FontStyle.Italic)
 
-function ObjectiveGuide.start()
-	if not G.Enabled then
-		return
-	end
+-- Crea una guía. `options`: posAttr = atributo de Workspace con la posición, nameAttr = atributo con el nombre (o fixedName), color,
+-- order = orden de dibujo de la flecha.
+local function createGuide(options)
+	local color = options.color
 
 	-- Columna de luz y cartel en el mundo
 	local beacon = Instance.new("Part")
-	beacon.Name = "ObjectiveBeacon"
+	beacon.Name = options.beaconName
 	beacon.Anchored = true
 	beacon.CanCollide = false
 	beacon.CanQuery = false
 	beacon.CanTouch = false
 	beacon.CastShadow = false
 	beacon.Material = Enum.Material.Neon
-	beacon.Color = G.Color
+	beacon.Color = color
 	beacon.Transparency = G.ShowBeam and 0.35 or 1 -- sin columna: la pieza queda invisible y solo sirve de ancla del cartel
 	beacon.Size = Vector3.new(G.BeaconWidth, G.BeaconHeight, G.BeaconWidth)
 
 	if G.ShowBeam then
 		local light = Instance.new("PointLight")
-		light.Color = G.Color
+		light.Color = color
 		light.Range = 30
 		light.Brightness = 2
 		light.Parent = beacon
@@ -42,7 +44,7 @@ function ObjectiveGuide.start()
 
 	local sign = Instance.new("BillboardGui")
 	sign.Size = UDim2.fromOffset(240, 70)
-	sign.StudsOffsetWorldSpace = Vector3.new(0, -G.BeaconHeight / 2 + 16, 0) -- el cartel va cerca del suelo del objetivo
+	sign.StudsOffsetWorldSpace = Vector3.new(0, -G.BeaconHeight / 2 + (options.signHeight or 16), 0) -- el cartel va cerca del suelo del objetivo
 	sign.AlwaysOnTop = true
 	sign.MaxDistance = 2000
 	sign.ResetOnSpawn = false
@@ -56,7 +58,7 @@ function ObjectiveGuide.start()
 		text.Size = UDim2.new(1, 0, 0, height)
 		text.FontFace = italic
 		text.TextSize = size
-		text.TextColor3 = G.Color
+		text.TextColor3 = color
 		text.TextStrokeTransparency = 0.2
 		text.Parent = parent
 		return text
@@ -67,10 +69,10 @@ function ObjectiveGuide.start()
 
 	-- Flecha en el borde de la pantalla
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "ObjectiveGuide"
+	gui.Name = options.guiName
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true -- las coordenadas son las de la pantalla completa
-	gui.DisplayOrder = 10
+	gui.DisplayOrder = options.order
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local arrow = Instance.new("Frame")
@@ -89,7 +91,7 @@ function ObjectiveGuide.start()
 	pointer.Font = Enum.Font.GothamBlack
 	pointer.Text = "▲"
 	pointer.TextSize = G.ArrowSize
-	pointer.TextColor3 = G.Color
+	pointer.TextColor3 = color
 	pointer.TextStrokeTransparency = 0
 	pointer.Parent = arrow
 
@@ -106,8 +108,8 @@ function ObjectiveGuide.start()
 	local currentPosition, currentName
 
 	local function refresh()
-		local position = workspace:GetAttribute("ObjectivePos")
-		local name = workspace:GetAttribute("ObjectiveName")
+		local position = workspace:GetAttribute(options.posAttr)
+		local name = options.fixedName or workspace:GetAttribute(options.nameAttr)
 		if position ~= currentPosition or name ~= currentName then
 			currentPosition, currentName = position, name
 			if position then
@@ -119,8 +121,10 @@ function ObjectiveGuide.start()
 			end
 		end
 	end
-	workspace:GetAttributeChangedSignal("ObjectivePos"):Connect(refresh)
-	workspace:GetAttributeChangedSignal("ObjectiveName"):Connect(refresh)
+	workspace:GetAttributeChangedSignal(options.posAttr):Connect(refresh)
+	if options.nameAttr then
+		workspace:GetAttributeChangedSignal(options.nameAttr):Connect(refresh)
+	end
 	refresh()
 
 	RunService.RenderStepped:Connect(function()
@@ -163,6 +167,14 @@ function ObjectiveGuide.start()
 		pointer.Rotation = math.deg(math.atan2(offset.Y, offset.X)) + 90 -- "▲" apunta hacia arriba
 		arrow.Visible = true
 	end)
+end
+
+function ObjectiveGuide.start()
+	if not G.Enabled then
+		return
+	end
+	createGuide({ beaconName = "ObjectiveBeacon", guiName = "ObjectiveGuide", posAttr = "ObjectivePos", nameAttr = "ObjectiveName", color = G.Color, order = 10 })
+	createGuide({ beaconName = "ShopBeacon", guiName = "ShopGuide", posAttr = "ShopPos", fixedName = "SHOP", color = G.ShopColor, order = 9, signHeight = 24 })
 end
 
 return ObjectiveGuide

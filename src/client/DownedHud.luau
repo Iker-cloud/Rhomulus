@@ -50,7 +50,7 @@ function DownedHud.create(gui)
 	title.TextSize = 20
 	title.TextColor3 = RED
 	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Text = "ESTÁS CAÍDO"
+	title.Text = "YOU'RE DOWN"
 	title.Parent = card
 
 	local seconds = Instance.new("TextLabel")

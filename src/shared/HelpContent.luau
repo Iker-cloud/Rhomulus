@@ -1,59 +1,59 @@
 -- Textos de la ayuda "Cómo jugar": los usan el menú (src-menu/client/Menu.client) y la partida (client/HelpPanel), así que
 -- se editan aquí una sola vez. Las dificultades no están aquí: salen de shared/Difficulties.
 local Content = {
-	Tabs = { "OBJETIVO", "CONTROLES", "CONSEJOS", "DIFICULTADES" },
+	Tabs = { "OBJECTIVE", "CONTROLS", "TIPS", "DIFFICULTIES" },
 
-	Headline = "SOBREVIVE\nJUNTO A TU EQUIPO",
+	Headline = "SURVIVE\nWITH YOUR TEAM",
 	Objective = {
-		"Cruza de noche el barrio Morro Esperanza hasta el estadio, llama a la radio y aguanta hasta que llegue la furgoneta.",
-		"Basta con que uno suba para ganar. Si todos caen, se pierde. Nadie se queda atrás.",
+		"Cross Morro Esperanza at night to the stadium, call in the radio and hold out until the van arrives.",
+		"It only takes one of you boarding to win. If everyone goes down, you lose. No one gets left behind.",
 	},
 
 	Steps = {
-		{ "VOTEN Y PREPÁRENSE", "Voten la dificultad; practiquen y pulsen Y para empezar." },
-		{ "CRUCEN EL BARRIO", "Tres tramos, tres rutas cada uno y dos puntos seguros." },
-		{ "ABRAN LA IGLESIA", "Lleven las garrafas al generador de la plaza." },
-		{ "LLEGUEN AL ESTADIO", "Crucen la terminal hasta el Refugio Remo." },
-		{ "LLAMEN A LA RADIO", "Aguanten la horda hasta que llegue la furgoneta." },
+		{ "VOTE AND GET READY", "Vote on the difficulty, practice, then press Y to start." },
+		{ "CROSS THE BARRIO", "Three sections, three routes each and two safe rooms." },
+		{ "OPEN UP THE IGLESIA", "Bring the gas cans to the generator in the plaza." },
+		{ "REACH THE STADIUM", "Cross the terminal to Refugio Remo." },
+		{ "CALL THE RADIO", "Hold off the horde until the van arrives." },
 	},
 
 	-- Tres columnas de teclas: { título, { { tecla, qué hace }, ... } }
 	Controls = {
-		{ "COMBATE", {
-			{ "CLIC", "DISPARAR" }, { "CLIC DER.", "APUNTAR" }, { "R", "RECARGAR" },
-			{ "1 · 2 · Q", "CAMBIAR ARMA" }, { "SHIFT", "CORRER" }, { "V", "CAMBIAR CÁMARA" },
+		{ "COMBAT", {
+			{ "CLICK", "SHOOT" }, { "RIGHT CLICK", "AIM" }, { "R", "RELOAD" },
+			{ "1 · 2 · Q", "SWITCH WEAPON" }, { "SHIFT", "SPRINT" }, { "V", "SWITCH CAMERA" },
 		} },
-		{ "EQUIPO", {
-			{ "E", "INTERACTUAR" }, { "F", "CARGAR AL CAÍDO" }, { "G", "SOLTAR" },
-			{ "ESPACIO", "ACIERTA AL REVIVIR" }, { "H", "LEVANTARSE SOLO" }, { "Y", "LISTO EN EL LOBBY" },
+		{ "TEAM", {
+			{ "E", "INTERACT" }, { "F", "CARRY TEAMMATE" }, { "G", "DROP" },
+			{ "SPACE", "REVIVE CHECK" }, { "H", "SELF-REVIVE" }, { "Y", "READY IN LOBBY" },
 		} },
-		{ "OBJETOS", {
-			{ "3", "GRANADA" }, { "4", "BOTIQUÍN" }, { "5", "MOLOTOV" },
-			{ "6", "VENDAS" }, { "7", "BENGALA" }, { "1 – 4", "VOTAR DIFICULTAD" },
+		{ "ITEMS", {
+			{ "3", "GRENADE" }, { "4", "MEDKIT" }, { "5", "MOLOTOV" },
+			{ "6", "BANDAGES" }, { "7", "FLARE" }, { "X", "MELEE STRIKE" },
 		} },
 	},
-	ControlsNote = "H solo se usa jugando solo (una vez por zona). K abre esta ayuda en la partida.",
-	ControlsSide = "MEJOR CON TECLADO Y RATÓN",
+	ControlsNote = "H only works when playing solo (once per zone). K opens this help in-game.",
+	ControlsSide = "BEST WITH KEYBOARD AND MOUSE",
 
 	Tips = {
-		{ "NO SE SEPAREN", "Un jugador solo cae rápido. Avancen juntos y cúbranse las espaldas." },
-		{ "REVIVAN RÁPIDO", "Mantén E junto al caído y acierta con ESPACIO. Aguanta unos 30 s antes de morir." },
-		{ "LAS LATAS SON DE TODOS", "Se ganan matando y se gastan en la caja de armas, la munición y los suministros." },
-		{ "USEN LOS PUNTOS SEGUROS", "La tienda y la iglesia curan, recargan y dan un respiro antes de seguir." },
-		{ "AGUANTEN EN LOS PASILLOS", "En campo abierto la horda los rodea. Usen puertas y esquinas." },
-		{ "LANCEN BENGALAS", "Atraen a los zombies durante 15 s. Úsenlas para ganar tiempo." },
-		{ "CUIDADO CON EL TANQUE", "Aguanta 1500 de vida en Tensión. Apunten a la cabeza y usen granadas y molotovs." },
-		{ "EL TECHO NO ES SEGURO", "Los zombies trepan a los autobuses en 4 o 5 segundos." },
+		{ "STICK TOGETHER", "A lone player goes down fast. Move together and watch each other's backs." },
+		{ "REVIVE FAST", "Hold E next to a downed teammate and hit SPACE on the check. They last about 30 s before dying." },
+		{ "CANS BELONG TO THE TEAM", "You earn them by killing and spend them on the weapon box, ammo and supplies." },
+		{ "USE THE SAFE ROOMS", "The tienda and the iglesia heal, restock and give you a breather before moving on." },
+		{ "HOLD THE CHOKEPOINTS", "In the open the horde surrounds you. Use doors and corners." },
+		{ "THROW FLARES", "They draw zombies for 15 s. Use them to buy time." },
+		{ "WATCH OUT FOR THE TANK", "It has 1500 health on Tension. Aim for the head and use grenades and molotovs." },
+		{ "THE ROOF ISN'T SAFE", "Zombies climb onto buses in 4 or 5 seconds." },
 	},
 
 	-- Tarjeta de bienvenida de la primera vez en el lobby (client/HelpPanel)
 	Welcome = {
-		Title = "BIENVENIDO A RHOMULUS",
+		Title = "WELCOME TO RHOMULUS",
 		Lines = {
-			"Cruza el barrio con tu equipo hasta el estadio y aguanta hasta que llegue la furgoneta.",
-			"Apunta con el clic derecho y dispara con el clic. R recarga y Shift corre.",
-			"E revive, abre y compra. F carga a un caído. 3 a 7 usan objetos.",
-			"Cuando todos estén listos, pulsen Y.",
+			"Cross the barrio with your team to the stadium and hold out until the van arrives.",
+			"Aim with right click and shoot with left click. R reloads and Shift sprints.",
+			"E revives, opens and buys. F carries a downed teammate. 3 to 7 use items.",
+			"When everyone is ready, press Y.",
 		},
 	},
 }
@@ -63,33 +63,33 @@ Content.Touch = {
 	Steps = table.clone(Content.Steps),
 	Tips = table.clone(Content.Tips),
 	Controls = {
-		{ "COMBATE", {
-			{ "FUEGO", "DISPARAR" }, { "APUNTAR", "ACERCAR LA MIRA" }, { "RECARGAR", "RECARGAR" },
-			{ "CORRER", "ALTERNA LA CARRERA" }, { "ARRASTRA", "MIRAR A TU ALREDEDOR" }, { "VISTA", "CAMBIAR CÁMARA" },
+		{ "COMBAT", {
+			{ "FIRE", "SHOOT" }, { "AIM", "ZOOM IN" }, { "RELOAD", "RELOAD" },
+			{ "SPRINT", "TOGGLE SPRINT" }, { "DRAG", "LOOK AROUND" }, { "VIEW", "SWITCH CAMERA" },
 		} },
-		{ "EQUIPO", {
-			{ "E", "INTERACTUAR" }, { "F", "CARGAR AL CAÍDO" }, { "SOLTAR", "SOLTAR AL CARGADO" },
-			{ "TOCA", "ACIERTA AL REVIVIR" }, { "LEVANTAR", "LEVANTARSE SOLO" }, { "LISTO", "LISTO EN EL LOBBY" },
+		{ "TEAM", {
+			{ "E", "INTERACT" }, { "F", "CARRY TEAMMATE" }, { "DROP", "DROP THE CARRIED" },
+			{ "TAP", "REVIVE CHECK" }, { "GET UP", "SELF-REVIVE" }, { "READY", "READY IN LOBBY" },
 		} },
-		{ "OBJETOS", {
-			{ "BARRA", "TOCA UN OBJETO" }, { "FUEGO", "USARLO O LANZARLO" }, { "CANCELAR", "ANULAR EL LANZAMIENTO" },
-			{ "?", "ESTA AYUDA" }, { "AJUSTES", "SENSIBILIDAD" }, { "PANEL", "TOCA PARA VOTAR" },
+		{ "ITEMS", {
+			{ "BAR", "TAP AN ITEM" }, { "FIRE", "USE OR THROW IT" }, { "CANCEL", "CANCEL THE THROW" },
+			{ "MELEE", "MELEE STRIKE" }, { "SETTINGS", "SENSITIVITY" }, { "PANEL", "TAP TO VOTE" },
 		} },
 	},
-	ControlsNote = "LEVANTAR solo sale jugando solo (una vez por zona). Los botones E y F aparecen cuando hay algo cerca.",
-	ControlsSide = "PENSADO PARA PANTALLA TÁCTIL",
+	ControlsNote = "GET UP only appears when playing solo (once per zone). The E and F buttons appear when something is nearby.",
+	ControlsSide = "BUILT FOR TOUCH SCREENS",
 	Welcome = {
-		Title = "BIENVENIDO A RHOMULUS",
+		Title = "WELCOME TO RHOMULUS",
 		Lines = {
-			"Cruza el barrio con tu equipo hasta el estadio y aguanta hasta que llegue la furgoneta.",
-			"Arrastra el dedo para mirar. FUEGO dispara, APUNTAR acerca la mira y RECARGAR recarga.",
-			"El botón E revive, abre y compra; F carga a un caído. Toca un objeto de la barra para sacarlo.",
-			"Cuando todos estén listos, toquen LISTO.",
+			"Cross the barrio with your team to the stadium and hold out until the van arrives.",
+			"Drag your finger to look around. FIRE shoots, AIM zooms in and RELOAD reloads.",
+			"The E button revives, opens and buys; F carries a downed teammate. Tap an item on the bar to draw it.",
+			"When everyone is ready, tap READY.",
 		},
 	},
 }
-Content.Touch.Steps[1] = { "VOTEN Y PREPÁRENSE", "Voten la dificultad; practiquen y toquen LISTO para empezar." }
-Content.Touch.Tips[2] = { "REVIVAN RÁPIDO", "Mantén el botón E junto al caído y toca el botón al acertar. Aguanta unos 30 s antes de morir." }
+Content.Touch.Steps[1] = { "VOTE AND GET READY", "Vote on the difficulty, practice, then tap READY to start." }
+Content.Touch.Tips[2] = { "REVIVE FAST", "Hold the E button next to a downed teammate and tap the button on the check. They last about 30 s before dying." }
 
 -- Los textos que corresponden al dispositivo: HelpContent.get(true) en celular, HelpContent.get(false) en PC
 function Content.get(touch)

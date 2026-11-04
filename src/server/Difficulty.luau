@@ -12,7 +12,7 @@ local Difficulty = {}
 
 local currentId = Difficulties.Default
 local currentMutators = {} -- ids de los mutadores de la ronda
-local effective = Difficulties[currentId] -- la dificultad con los mutadores aplicados (lo que leen los demás sistemas)
+local effective = Mutators.apply(Difficulties[currentId], currentMutators) -- la dificultad con los mutadores aplicados (lo que leen los demás sistemas); con Flags desde el principio
 workspace:SetAttribute("Difficulty", currentId)
 workspace:SetAttribute("Mutators", "")
 

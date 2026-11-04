@@ -6,31 +6,32 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Controls = require(script.Parent.Controls)
+local Lang = require(game:GetService("ReplicatedStorage").Shared.Lang)
 
 local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
 
 -- clave -> { color, remitente }
 local TONES = {
-	Lobby = { Color3.fromRGB(155, 214, 70), "COMANDANTE" },
-	Waiting = { Color3.fromRGB(120, 190, 120), "COMANDANTE" },
-	Start = { Color3.fromRGB(70, 215, 200), "COMANDANTE" },
-	Advance = { Color3.fromRGB(245, 190, 50), "COMANDANTE" },
-	Stadium = { Color3.fromRGB(245, 190, 50), "COMANDANTE" },
-	Vote = { Color3.fromRGB(70, 215, 200), "COMANDANTE" },
-	Safe = { Color3.fromRGB(90, 170, 255), "ENFERMERÍA" },
-	Generator = { Color3.fromRGB(255, 140, 50), "TÉCNICO" },
-	Gas = { Color3.fromRGB(255, 140, 50), "TÉCNICO" },
-	GasCarry = { Color3.fromRGB(255, 140, 50), "TÉCNICO" },
-	Warning = { Color3.fromRGB(235, 70, 60), "VIGÍA" },
-	Horde = { Color3.fromRGB(255, 60, 120), "VIGÍA" },
-	Radio = { Color3.fromRGB(170, 125, 255), "OPERADOR" },
-	Hold = { Color3.fromRGB(255, 100, 50), "COMANDANTE" },
-	Van = { Color3.fromRGB(90, 225, 130), "PILOTO" },
-	Board = { Color3.fromRGB(255, 215, 60), "PILOTO" },
-	Run = { Color3.fromRGB(255, 75, 75), "PILOTO" },
-	Victory = { Color3.fromRGB(110, 230, 120), "COMANDANTE" },
-	Defeat = { Color3.fromRGB(235, 70, 60), "COMANDANTE" },
+	Lobby = { Color3.fromRGB(155, 214, 70), "COMMANDER" },
+	Waiting = { Color3.fromRGB(120, 190, 120), "COMMANDER" },
+	Start = { Color3.fromRGB(70, 215, 200), "COMMANDER" },
+	Advance = { Color3.fromRGB(245, 190, 50), "COMMANDER" },
+	Stadium = { Color3.fromRGB(245, 190, 50), "COMMANDER" },
+	Vote = { Color3.fromRGB(70, 215, 200), "COMMANDER" },
+	Safe = { Color3.fromRGB(90, 170, 255), "MEDICAL" },
+	Generator = { Color3.fromRGB(255, 140, 50), "TECH" },
+	Gas = { Color3.fromRGB(255, 140, 50), "TECH" },
+	GasCarry = { Color3.fromRGB(255, 140, 50), "TECH" },
+	Warning = { Color3.fromRGB(235, 70, 60), "LOOKOUT" },
+	Horde = { Color3.fromRGB(255, 60, 120), "LOOKOUT" },
+	Radio = { Color3.fromRGB(170, 125, 255), "OPERATOR" },
+	Hold = { Color3.fromRGB(255, 100, 50), "COMMANDER" },
+	Van = { Color3.fromRGB(90, 225, 130), "PILOT" },
+	Board = { Color3.fromRGB(255, 215, 60), "PILOT" },
+	Run = { Color3.fromRGB(255, 75, 75), "PILOT" },
+	Victory = { Color3.fromRGB(110, 230, 120), "COMMANDER" },
+	Defeat = { Color3.fromRGB(235, 70, 60), "COMMANDER" },
 }
 
 local RadioHud = {}
@@ -42,7 +43,7 @@ local function withKeys(message, color)
 	return (
 		message:gsub("%S+", function(word)
 			local lead, key, trail = word:match("^([¡¿%p]*)(%u)([%p]*)$")
-			if not key then
+			if not key or key == "A" or key == "I" then -- "A" e "I" son palabras en inglés, no teclas
 				return word
 			end
 			return lead .. `<mark color="#{hex}" transparency="0"><font color="#10140f"> {key} </font></mark>` .. trail
@@ -158,13 +159,15 @@ function RadioHud.start()
 		accent.BackgroundColor3 = color
 		stroke.Color = color
 		sender.TextColor3 = color
-		sender.Text = `CANAL 7 · {tone[2]}`
+		sender.Text = `CHANNEL 7 · {tone[2]}`
 		for _, barFrame in signal do
 			barFrame.BackgroundColor3 = color
 		end
 
-		body.Text = withKeys(Controls.touchText(message), color)
-		total = utf8.len(message) or #message
+		-- se traduce antes de poner las teclas (la etiqueta ya lleva marcas de texto enriquecido)
+		local shown = Lang.tr(Controls.touchText(message))
+		body.Text = withKeys(shown, color)
+		total = utf8.len(shown) or #shown
 		reveal = 0 -- el texto aparece letra por letra
 		body.MaxVisibleGraphemes = 0
 
@@ -187,7 +190,7 @@ function RadioHud.start()
 		end
 		-- En el lobby, después de presionar Y, la orden cambia a esperar a los demás
 		if workspace:GetAttribute("Stage") == "Lobby" and toneKey == "Lobby" and player:GetAttribute("Ready") then
-			message, toneKey = "Listo. Esperando a los demás jugadores", "Waiting"
+			message, toneKey = "Ready. Waiting for the other players", "Waiting"
 		end
 		local key = message .. "|" .. tostring(toneKey)
 		if key ~= lastKey then

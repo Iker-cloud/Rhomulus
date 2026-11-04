@@ -1,5 +1,8 @@
 -- Placas inclinadas (paralelogramos) hechas con franjas, y utilidades de texto para la señalética.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
+
+local Lang = require(ReplicatedStorage.Shared.Lang)
 
 local Slant = {}
 
@@ -7,14 +10,9 @@ Slant.FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeigh
 
 local STRIPS = 10
 
--- string.upper no cambia las letras con tilde: las pasamos a mano
-local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ", ["ü"] = "Ü" }
+-- Mayúsculas con tilde (Lang.upper) y traducidas al idioma del jugador: la señalética se arma letra por letra, así que aquí se traduce
 function Slant.upper(text)
-	local result = string.upper(text)
-	for lower, upper in ACCENTS do
-		result = result:gsub(lower, upper)
-	end
-	return result
+	return Lang.upper(Lang.tr(text))
 end
 
 -- Ancho en píxeles del texto (con un cálculo aproximado si aún no se puede medir)

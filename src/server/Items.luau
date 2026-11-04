@@ -103,20 +103,20 @@ end
 function Items.tryBuy(player, id)
 	local cfg = I[id]
 	if not cfg then
-		return false, "Objeto desconocido"
+		return false, "Unknown item"
 	end
 	if PlayerState.get(player) ~= "Normal" then
-		return false, "No puedes comprar ahora"
+		return false, "You can't buy right now"
 	end
 	if not Items.canAdd(player, id) then
-		return false, `Ya llevas el máximo de {string.lower(cfg.Name)}`
+		return false, `You're at the max for {string.lower(cfg.Name)}`
 	end
 	local cost = Difficulty.price(cfg.Cost)
 	if not Points.spend(cost) then
-		return false, `Faltan latas: {string.lower(cfg.Name)} cuesta {cost}`
+		return false, `Not enough cans: {string.lower(cfg.Name)} costs {cost}`
 	end
 	Items.add(player, id, 1)
-	Points.feed(`{player.DisplayName} compró {string.lower(cfg.Name)}`)
+	Points.feed(`{player.DisplayName} bought: {string.lower(cfg.Name)}`)
 	return true
 end
 
@@ -402,6 +402,11 @@ local function clearGesture(character)
 	end
 end
 
+-- Bloquea sacar y usar objetos durante `seconds` (lo usa la jeringa de la farmacia mientras se inyecta)
+function Items.lock(player, seconds)
+	busyUntil[player] = math.max(busyUntil[player] or 0, os.clock() + seconds)
+end
+
 -- El objeto que lleva en la mano (id) o nil
 function Items.readyId(player)
 	local r = ready[player]
@@ -508,23 +513,47 @@ local function launch(player, id, direction, speed)
 			end
 		end)
 	elseif id == "Molotov" then
+		-- Estalla en el PRIMER impacto, sin rebotar: cada cuadro se lanza un rayo desde donde estaba hasta donde esta
+		-- (Touched llega tarde y la botella ya habia rebotado), con Touched de respaldo.
 		local landed = false
-		local function land()
+		local conn
+		local function land(position)
 			if landed or not part.Parent then
 				return
 			end
 			landed = true
-			local position = part.Position
+			if conn then
+				conn:Disconnect()
+			end
+			position = position or part.Position
 			model:Destroy()
 			fireZone(player, position)
 		end
-		task.delay(0.25, function() -- un instante para despegarse de la mano antes de detectar golpes
-			if part.Parent then
-				part.Touched:Connect(function(hit)
-					if not hit:IsDescendantOf(player.Character) and hit.CanCollide then
-						land()
-					end
-				end)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { model, projectiles, player.Character }
+		params.RespectCanCollide = true
+		local last = part.Position
+		local born = os.clock()
+		conn = game:GetService("RunService").Heartbeat:Connect(function()
+			if landed or not part.Parent then
+				conn:Disconnect()
+				return
+			end
+			local now = part.Position
+			local delta = now - last
+			if os.clock() - born > 0.05 and delta.Magnitude > 0.01 then
+				local hit = workspace:Raycast(last, delta + delta.Unit * 0.6, params)
+				if hit then
+					land(hit.Position + hit.Normal * 0.2)
+					return
+				end
+			end
+			last = now
+		end)
+		part.Touched:Connect(function(hit)
+			if os.clock() - born > 0.1 and hit.CanCollide and not hit:IsDescendantOf(player.Character) then
+				land()
 			end
 		end)
 		task.delay(3, land)
@@ -563,7 +592,7 @@ function Items.use(player, id, direction)
 	local power = 0
 	if id == "Bandage" then
 		if humanoid.Health >= humanoid.MaxHealth then
-			Remotes.Feed:FireClient(player, "Tienes la vida llena")
+			Remotes.Feed:FireClient(player, "You're at full health")
 			return
 		end
 	else

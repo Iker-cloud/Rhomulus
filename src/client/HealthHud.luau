@@ -153,10 +153,10 @@ function HealthHud.start()
 		root.Position = basePosition + UDim2.fromOffset((math.random() - 0.5) * 12 * shake, (math.random() - 0.5) * 12 * shake)
 
 		if downed then
-			label.Text = "CAÍDO"
+			label.Text = "DOWN"
 			label.TextColor3 = Color3.fromRGB(255, 90, 70)
 		else
-			label.Text = `SANGRE {math.floor(displayed + 0.5)}`
+			label.Text = `BLOOD {math.floor(displayed + 0.5)}`
 			label.TextColor3 = low and LOW_BLOOD or GLASS
 		end
 	end)

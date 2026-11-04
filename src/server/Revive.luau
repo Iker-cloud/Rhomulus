@@ -1,5 +1,7 @@
 -- Revivir (mantener E), cargar al caído en hombros (mantener F, soltar con G) y frases en globo.
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,12 +12,12 @@ local PlayerState = require(script.Parent.PlayerState)
 local RateLimit = require(script.Parent.RateLimit)
 local SkillCheck = require(script.Parent.SkillCheck)
 local Points = require(script.Parent.Points)
+local Stats = require(script.Parent.Stats)
 
 local Revive = {}
 
 local carrying = {} -- [carrier] = target
 local carriedBy = {} -- [target] = carrier
-local welds = {} -- [target] = WeldConstraint
 local sessions = {} -- [helper] = { target, checks pasadas, falló } mientras mantiene E con las pruebas de acción activas
 
 pcall(function()
@@ -86,7 +88,8 @@ local function setCollisionGroup(character, group)
 	end
 end
 
-local function drop(carrier)
+-- `reason` (opcional): por qué se soltó solo, para avisar a quien cargaba (si no, parece que el juego lo soltó sin motivo)
+local function drop(carrier, reason)
 	local target = carrying[carrier]
 	if not target then
 		return
@@ -94,20 +97,22 @@ local function drop(carrier)
 	carrying[carrier] = nil
 	carriedBy[target] = nil
 
-	if welds[target] then
-		welds[target]:Destroy()
-		welds[target] = nil
-	end
-
 	carrier:SetAttribute("Carrying", nil)
 	PlayerState.refreshSpeed(carrier)
+	if typeof(reason) == "string" and carrier.Parent then
+		Remotes.Feed:FireClient(carrier, reason)
+	end
 
 	local character = target.Character
 	if character then
 		character:SetAttribute("Carried", nil)
+		character:SetAttribute("CarriedBy", nil)
+		CollectionService:RemoveTag(character, "CarriedBody")
 		setCollisionGroup(character, "Default")
 		local droppedRoot = character:FindFirstChild("HumanoidRootPart")
 		if droppedRoot then
+			droppedRoot.Anchored = false
+			droppedRoot.AssemblyLinearVelocity = Vector3.zero
 			pcall(function()
 				droppedRoot:SetNetworkOwner(target)
 			end)
@@ -134,24 +139,20 @@ local function carry(carrier, target)
 	carrying[carrier] = target
 	carriedBy[target] = carrier
 	Points.add(Config.Points.Carry, carrier)
+	Stats.add(carrier, "Carries")
 	carrier:SetAttribute("Carrying", target.Name)
 	PlayerState.refreshSpeed(carrier)
 
+	-- El cuerpo del caído queda anclado (lo mueve el servidor y cada cliente lo pega a quien carga, ver client/CarryAttach): sin
+	-- soldaduras ni dueños de la física que se peleen entre el cliente del caído y el de quien carga
 	target.Character:SetAttribute("Carried", true) -- el cliente deja de girar al personaje
+	target.Character:SetAttribute("CarriedBy", carrier.Name)
+	CollectionService:AddTag(target.Character, "CarriedBody")
 	setCollisionGroup(target.Character, "Carried")
 	humanoid.PlatformStand = true
-
-	-- Acostado sobre los hombros de quien carga
-	targetRoot.CFrame = carrierRoot.CFrame * CFrame.new(0.5, 1.5, 0) * CFrame.Angles(0, 0, math.rad(90))
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = carrierRoot
-	weld.Part1 = targetRoot
-	weld.Parent = targetRoot
-	welds[target] = weld
-	-- Un solo dueño de la física para los dos cuerpos soldados: quien carga (si no, el cliente del caído y el de quien lo carga se pelean)
-	pcall(function()
-		targetRoot:SetNetworkOwner(carrier)
-	end)
+	targetRoot.AssemblyLinearVelocity = Vector3.zero
+	targetRoot.Anchored = true
+	targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
 
 	updatePrompts(target)
 end
@@ -159,33 +160,33 @@ end
 -- ¿Puede `helper` revivir o cargar a `target`? Devuelve (true) o (false, motivo en español)
 local function canHelp(helper, target)
 	if helper == target then
-		return false, "no puedes cargarte a ti mismo"
+		return false, "you can't carry yourself"
 	end
 	if PlayerState.get(helper) ~= "Normal" then
-		return false, "tienes que estar de pie"
+		return false, "you have to be standing"
 	end
 	if carrying[helper] or helper:GetAttribute("Carrying") then
-		return false, "ya llevas algo a cuestas (G para soltar)"
+		return false, "you're already carrying something (G to drop)"
 	end
 	if PlayerState.get(target) ~= "Downed" then
-		return false, "ya no está caído"
+		return false, "they're no longer downed"
 	end
 	if carriedBy[target] then
-		return false, "ya lo está cargando otro"
+		return false, "someone else is already carrying them"
 	end
 	local helperRoot, targetRoot = getRoot(helper), getRoot(target)
 	if not (helperRoot and targetRoot) then
-		return false, "no se encuentra a tu compañero"
+		return false, "your teammate can't be found"
 	end
 	if (helperRoot.Position - targetRoot.Position).Magnitude > Config.Revive.MaxDistance then
-		return false, "estás muy lejos"
+		return false, "you're too far away"
 	end
 	return true
 end
 
 -- Avisa en pantalla a quien intentó cargar y no pudo (si no, el prompt parece no hacer nada)
 local function refuse(helper, reason)
-	Remotes.Feed:FireClient(helper, `No puedes cargar: {reason}`)
+	Remotes.Feed:FireClient(helper, `Can't carry: {reason}`)
 end
 
 local function makePrompt(root, name, action, key, holdTime, offset)
@@ -213,8 +214,8 @@ local function onCharacter(player, character)
 		end
 	end
 
-	local revivePrompt = makePrompt(root, "RevivePrompt", "Revivir", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
-	local carryPrompt = makePrompt(root, "CarryPrompt", "Cargar", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
+	local revivePrompt = makePrompt(root, "RevivePrompt", "Revive", Enum.KeyCode.E, Config.Revive.HoldTime, Vector2.zero)
+	local carryPrompt = makePrompt(root, "CarryPrompt", "Carry", Enum.KeyCode.F, Config.Revive.CarryHoldTime, Vector2.new(0, 70))
 
 	revivePrompt.ObjectText = player.DisplayName
 	-- E y F tienen el mismo botón de mando por defecto: sin esto, con mando solo saldría uno de los dos
@@ -370,7 +371,62 @@ function Revive.start()
 		updatePrompts(player)
 	end)
 
-	Remotes.Drop.OnServerEvent:Connect(RateLimit.wrap("DropCarry", 0.3, drop))
+	local dropOnRequest = RateLimit.wrap("DropCarry", 0.3, function(carrier)
+		drop(carrier) -- sin motivo: lo pidió el jugador (el cliente no puede mandar texto)
+	end)
+	Remotes.Drop.OnServerEvent:Connect(dropOnRequest)
+
+	-- Si alguien reaparece (nuevo personaje) o su personaje desaparece, nada de lo que cargaba o de quien lo cargaba sigue valiendo:
+	-- sin esto quedaba el registro viejo, el compañero pegado al cuerpo anterior y su prompt de cargar apagado para siempre
+	local function release(player)
+		drop(player)
+		local carrier = carriedBy[player]
+		if carrier then
+			drop(carrier, `You dropped {player.DisplayName}: their character changed`)
+		end
+	end
+	-- Con el personaje nuevo ya puesto solo se borra el registro (no se toca el cuerpo: está apareciendo y soltarlo lo movería o lo desanclaría)
+	local function forget(player)
+		local target = carrying[player]
+		if target then
+			carrying[player] = nil
+			carriedBy[target] = nil
+		end
+		local carrier = carriedBy[player]
+		if carrier then
+			carriedBy[player] = nil
+			carrying[carrier] = nil
+			carrier:SetAttribute("Carrying", nil)
+			PlayerState.refreshSpeed(carrier)
+		end
+		updatePrompts(player) -- el prompt de cargar del personaje nuevo puede haber quedado apagado por el registro viejo
+	end
+	local function watchCharacterChanges(player)
+		player.CharacterRemoving:Connect(function()
+			release(player)
+		end)
+		player.CharacterAdded:Connect(function()
+			forget(player)
+		end)
+	end
+	Players.PlayerAdded:Connect(watchCharacterChanges)
+	for _, player in Players:GetPlayers() do
+		watchCharacterChanges(player)
+	end
+
+	-- El caído a cuestas sigue a quien lo carga (en el servidor, para que la zona, la furgoneta y los demás sistemas lo vean donde está)
+	RunService.Heartbeat:Connect(function()
+		for carrier, target in carrying do
+			local carrierRoot, targetRoot = getRoot(carrier), getRoot(target)
+			if not (carrierRoot and targetRoot and targetRoot:IsDescendantOf(workspace)) then
+				drop(carrier, "You dropped your teammate: they can't be found anymore")
+			elseif carrier.Character ~= carrierRoot.Parent or target.Character ~= targetRoot.Parent then
+				drop(carrier, "You dropped your teammate: their character changed")
+			else
+				targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
+			end
+		end
+	end)
 
 	-- Pulsación de la prueba de acción: el servidor decide con la hora que dice el cliente (ya limitada por SkillCheck.judge)
 	Remotes.SkillCheckPress.OnServerEvent:Connect(function(helper, id, pressTime)
