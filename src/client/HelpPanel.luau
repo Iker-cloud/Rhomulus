@@ -25,7 +25,7 @@ local player = Players.LocalPlayer
 local TYPEWRITER = Font.fromEnum(Enum.Font.SpecialElite)
 local HEAD = (function()
 	local ok, font = pcall(function()
-		return Font.fromEnum(Enum.Font.Sarpanch)
+		return Font.new("rbxasset://fonts/families/Sarpanch.json", Enum.FontWeight.ExtraBold)
 	end)
 	return ok and font or Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
 end)()
@@ -113,13 +113,13 @@ local buildTab = {}
 buildTab[1] = function(c)
 	label(c, HelpContent.Headline, 40, 24, 480, 140, 56, WHITE, BOLD, { lineHeight = 1.0 })
 	box(c, 40, 172, 90, 5, GOLD)
-	label(c, HelpContent.Objective[1], 40, 196, 470, 130, 23, PALE, REGULAR, { wrap = true })
-	label(c, HelpContent.Objective[2], 40, 282, 470, 100, 23, WHITE, BOLD, { wrap = true })
+	label(c, HelpContent.Objective[1], 40, 196, 490, 140, 19, PALE, REGULAR, { wrap = true })
+	label(c, HelpContent.Objective[2], 40, 340, 490, 100, 21, WHITE, BOLD, { wrap = true })
 	for i, step in HelpContent.Steps do
 		local y = 20 + 98 * (i - 1)
 		label(c, string.format("%02d", i), 580, y, 50, 40, 32, GOLD, BOLD)
 		label(c, step[1], 640, y, 500, 34, 28, WHITE, BOLD)
-		label(c, step[2], 640, y + 36, 500, 28, 20, PALE, REGULAR)
+		label(c, step[2], 640, y + 36, 500, 44, 16, PALE, REGULAR, { wrap = true })
 		if i < #HelpContent.Steps then
 			box(c, 580, y + 84, 560, 1, PALE, 0.75)
 		end
@@ -310,7 +310,7 @@ function HelpPanel.start()
 	label(stamp, "EVACUATION ORDER", 6, 6, 224, 72, 27, GOLD, HEAD, { wrap = true, align = Enum.TextXAlignment.Center, valign = Enum.TextYAlignment.Center, lineHeight = 0.95 })
 	box(welcome, 34, 212, 692, 4, DARK)
 	-- Las teclas de cada línea se resaltan con marcador amarillo
-	local HILITES = { "Shift", "3 to 7", "READY", "FIRE", "AIM", "RELOAD", "R", "E", "F", "Y" }
+	local HILITES = { "Shift", "3 to 7", "3 a 7", "READY", "FIRE", "AIM", "RELOAD", "R", "E", "F", "Y" }
 	local function highlight(text)
 		for _, token in HILITES do
 			text = string.gsub(text, "%f[%w]" .. token .. "%f[%W]", `<mark color="#f6c446" transparency="0.05">{token}</mark>`)
