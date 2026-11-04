@@ -214,6 +214,9 @@ return {
 			ZombieDeath = { "rbxassetid://138338177111300", 0.6, 0.85 }, -- 3D
 			TankRoar = { "rbxassetid://9113980319", 0.9, 0.55 }, -- 3D, al aparecer un Tanque
 			TankDeath = { "rbxassetid://94978851787238", 1, 1 }, -- 3D, al caer un Tanque
+			TankSlam = { "rbxassetid://126212934401370", 1, 0.55 }, -- 3D, el Tanque golpea el suelo (explosión grave; sin oír todavía)
+			AlertTank = { "rbxassetid://9113980319", 0.6, 0.8 }, -- 2D, aviso de que salió un Tanque
+			AlertGrabber = { "rbxassetid://9113980319", 0.45, 1.9 }, -- 2D, aviso de que salió un Atrapador
 			-- Atrapador (ids reutilizados con otro tono: sin oír todavía)
 			GrabberAim = { "rbxassetid://9113980319", 0.5, 1.9 }, -- 3D, empieza a apuntar
 			TongueShot = { "rbxassetid://75492070005287", 0.8, 1.6 }, -- 3D, sale la lengua
@@ -564,6 +567,21 @@ return {
 			AttackCooldown = 1.6,
 			AgentRadius = 2.2, -- grosor para calcular rutas (los demás usan 1.5)
 			ModelDetail = "full",
+			-- Golpe al suelo (server/Zombies.slam, client/TankSlamFx): levanta los brazos (Windup, con un círculo rojo en el suelo),
+			-- golpea y suelta una onda en área. Se esquiva alejándose del círculo o SALTANDO cuando llega la onda (Airborne).
+			Slam = {
+				FirstCooldown = 4, -- espera tras aparecer
+				Cooldown = 11, -- espera entre golpes
+				TriggerRange = 12, -- lo usa cuando hay alguien a esta distancia o menos
+				Windup = 1.05, -- segundos con los brazos arriba antes de golpear
+				Recover = 0.9, -- segundos quieto tras el golpe
+				Radius = 13, -- radio de la onda
+				DamageMult = 1.3, -- daño = su daño normal x esto (la dificultad ya lo multiplica)
+				Airborne = 3.2, -- quien esté a más de esta altura del suelo cuando llega la onda no recibe daño
+				Knock = 48, -- empujón horizontal que recibe quien lo sufre (cliente)
+				Lift = 26, -- y hacia arriba
+				Shake = 0.9, -- fuerza de la sacudida de cámara (0 a 1) cerca del golpe
+			},
 		},
 
 		-- El Atrapador (zombie-el-atrapador.glb): frágil, se mantiene a media distancia y caza con la lengua (server/Grabber, Config.Grabber).

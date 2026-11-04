@@ -226,6 +226,65 @@ local function climbBus(model, humanoid, root, bus, stillWanted)
 	return reached
 end
 
+-- Golpe al suelo del Tanque: se queda quieto con los brazos arriba (el cliente dibuja el círculo rojo y anima el cuerpo con SlamT0 /
+-- SlamDur / SlamPos), golpea (SlamHit) y la onda hiere a todos los que estén dentro del radio y sin estar en el aire.
+-- El empujón lo aplica cada cliente a su propio personaje (client/TankSlamFx).
+local function slam(model, humanoid, root, stats)
+	local S = Config.Zombie.Tank.Slam
+	local walkSpeed = humanoid.WalkSpeed
+	humanoid.WalkSpeed = 0
+	humanoid:MoveTo(root.Position)
+
+	local groundParams = RaycastParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Exclude
+	groundParams.FilterDescendantsInstances = { folder }
+	local ground = workspace:Raycast(root.Position, Vector3.new(0, -12, 0), groundParams)
+	local center = ground and ground.Position or (root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0))
+
+	model:SetAttribute("SlamPos", center)
+	model:SetAttribute("SlamDur", S.Windup)
+	model:SetAttribute("SlamT0", workspace:GetServerTimeNow())
+
+	local function finish()
+		model:SetAttribute("SlamT0", nil)
+		if humanoid.Health > 0 then
+			humanoid.WalkSpeed = walkSpeed
+		end
+	end
+
+	local windupEnd = os.clock() + S.Windup
+	while os.clock() < windupEnd do
+		if humanoid.Health <= 0 or not root.Parent then
+			finish()
+			return
+		end
+		task.wait(0.05)
+	end
+
+	model:SetAttribute("SlamHit", workspace:GetServerTimeNow())
+	local sightParams = RaycastParams.new()
+	sightParams.FilterType = Enum.RaycastFilterType.Exclude
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local playerHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+		if playerHumanoid and playerRoot and playerHumanoid.Health > 0 then
+			local flat = Vector3.new(playerRoot.Position.X - center.X, 0, playerRoot.Position.Z - center.Z).Magnitude
+			local airborne = playerHumanoid.FloorMaterial == Enum.Material.Air and playerRoot.Position.Y - center.Y > S.Airborne
+			if flat <= S.Radius and not airborne then
+				sightParams.FilterDescendantsInstances = { folder, character }
+				local blocked = workspace:Raycast(center + Vector3.new(0, 2, 0), playerRoot.Position - (center + Vector3.new(0, 2, 0)), sightParams)
+				if not blocked then
+					PlayerState.damage(player, stats.Damage * S.DamageMult)
+				end
+			end
+		end
+	end
+
+	task.wait(S.Recover)
+	finish()
+end
+
 local function think(humanoid, root, stats)
 	local path = PathfindingService:CreatePath({
 		AgentRadius = stats.AgentRadius or 1.5,
@@ -236,6 +295,8 @@ local function think(humanoid, root, stats)
 	sightParams.FilterType = Enum.RaycastFilterType.Exclude
 
 	local lastAttack = 0
+	local slamConfig = root.Parent:GetAttribute("Kind") == "Tank" and Config.Zombie.Tank.Slam or nil
+	local nextSlam = os.clock() + (slamConfig and slamConfig.FirstCooldown or 0)
 	-- Desfase aleatorio para que 25 zombies no calculen ruta en el mismo frame
 	local lastPath = os.clock() - math.random() * Config.Zombie.RepathInterval
 
@@ -261,6 +322,11 @@ local function think(humanoid, root, stats)
 		if target then
 			local now = os.clock()
 
+			if slamConfig and distance <= slamConfig.TriggerRange and now >= nextSlam then
+				slam(root.Parent, humanoid, root, stats)
+				nextSlam = os.clock() + slamConfig.Cooldown
+				continue
+			end
 			if distance <= stats.AttackRange then
 				humanoid:MoveTo(root.Position) -- se detiene para golpear
 				if now - lastAttack >= stats.AttackCooldown then

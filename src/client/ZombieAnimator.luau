@@ -196,6 +196,34 @@ local function animate(model, rig, dt)
 		end
 	end
 
+	-- Golpe al suelo del Tanque (SlamT0 / SlamDur): se inclina hacia atrás con los dos brazos en alto temblando, y baja los puños de
+	-- golpe contra el suelo; después se queda un momento doblado, recuperándose
+	local slamT0 = model:GetAttribute("SlamT0")
+	if slamT0 then
+		local dur = model:GetAttribute("SlamDur") or 1
+		local since = workspace:GetServerTimeNow() - slamT0
+		local up, down, recover = 0, 0, 0
+		if since < dur then
+			up = smooth(since / (dur * 0.8))
+		elseif since < dur + 0.14 then
+			up, down = 1 - (since - dur) / 0.14, (since - dur) / 0.14
+		else
+			down = 1
+			recover = smooth((since - dur - 0.14) / 0.8)
+		end
+		local armAngle = -2.75 * up + (0.25 * down - 0.0) * (1 - recover * 0.6)
+		local tremble = up * math.sin(t * 40) * 0.025
+		if m.torso then m.torso.Transform = rot(-0.28 * up + 0.5 * down * (1 - recover * 0.5), 0, tremble) end
+		if m.cabeza then m.cabeza.Transform = rot(-0.4 * up + 0.2 * down, 0, 0) end
+		if m.mandibula then m.mandibula.Transform = rot(pr.jaw + 0.9 * up + 0.5 * down * (1 - recover)) end
+		if m.brazo_izq then m.brazo_izq.Transform = rot(armAngle + tremble, 0, 0.15 * up) end
+		if m.brazo_der then m.brazo_der.Transform = rot(armAngle - tremble, 0, -0.15 * up) end
+		if m.antebrazo_izq then m.antebrazo_izq.Transform = rot(-0.5 * up) end
+		if m.antebrazo_der then m.antebrazo_der.Transform = rot(-0.5 * up) end
+		if m.pierna_izq then m.pierna_izq.Transform = rot(0.12 * down) end
+		if m.pierna_der then m.pierna_der.Transform = rot(-0.12 * down) end
+	end
+
 	-- Trepando a un autobús (el servidor publica ClimbStart / ClimbEnd): brazos arriba que se alternan, piernas pisando la
 	-- pared y el cuerpo inclinado hacia ella; al final se impulsa sobre el borde
 	local climbStart, climbEnd = model:GetAttribute("ClimbStart"), model:GetAttribute("ClimbEnd")
