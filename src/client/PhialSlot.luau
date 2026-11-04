@@ -7,18 +7,19 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Paper = require(script.Parent.PaperStyle)
 local PhialIcon = require(script.Parent.PhialIcon)
 local UiFit = require(script.Parent.UiFit)
 
 local player = Players.LocalPlayer
 local P = Config.Pharmacy
 
-local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local OSWALD_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
-local BG = Color3.fromRGB(13, 13, 15)
-local CREAM = Color3.fromRGB(236, 230, 218)
-local GRAY = Color3.fromRGB(150, 148, 144)
-local GOLD = Color3.fromRGB(246, 196, 70)
+local OSWALD = Paper.Head
+local OSWALD_LIGHT = Paper.Typewriter
+local BG = Paper.Paper
+local CREAM = Paper.Ink -- texto principal (tinta)
+local GRAY = Paper.Soft
+local GOLD = Paper.Hilite
 
 local PhialSlot = {}
 
@@ -54,7 +55,7 @@ function PhialSlot.start()
 	end
 	card.Size = UDim2.fromOffset(168, 218)
 	card.BackgroundColor3 = BG
-	card.BackgroundTransparency = 0.08
+	card.BackgroundTransparency = 0
 	card.BorderSizePixel = 0
 	card.Text = ""
 	card.Visible = false
@@ -74,7 +75,7 @@ function PhialSlot.start()
 	keyBadge.BorderSizePixel = 0
 	keyBadge.Parent = card
 	Instance.new("UICorner", keyBadge).CornerRadius = UDim.new(0, 5)
-	label(keyBadge, "Z", UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 20, Color3.fromRGB(16, 16, 16))
+	label(keyBadge, "Z", UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 20, Paper.Ink)
 
 	local outer = Instance.new("Frame")
 	outer.Size = UDim2.fromOffset(104, 104)
@@ -95,7 +96,7 @@ function PhialSlot.start()
 	local limit = Instance.new("UITextSizeConstraint")
 	limit.MaxTextSize = 26
 	limit.Parent = nameLabel
-	local hint = label(card, "TAP OR PRESS Z", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 188), 15, GRAY, nil, OSWALD_LIGHT)
+	local hint = label(card, "TAP OR PRESS Z", UDim2.new(1, 0, 0, 20), UDim2.fromOffset(0, 188), 13, GRAY, nil, OSWALD_LIGHT)
 
 	local shownId = nil
 	local icon = nil
@@ -110,7 +111,7 @@ function PhialSlot.start()
 		card.Visible = true
 		if shownId ~= id then
 			shownId = id
-			stroke.Color = def.Color
+			stroke.Color = Paper.onPaper(def.Color)
 			outer.BackgroundColor3 = Color3.new(def.Color.R * 0.3, def.Color.G * 0.3, def.Color.B * 0.3)
 			inner.BackgroundColor3 = Color3.new(def.Color.R * 0.5, def.Color.G * 0.5, def.Color.B * 0.5)
 			if icon then
@@ -120,7 +121,7 @@ function PhialSlot.start()
 			nameLabel.Text = def.Upper
 		end
 		local usable = player:GetAttribute("State") == "Normal" and not player:GetAttribute("Injecting")
-		card.BackgroundTransparency = usable and 0.08 or 0.5
+		card.BackgroundTransparency = usable and 0 or 0.4
 		hint.Text = usable and "TAP OR PRESS Z" or "CAN'T DO THAT NOW"
 	end
 

@@ -8,14 +8,15 @@ local TweenService = game:GetService("TweenService")
 
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local UiFit = require(script.Parent.UiFit)
+local Paper = require(script.Parent.PaperStyle)
 
 local player = Players.LocalPlayer
 
-local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local OSWALD_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
-local BG = Color3.fromRGB(13, 13, 15)
-local CREAM = Color3.fromRGB(238, 232, 220)
-local GRAY = Color3.fromRGB(150, 148, 144)
+local OSWALD = Paper.Head
+local OSWALD_LIGHT = Paper.Typewriter
+local BG = Paper.Paper
+local CREAM = Paper.Ink -- texto principal (tinta)
+local GRAY = Paper.Soft
 
 local MutatorHud = {}
 
@@ -92,13 +93,13 @@ function MutatorHud.start()
 		chip.Text = ""
 		chip.Size = UDim2.fromOffset(228, 56)
 		chip.BackgroundColor3 = BG
-		chip.BackgroundTransparency = 0.12
+		chip.BackgroundTransparency = 0
 		chip.BorderSizePixel = 0
 		chip.ClipsDescendants = true
 		chip.Parent = holder
 		Instance.new("UICorner", chip).CornerRadius = UDim.new(0, 8)
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = rarity.Color
+		stroke.Color = Paper.onPaper(rarity.Color)
 		stroke.Thickness = 2
 		stroke.Transparency = 0.15
 		stroke.Parent = chip
@@ -113,7 +114,7 @@ function MutatorHud.start()
 		badge.BorderSizePixel = 0
 		badge.Parent = chip
 		Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 7)
-		local letters = label(badge, monogram(id), UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 22, BG)
+		local letters = label(badge, monogram(id), UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 22, Paper.Ink)
 		letters.TextXAlignment = Enum.TextXAlignment.Center
 
 		local name = label(chip, def.Upper, UDim2.fromOffset(170, 26), UDim2.fromOffset(56, 6), 21, CREAM)
@@ -121,8 +122,8 @@ function MutatorHud.start()
 		local limit = Instance.new("UITextSizeConstraint")
 		limit.MaxTextSize = 21
 		limit.Parent = name
-		local rarityLabel = label(chip, `{rarity.Text}  ·  {bonus > 0 and `+{bonus} % XP` or "NO BONUS"}`, UDim2.fromOffset(170, 16), UDim2.fromOffset(56, 33), 13, rarity.Color)
-		local description = label(chip, def.Description, UDim2.fromOffset(212, 52), UDim2.fromOffset(8, 62), 14, Color3.fromRGB(196, 192, 184), OSWALD_LIGHT)
+		local rarityLabel = label(chip, `{rarity.Text}  ·  {bonus > 0 and `+{bonus} % XP` or "NO BONUS"}`, UDim2.fromOffset(170, 16), UDim2.fromOffset(56, 33), 12, Paper.onPaper(rarity.Color), OSWALD_LIGHT)
+		local description = label(chip, def.Description, UDim2.fromOffset(212, 52), UDim2.fromOffset(8, 62), 12, Paper.Soft, OSWALD_LIGHT)
 		description.TextWrapped = true
 		description.TextYAlignment = Enum.TextYAlignment.Top
 

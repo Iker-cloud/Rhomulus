@@ -9,11 +9,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Controls = require(script.Parent.Controls)
 local Performance = require(script.Parent.Performance)
 local Sfx = require(script.Parent.Sfx)
+local Paper = require(script.Parent.PaperStyle)
 
 local player = Players.LocalPlayer
-local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local GOLD = Color3.fromRGB(246, 196, 70)
-local DARK = Color3.fromRGB(18, 18, 20)
+local OSWALD = Paper.Head
+local GOLD = Paper.Red -- acento: rojo tinta
 
 local SettingsPanel = {}
 
@@ -28,12 +28,12 @@ function SettingsPanel.isOpen()
 	return isOpen
 end
 
-local function label(parent, str, size, position, textSize, color, align)
+local function label(parent, str, size, position, textSize, color, align, font)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Size = size
 	l.Position = position
-	l.FontFace = OSWALD
+	l.FontFace = font or OSWALD
 	l.TextSize = textSize
 	l.TextColor3 = color
 	l.Text = str
@@ -47,11 +47,11 @@ local function button(parent, str, size, position)
 	b.AutoButtonColor = true
 	b.Size = size
 	b.Position = position
-	b.BackgroundColor3 = Color3.fromRGB(44, 44, 48)
+	b.BackgroundColor3 = Paper.Ink
 	b.BorderSizePixel = 0
 	b.FontFace = OSWALD
 	b.TextSize = 28
-	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextColor3 = Paper.Hilite
 	b.Text = str
 	b.Parent = parent
 	return b
@@ -70,14 +70,9 @@ function SettingsPanel.start()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.fromOffset(360, 340)
-	panel.BackgroundColor3 = DARK
-	panel.BackgroundTransparency = 0.05
-	panel.BorderSizePixel = 0
+	panel.Rotation = -0.4
 	panel.Parent = gui
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = GOLD
-	stroke.Thickness = 2
-	stroke.Parent = panel
+	Paper.paper(panel, 3)
 	-- En pantallas muy bajas el panel se achica para que quepa
 	local scale = Instance.new("UIScale")
 	scale.Parent = panel
@@ -92,17 +87,19 @@ function SettingsPanel.start()
 	local close = button(panel, "X", UDim2.fromOffset(40, 36), UDim2.new(1, -46, 0, 6))
 	close.TextSize = 22
 
-	label(panel, "SENSITIVITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 56), 18, Color3.fromRGB(215, 210, 200))
+	label(panel, "SENSITIVITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 56), 18, Paper.Ink)
 	local minus = button(panel, "−", UDim2.fromOffset(64, 52), UDim2.fromOffset(16, 86))
 	local plus = button(panel, "+", UDim2.fromOffset(64, 52), UDim2.new(1, -80, 0, 86))
-	local value = label(panel, "", UDim2.new(1, -176, 0, 52), UDim2.fromOffset(88, 86), 30, Color3.new(1, 1, 1), Enum.TextXAlignment.Center)
+	local value = label(panel, "", UDim2.new(1, -176, 0, 52), UDim2.fromOffset(88, 86), 30, Paper.Ink, Enum.TextXAlignment.Center)
 	label(
 		panel,
 		Controls.isTouch() and "How far the camera turns when you drag your finger" or "How far the camera turns with the mouse",
 		UDim2.new(1, -32, 0, 40),
 		UDim2.fromOffset(16, 148),
-		15,
-		Color3.fromRGB(150, 146, 140)
+		14,
+		Paper.Soft,
+		nil,
+		Paper.Typewriter
 	).TextWrapped = true
 
 	local function refresh()
@@ -112,12 +109,12 @@ function SettingsPanel.start()
 	Controls.sensitivityChanged:Connect(refresh)
 
 	-- Calidad gráfica: AUTO / ALTA / MEDIA / BAJA
-	label(panel, "GRAPHICS QUALITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 196), 18, Color3.fromRGB(215, 210, 200))
+	label(panel, "GRAPHICS QUALITY", UDim2.new(1, -32, 0, 24), UDim2.fromOffset(16, 196), 18, Paper.Ink)
 	local qualityPrev = button(panel, "<", UDim2.fromOffset(64, 44), UDim2.fromOffset(16, 222))
 	qualityPrev.Name = "QualityPrev"
 	local qualityNext = button(panel, ">", UDim2.fromOffset(64, 44), UDim2.new(1, -80, 0, 222))
 	qualityNext.Name = "QualityNext"
-	local quality = label(panel, "", UDim2.new(1, -176, 0, 44), UDim2.fromOffset(88, 222), 24, Color3.new(1, 1, 1), Enum.TextXAlignment.Center)
+	local quality = label(panel, "", UDim2.new(1, -176, 0, 44), UDim2.fromOffset(88, 222), 24, Paper.Ink, Enum.TextXAlignment.Center)
 	quality.TextYAlignment = Enum.TextYAlignment.Center
 	local function refreshQuality()
 		quality.Text = Performance.levelName()

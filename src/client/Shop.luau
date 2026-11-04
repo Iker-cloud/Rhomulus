@@ -11,20 +11,21 @@ local Difficulties = require(ReplicatedStorage.Shared.Difficulties)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local UiFit = require(script.Parent.UiFit)
+local Paper = require(script.Parent.PaperStyle)
 local player = Players.LocalPlayer
-local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local GOLD = Color3.fromRGB(246, 196, 70)
-local DARK = Color3.fromRGB(18, 18, 20)
+local OSWALD = Paper.Head
+local GOLD = Paper.Red -- acento: rojo tinta
+local ROW = Color3.fromRGB(214, 198, 160)
 local CLOSE_DISTANCE = 22
 
 local Shop = {}
 
-local function label(parent, str, size, position, textSize, color, align)
+local function label(parent, str, size, position, textSize, color, align, font)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Size = size
 	l.Position = position
-	l.FontFace = OSWALD
+	l.FontFace = font or OSWALD
 	l.TextSize = textSize
 	l.TextColor3 = color
 	l.Text = str
@@ -52,27 +53,22 @@ function Shop.start()
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
 	panel.Size = UDim2.fromOffset(420, 70 + #entries * 52)
-	panel.BackgroundColor3 = DARK
-	panel.BackgroundTransparency = 0.05
-	panel.BorderSizePixel = 0
+	panel.Rotation = -0.4
 	panel.Visible = false
 	panel.Parent = gui
+	Paper.paper(panel, 3)
 	UiFit.fitPanel(panel, 420, 70 + #entries * 52)
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = GOLD
-	stroke.Thickness = 2
-	stroke.Parent = panel
 
 	label(panel, "SUPPLIES", UDim2.new(1, -60, 0, 34), UDim2.fromOffset(16, 8), 28, GOLD)
-	local latas = label(panel, "", UDim2.new(1, -60, 0, 18), UDim2.fromOffset(16, 40), 16, Color3.fromRGB(215, 210, 200))
+	local latas = label(panel, "", UDim2.new(1, -60, 0, 18), UDim2.fromOffset(16, 40), 14, Paper.Soft, nil, Paper.Typewriter)
 	local close = Instance.new("TextButton")
 	close.Size = UDim2.fromOffset(34, 34)
 	close.Position = UDim2.new(1, -44, 0, 8)
-	close.BackgroundColor3 = Color3.fromRGB(40, 40, 44)
+	close.BackgroundColor3 = Paper.Ink
 	close.BorderSizePixel = 0
 	close.FontFace = OSWALD
 	close.TextSize = 20
-	close.TextColor3 = Color3.new(1, 1, 1)
+	close.TextColor3 = Color3.fromRGB(240, 232, 214)
 	close.Text = "X"
 	close.Parent = panel
 
@@ -80,20 +76,24 @@ function Shop.start()
 		local row = Instance.new("Frame")
 		row.Position = UDim2.fromOffset(12, 66 + (i - 1) * 52)
 		row.Size = UDim2.new(1, -24, 0, 46)
-		row.BackgroundColor3 = Color3.fromRGB(34, 34, 38)
+		row.BackgroundColor3 = ROW
 		row.BorderSizePixel = 0
 		row.Parent = panel
-		label(row, entry.name, UDim2.fromOffset(150, 24), UDim2.fromOffset(12, 4), 20, Color3.new(1, 1, 1))
-		local count = label(row, entry.note or "", UDim2.fromOffset(160, 16), UDim2.fromOffset(12, 26), 13, Color3.fromRGB(150, 146, 140))
+		label(row, entry.name, UDim2.fromOffset(150, 24), UDim2.fromOffset(12, 4), 20, Paper.Ink)
+		local count = label(row, entry.note or "", UDim2.fromOffset(160, 16), UDim2.fromOffset(12, 26), 12, Paper.Soft, nil, Paper.Typewriter)
+		count.TextScaled = true
+		local fitNote = Instance.new("UITextSizeConstraint")
+		fitNote.MaxTextSize = 12
+		fitNote.Parent = count
 		local cost = label(row, `{entry.cost} CANS`, UDim2.fromOffset(90, 46), UDim2.fromOffset(176, 0), 18, GOLD, Enum.TextXAlignment.Right)
 		local button = Instance.new("TextButton")
 		button.Size = UDim2.fromOffset(86, 32)
 		button.Position = UDim2.new(1, -96, 0, 7)
-		button.BackgroundColor3 = GOLD
+		button.BackgroundColor3 = Paper.Ink
 		button.BorderSizePixel = 0
 		button.FontFace = OSWALD
 		button.TextSize = 18
-		button.TextColor3 = Color3.fromRGB(16, 16, 16)
+		button.TextColor3 = Paper.Hilite
 		button.Text = "BUY"
 		button.Parent = row
 		button.Activated:Connect(function()
@@ -132,8 +132,9 @@ function Shop.start()
 					r.cost.Text = `{price} CANS`
 					local affordable = points >= price
 					r.button.Text = full and "MAX" or "BUY"
-					r.button.BackgroundColor3 = (full or not affordable) and Color3.fromRGB(80, 78, 74) or GOLD
-					r.cost.TextColor3 = affordable and GOLD or Color3.fromRGB(200, 90, 80)
+					r.button.BackgroundColor3 = (full or not affordable) and Color3.fromRGB(150, 138, 118) or Paper.Ink
+					r.button.TextColor3 = (full or not affordable) and Paper.Paper or Paper.Hilite
+					r.cost.TextColor3 = affordable and Paper.Ink or Color3.fromRGB(150, 40, 36)
 				end
 			end)
 		end
