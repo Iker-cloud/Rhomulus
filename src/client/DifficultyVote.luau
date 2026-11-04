@@ -11,13 +11,13 @@ local Progress = require(ReplicatedStorage.Shared.Progress)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
 local Controls = require(script.Parent.Controls)
 local Sfx = require(script.Parent.Sfx)
+local Paper = require(script.Parent.PaperStyle)
 
 local UiFit = require(script.Parent.UiFit)
 local player = Players.LocalPlayer
-local OSWALD = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Bold)
-local OSWALD_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWeight.Regular)
-local DARK = Color3.fromRGB(18, 18, 20)
-local PALE = Color3.fromRGB(215, 210, 200)
+local OSWALD = Paper.Head -- títulos en Sarpanch
+local OSWALD_LIGHT = Paper.Typewriter -- textos en máquina de escribir
+local PALE = Paper.Soft
 local KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four }
 local ACTION = "DifficultyVoteKeys"
 local ROW_HEIGHT = 84
@@ -56,18 +56,13 @@ function DifficultyVote.start()
 	panel.AnchorPoint = Vector2.new(0, 0.5)
 	panel.Position = UDim2.new(0, 20, 0.5, compact and -30 or 60) -- bajo el aviso de la radio (en pantallas bajas más arriba: abajo está la jeringa)
 	panel.Size = UDim2.fromOffset(compact and 260 or 340, 64 + #Difficulties.Order * rowHeight)
-	panel.BackgroundColor3 = DARK
-	panel.BackgroundTransparency = 0.08
-	panel.BorderSizePixel = 0
+	panel.Rotation = -0.5
 	panel.Visible = false
 	panel.Parent = gui
+	Paper.paper(panel, 3)
 	UiFit.scale(panel)
-	local panelStroke = Instance.new("UIStroke")
-	panelStroke.Color = Color3.fromRGB(246, 196, 70)
-	panelStroke.Thickness = 2
-	panelStroke.Parent = panel
-	label(panel, "DIFFICULTY", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Color3.fromRGB(246, 196, 70))
-	label(panel, Controls.isTouch() and "Tap a difficulty to vote" or "Press 1 to 4 to vote", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 15, PALE, nil, OSWALD_LIGHT)
+	label(panel, "DIFFICULTY", UDim2.new(1, -24, 0, 30), UDim2.fromOffset(16, 8), 26, Paper.Red)
+	label(panel, Controls.isTouch() and "Tap a difficulty to vote" or "Press 1 to 4 to vote", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(16, 38), 14, PALE, nil, OSWALD_LIGHT)
 
 	local rows = {}
 	for i, id in Difficulties.Order do
@@ -77,18 +72,18 @@ function DifficultyVote.start()
 		row.Text = ""
 		row.Position = UDim2.fromOffset(10, 64 + (i - 1) * rowHeight)
 		row.Size = UDim2.new(1, -20, 0, rowHeight - 6)
-		row.BackgroundColor3 = Color3.fromRGB(34, 34, 38)
+		row.BackgroundColor3 = Color3.fromRGB(214, 198, 160)
 		row.BorderSizePixel = 0
 		row.Parent = panel
 		local stroke = Instance.new("UIStroke")
-		stroke.Color = d.Color
-		stroke.Thickness = 2
+		stroke.Color = Paper.onPaper(d.Color)
+		stroke.Thickness = 3
 		stroke.Transparency = 1
 		stroke.Parent = row
-		label(row, `{i}`, UDim2.fromOffset(20, 24), UDim2.fromOffset(8, 4), 20, Color3.fromRGB(150, 146, 140))
-		local nameLabel = label(row, d.Upper, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, d.Color)
-		local count = label(row, "0", UDim2.fromOffset(90, 26), UDim2.new(1, -98, 0, 3), 22, Color3.new(1, 1, 1), Enum.TextXAlignment.Right)
-		local desc = label(row, d.Description, UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 30), 13, PALE, nil, OSWALD_LIGHT)
+		label(row, `{i}`, UDim2.fromOffset(20, 24), UDim2.fromOffset(8, 4), 20, PALE)
+		local nameLabel = label(row, d.Upper, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(30, 3), 22, Paper.onPaper(d.Color))
+		local count = label(row, "0", UDim2.fromOffset(90, 26), UDim2.new(1, -98, 0, 3), 22, Paper.Ink, Enum.TextXAlignment.Right)
+		local desc = label(row, d.Description, UDim2.new(1, -20, 0, 54), UDim2.fromOffset(10, 30), 12, PALE, nil, OSWALD_LIGHT)
 		desc.TextWrapped = true
 		desc.Visible = not compact
 		row.Activated:Connect(function()
@@ -124,12 +119,13 @@ function DifficultyVote.start()
 	local tag = Instance.new("TextLabel")
 	tag.AnchorPoint = Vector2.new(0.5, 0)
 	tag.Position = UDim2.new(0.5, 0, 0, 8)
-	tag.Size = UDim2.fromOffset(280, 24)
-	tag.BackgroundTransparency = 1
+	tag.Size = UDim2.fromOffset(280, 28)
+	tag.Rotation = -0.8
 	tag.FontFace = OSWALD
 	tag.TextSize = 18
-	tag.TextStrokeTransparency = 0.5
+	tag.TextStrokeTransparency = 1
 	tag.Parent = gui
+	Paper.paper(tag, 2)
 
 	-- Mutadores de la ronda, bajo la etiqueta de dificultad: "MUTADORES · APAGÓN TOTAL · +25 % XP"
 	local mutatorTag = Instance.new("TextLabel")
@@ -151,7 +147,7 @@ function DifficultyVote.start()
 		panel.Visible = voting
 		local d = Difficulties.get(workspace:GetAttribute("Difficulty"))
 		tag.Text = `DIFFICULTY · {d.Upper}`
-		tag.TextColor3 = d.Color
+		tag.TextColor3 = d.Color:Lerp(Paper.Ink, 0.6)
 		-- La etiqueta se esconde con la tarjeta de caído y la del espectador (arriba al centro) y con la pantalla de resultados
 		local stage = workspace:GetAttribute("Stage")
 		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State"))

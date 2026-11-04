@@ -5,17 +5,13 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local UiFit = require(script.Parent.UiFit)
+local Paper = require(script.Parent.PaperStyle)
 local localPlayer = Players.LocalPlayer
 
-local YELLOW = Color3.fromRGB(255, 196, 30)
-local BLACK = Color3.fromRGB(18, 18, 18)
-local WHITE = Color3.new(1, 1, 1)
 local GAIN_SHOW_TIME = 1.5 -- segundos que se ve el "+25" junto al nombre
 local ROW_HEIGHT = 24
 
 local ContribHud = {}
-
-local italic = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy, Enum.FontStyle.Italic)
 
 function ContribHud.start()
 	local gui = Instance.new("ScreenGui")
@@ -29,10 +25,9 @@ function ContribHud.start()
 	panel.Position = UDim2.new(1, -24, 0, 160) -- justo debajo del cartel de LATAS
 	panel.Size = UDim2.fromOffset(210, 0)
 	panel.AutomaticSize = Enum.AutomaticSize.Y
-	panel.BackgroundColor3 = BLACK
-	panel.BackgroundTransparency = 0.2
-	panel.BorderSizePixel = 0
+	panel.Rotation = 0.6
 	panel.Parent = gui
+	Paper.paper(panel, 3)
 	UiFit.scale(panel)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 6)
@@ -44,18 +39,14 @@ function ContribHud.start()
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Padding = UDim.new(0, 2)
 	layout.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = YELLOW
-	stroke.Thickness = 2
-	stroke.Parent = panel
 
 	local title = Instance.new("TextLabel")
 	title.LayoutOrder = -1000000
 	title.BackgroundTransparency = 1
 	title.Size = UDim2.new(1, 0, 0, 16)
-	title.FontFace = italic
-	title.TextSize = 14
-	title.TextColor3 = YELLOW
+	title.FontFace = Paper.Head
+	title.TextSize = 15
+	title.TextColor3 = Paper.Red
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Text = "TEAM CONTRIBUTION"
 	title.Parent = panel
@@ -71,9 +62,9 @@ function ContribHud.start()
 		local name = Instance.new("TextLabel")
 		name.BackgroundTransparency = 1
 		name.Size = UDim2.new(0.55, 0, 1, 0)
-		name.FontFace = italic
-		name.TextSize = 16
-		name.TextColor3 = player == localPlayer and YELLOW or WHITE
+		name.FontFace = player == localPlayer and Paper.Head or Paper.Typewriter
+		name.TextSize = 15
+		name.TextColor3 = player == localPlayer and Paper.Red or Paper.Ink
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextTruncate = Enum.TextTruncate.AtEnd
 		name.Text = player.DisplayName
@@ -84,9 +75,9 @@ function ContribHud.start()
 		gain.AnchorPoint = Vector2.new(1, 0)
 		gain.Position = UDim2.new(0.8, 0, 0, 0)
 		gain.Size = UDim2.new(0.25, 0, 1, 0)
-		gain.FontFace = italic
+		gain.FontFace = Paper.Head
 		gain.TextSize = 14
-		gain.TextColor3 = Color3.fromRGB(120, 230, 120)
+		gain.TextColor3 = Paper.Green
 		gain.TextXAlignment = Enum.TextXAlignment.Right
 		gain.Text = ""
 		gain.Parent = frame
@@ -96,9 +87,9 @@ function ContribHud.start()
 		number.AnchorPoint = Vector2.new(1, 0)
 		number.Position = UDim2.new(1, 0, 0, 0)
 		number.Size = UDim2.new(0.25, 0, 1, 0)
-		number.FontFace = italic
-		number.TextSize = 18
-		number.TextColor3 = WHITE
+		number.FontFace = Paper.Head
+		number.TextSize = 19
+		number.TextColor3 = Paper.Ink
 		number.TextXAlignment = Enum.TextXAlignment.Right
 		number.Text = "0"
 		number.Parent = frame
