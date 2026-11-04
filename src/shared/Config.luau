@@ -624,16 +624,18 @@ return {
 		--   oleadas: cada WaveEvery segundos sale una horda de WaveSize (al 100%: se escala con jugadores y dificultad);
 		--   en los últimos FinalSeconds salen cada FinalEvery y son de FinalSize
 		Extraction = {
-			CapStart = 0.8,
-			CapEnd = 1.3,
-			IntervalStart = 2.5,
-			IntervalEnd = 1.0,
-			FirstWave = 12, -- segundos después de llamar a la radio
-			WaveEvery = 22,
-			WaveSize = 10,
-			FinalSeconds = 60,
-			FinalEvery = 12,
-			FinalSize = 16,
+			CapStart = 1.0,
+			CapEnd = 1.6,
+			MinAlive = 14, -- suelo del tope de vivos (con pocos jugadores el normal es muy bajo); también se multiplica por la presión
+			MinHordeScale = 0.7, -- las oleadas nunca bajan de esta fracción de su tamaño, aunque juegue 1 solo
+			IntervalStart = 2.0,
+			IntervalEnd = 0.7,
+			FirstWave = 10, -- segundos después de llamar a la radio
+			WaveEvery = 16,
+			WaveSize = 14,
+			FinalSeconds = 70,
+			FinalEvery = 9,
+			FinalSize = 22,
 		},
 		FailedSpawnRetry = 0.4, -- si no hay punto libre, reintenta pronto en vez de esperar la pausa entera
 		MaxFailedSpawns = 4, -- si no hay punto oculto tantas veces seguidas, se relaja la regla de vista

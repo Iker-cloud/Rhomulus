@@ -11,6 +11,7 @@
 --   TankEvery                      multiplica el tiempo entre Tanques de la extracción (menos = más seguidos)
 --   ExtraGrabbers                  Atrapadores vivos a la vez de más (el máximo base es 1, 2 con 3 o más jugadores)
 --   GrabberEvery                   multiplica la espera entre lenguetazos y entre Atrapadores (menos = más seguidos)
+--   ExtractPressure                multiplica la presión de la extracción (tope de vivos, tamaño y frecuencia de oleadas, ritmo de aparición)
 --   SpawnInterval                  multiplica la pausa entre apariciones (menos = llegan más rápido)
 --   Cost                           multiplica los precios (caja, munición y objetos)
 --   Reward                         multiplica las latas que se ganan
@@ -37,6 +38,7 @@ local Difficulties = {
 		TankEvery = 1.5,
 		ExtraGrabbers = 0,
 		GrabberEvery = 1.4,
+		ExtractPressure = 0.9,
 		SpawnInterval = 1.3,
 		Cost = 0.8,
 		Reward = 1,
@@ -60,6 +62,7 @@ local Difficulties = {
 		TankEvery = 1,
 		ExtraGrabbers = 0,
 		GrabberEvery = 1,
+		ExtractPressure = 1.3,
 		SpawnInterval = 1,
 		Cost = 1,
 		Reward = 1,
@@ -83,6 +86,7 @@ local Difficulties = {
 		TankEvery = 0.75,
 		ExtraGrabbers = 0,
 		GrabberEvery = 0.85,
+		ExtractPressure = 1.7,
 		SpawnInterval = 0.8,
 		Cost = 1.25,
 		Reward = 1.15,
@@ -106,6 +110,7 @@ local Difficulties = {
 		TankEvery = 0.55,
 		ExtraGrabbers = 1,
 		GrabberEvery = 0.7,
+		ExtractPressure = 2.1,
 		SpawnInterval = 0.65,
 		Cost = 1.5,
 		Reward = 1.3,

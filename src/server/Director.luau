@@ -79,7 +79,8 @@ local function getMaxAlive()
 	local max = getScaling().MaxAlive
 	if boost then
 		local E = Config.Director.Extraction
-		max = math.floor(max * lerp(E.CapStart, E.CapEnd, extractionProgress()) + 0.5)
+		local pressure = Difficulty.get().ExtractPressure or 1
+		max = math.floor(math.max(max, E.MinAlive) * lerp(E.CapStart, E.CapEnd, extractionProgress()) * pressure + 0.5)
 		max = math.clamp(max, 1, Difficulties.MaxAliveCap)
 	end
 	return max
@@ -155,7 +156,8 @@ end
 
 -- Oleada de la extracción: una horda de golpe (sin Tanque; esos van aparte), respetando el tope de vivos
 local function spawnWave(size)
-	local count = math.max(2, math.floor(size * getScaling().HordeScale + 0.5))
+	local scale = math.max(getScaling().HordeScale, Config.Director.Extraction.MinHordeScale) -- las oleadas de la extracción nunca son diminutas
+	local count = math.max(2, math.floor(size * scale + 0.5))
 	for _ = 1, count do
 		if not boost or Zombies.getAlive() >= getMaxAlive() then
 			break
@@ -238,7 +240,7 @@ function Director.start()
 			local pause = Config.Director.SpawnInterval
 			if boost then
 				local E = Config.Director.Extraction
-				pause = lerp(E.IntervalStart, E.IntervalEnd, extractionProgress())
+				pause = lerp(E.IntervalStart, E.IntervalEnd, extractionProgress()) / (Difficulty.get().ExtractPressure or 1)
 			end
 			pause *= Difficulty.get().SpawnInterval
 			if zone and #Players:GetPlayers() > 0 then
@@ -271,8 +273,9 @@ function Director.start()
 				local remaining = Config.Game.ExtractionTime - (os.clock() - boostStart)
 				if remaining > 0 then
 					local final = remaining <= E.FinalSeconds
-					nextWave = os.clock() + (final and E.FinalEvery or E.WaveEvery)
-					task.spawn(spawnWave, final and E.FinalSize or E.WaveSize)
+					local pressure = Difficulty.get().ExtractPressure or 1
+					nextWave = os.clock() + (final and E.FinalEvery or E.WaveEvery) / math.sqrt(pressure)
+					task.spawn(spawnWave, math.floor((final and E.FinalSize or E.WaveSize) * pressure + 0.5))
 				else
 					nextWave = math.huge
 				end
