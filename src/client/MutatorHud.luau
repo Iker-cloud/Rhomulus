@@ -111,10 +111,20 @@ function MutatorHud.start()
 		badge.Position = UDim2.fromOffset(8, 9)
 		badge.Size = UDim2.fromOffset(38, 38)
 		badge.BackgroundColor3 = def.Color
+		badge.BackgroundTransparency = def.Icon and 1 or 0
 		badge.BorderSizePixel = 0
 		badge.Parent = chip
 		Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 7)
 		local letters = label(badge, monogram(id), UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 22, Paper.Ink)
+		if def.Icon then
+			letters.Visible = false
+			local image = Instance.new("ImageLabel")
+			image.BackgroundTransparency = 1
+			image.Size = UDim2.fromScale(1, 1)
+			image.Image = def.Icon
+			image.ScaleType = Enum.ScaleType.Fit
+			image.Parent = badge
+		end
 		letters.TextXAlignment = Enum.TextXAlignment.Center
 
 		local name = label(chip, def.Upper, UDim2.fromOffset(170, 26), UDim2.fromOffset(56, 6), 21, CREAM)

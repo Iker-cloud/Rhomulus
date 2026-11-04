@@ -160,6 +160,12 @@ function MutatorWheel.start()
 		local badge = box(card, UDim2.fromOffset(64, 64), UDim2.fromOffset(18, 62), CREAM)
 		Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 8)
 		local badgeText = label(badge, "", UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), 32, BG, Enum.TextXAlignment.Center)
+		local badgeImage = Instance.new("ImageLabel")
+		badgeImage.BackgroundTransparency = 1
+		badgeImage.Size = UDim2.fromScale(1, 1)
+		badgeImage.ScaleType = Enum.ScaleType.Fit
+		badgeImage.Visible = false
+		badgeImage.Parent = badge
 		local name = label(card, "", UDim2.fromOffset(300, 48), UDim2.fromOffset(100, 50), 42, CREAM)
 		name.TextScaled = true
 		local limit = Instance.new("UITextSizeConstraint")
@@ -172,7 +178,7 @@ function MutatorWheel.start()
 		local bonus = label(card, "", UDim2.fromOffset(110, 60), UDim2.fromOffset(RW - 128, 52), 46, CREAM, Enum.TextXAlignment.Right)
 		local fresh = label(card, "", UDim2.fromOffset(130, 44), UDim2.fromOffset(RW - 148, 122), 17, GOLD, Enum.TextXAlignment.Right)
 		fresh.TextWrapped = true
-		cards[index] = { frame = card, stroke = stroke, badge = badge, badgeText = badgeText, name = name, rarity = rarity, desc = desc, bonus = bonus, fresh = fresh }
+		cards[index] = { frame = card, stroke = stroke, badge = badge, badgeText = badgeText, badgeImage = badgeImage, name = name, rarity = rarity, desc = desc, bonus = bonus, fresh = fresh }
 	end
 
 	box(panel, UDim2.fromOffset(RW, 2), UDim2.fromOffset(RX, 636), RED)
@@ -264,6 +270,20 @@ function MutatorWheel.start()
 			text.Text = monogram(slice.id)
 			text.ZIndex = 3
 			text.Parent = wheel
+			local sliceIcon = Mutators[slice.id].Icon
+			if sliceIcon then
+				text.Visible = false
+				local image = Instance.new("ImageLabel")
+				image.AnchorPoint = Vector2.new(0.5, 0.5)
+				image.BackgroundTransparency = 1
+				image.Position = text.Position
+				image.Size = UDim2.fromOffset(size + 14, size + 14)
+				image.Rotation = mid
+				image.Image = sliceIcon
+				image.ScaleType = Enum.ScaleType.Fit
+				image.ZIndex = 3
+				image.Parent = wheel
+			end
 		end
 		return slices
 	end
@@ -273,7 +293,10 @@ function MutatorWheel.start()
 		local rarity = Mutators.Rarities[def.Rarity]
 		card.stroke.Color = rarity.Color
 		card.badge.BackgroundColor3 = def.Color
-		card.badgeText.Text = monogram(id)
+		card.badge.BackgroundTransparency = def.Icon and 1 or 0
+		card.badgeText.Text = def.Icon and "" or monogram(id)
+		card.badgeImage.Visible = def.Icon ~= nil
+		card.badgeImage.Image = def.Icon or ""
 		card.name.Text = def.Upper
 		card.rarity.Text = spaced(rarity.Text)
 		card.rarity.TextColor3 = rarity.Color

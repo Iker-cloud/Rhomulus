@@ -215,6 +215,8 @@ return {
 			TankRoar = { "rbxassetid://9113980319", 0.9, 0.55 }, -- 3D, al aparecer un Tanque
 			TankDeath = { "rbxassetid://94978851787238", 1, 1 }, -- 3D, al caer un Tanque
 			TankSlam = { "rbxassetid://126212934401370", 1, 0.55 }, -- 3D, el Tanque golpea el suelo (explosión grave; sin oír todavía)
+			TankSlamRoar = { "rbxassetid://9113980319", 1, 0.42 }, -- 3D, rugido largo y grave al levantar los brazos
+			TankSlamRumble = { "rbxassetid://94978851787238", 0.8, 0.5 }, -- 3D, retumbar del suelo tras el golpe
 			AlertTank = { "rbxassetid://9113980319", 0.6, 0.8 }, -- 2D, aviso de que salió un Tanque
 			AlertGrabber = { "rbxassetid://9113980319", 0.45, 1.9 }, -- 2D, aviso de que salió un Atrapador
 			-- Atrapador (ids reutilizados con otro tono: sin oír todavía)

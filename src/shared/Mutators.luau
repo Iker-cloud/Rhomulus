@@ -36,6 +36,7 @@ Mutators.Count = {
 
 Mutators.MunicionEscasa = {
 	Name = "Scarce Ammo",
+	Icon = "rbxassetid://86534395644640",
 	Upper = "SCARCE AMMO",
 	Description = "Weapons hold half the reserve ammo.",
 	Color = Color3.fromRGB(240, 170, 70),
@@ -46,6 +47,7 @@ Mutators.MunicionEscasa = {
 }
 Mutators.ZombiesRapidos = {
 	Name = "Fast Zombies",
+	Icon = "rbxassetid://138288305389572",
 	Upper = "FAST ZOMBIES",
 	Description = "Zombies run faster and most of them are the fast kind.",
 	Color = Color3.fromRGB(230, 90, 70),
@@ -56,6 +58,7 @@ Mutators.ZombiesRapidos = {
 }
 Mutators.DobleTanque = {
 	Name = "Double Tank",
+	Icon = "rbxassetid://120148080501363",
 	Upper = "DOUBLE TANK",
 	Description = "One more Tank at a time, and they show up more often.",
 	Color = Color3.fromRGB(190, 70, 50),
@@ -67,6 +70,7 @@ Mutators.DobleTanque = {
 }
 Mutators.HordasGrandes = {
 	Name = "Big Hordes",
+	Icon = "rbxassetid://82161701530274",
 	Upper = "BIG HORDES",
 	Description = "Hordes are 50% bigger, but come less often.",
 	Color = Color3.fromRGB(210, 110, 60),
@@ -76,6 +80,7 @@ Mutators.HordasGrandes = {
 }
 Mutators.EconomiaFloja = {
 	Name = "Weak Economy",
+	Icon = "rbxassetid://79950308429100",
 	Upper = "WEAK ECONOMY",
 	Description = "Cans you earn are worth half.",
 	Color = Color3.fromRGB(180, 160, 90),
@@ -86,6 +91,7 @@ Mutators.EconomiaFloja = {
 }
 Mutators.Cristal = {
 	Name = "Glass",
+	Icon = "rbxassetid://89176976915836",
 	Upper = "GLASS",
 	Description = "Everyone has 50 health, but medkits and bandages heal double.",
 	Color = Color3.fromRGB(150, 200, 230),
@@ -97,6 +103,7 @@ Mutators.Cristal = {
 }
 Mutators.Apagon = {
 	Name = "Total Blackout",
+	Icon = "rbxassetid://85206179377681",
 	Upper = "TOTAL BLACKOUT",
 	Description = "The streetlights are out: only your flashlight is left.",
 	Color = Color3.fromRGB(110, 120, 170),
@@ -106,6 +113,7 @@ Mutators.Apagon = {
 }
 Mutators.Generoso = {
 	Name = "Generous",
+	Icon = "rbxassetid://96291763474594",
 	Upper = "GENEROUS",
 	Description = "Everything costs less, you earn more cans and healing goes further.",
 	Color = Color3.fromRGB(110, 190, 140),
@@ -117,6 +125,7 @@ Mutators.Generoso = {
 
 Mutators.NieblaDensa = {
 	Name = "Dense Fog",
+	Icon = "rbxassetid://137395626720126",
 	Upper = "DENSE FOG",
 	Description = "The fog is so thick you can barely see 60 studs.",
 	Color = Color3.fromRGB(170, 180, 190),
@@ -127,6 +136,7 @@ Mutators.NieblaDensa = {
 }
 Mutators.Explosivos = {
 	Name = "Explosives",
+	Icon = "rbxassetid://110876086569839",
 	Upper = "EXPLOSIVES",
 	Description = "Some zombies explode when they die: back away for a few seconds.",
 	Color = Color3.fromRGB(255, 120, 40),
@@ -136,6 +146,7 @@ Mutators.Explosivos = {
 }
 Mutators.Ruidoso = {
 	Name = "Noisy",
+	Icon = "rbxassetid://131739712167132",
 	Upper = "NOISY",
 	Description = "Every shot draws nearby zombies. The pistol is silent.",
 	Color = Color3.fromRGB(240, 210, 80),
@@ -145,6 +156,7 @@ Mutators.Ruidoso = {
 }
 Mutators.Sangrado = {
 	Name = "Bleeding",
+	Icon = "rbxassetid://129725832158032",
 	Upper = "BLEEDING",
 	Description = "Below 40 health you lose 1 per second (without going down). Bandage up.",
 	Color = Color3.fromRGB(190, 40, 60),
@@ -154,6 +166,7 @@ Mutators.Sangrado = {
 }
 Mutators.CabezasDuras = {
 	Name = "Tough Skulls",
+	Icon = "rbxassetid://77531870639085",
 	Upper = "TOUGH SKULLS",
 	Description = "Headshots deal x1.5 instead of x2.",
 	Color = Color3.fromRGB(150, 150, 160),
@@ -165,6 +178,7 @@ Mutators.CabezasDuras = {
 -- Combinaciones épicas y la legendaria: reúnen reglas de otras en una sola casilla de la ruleta
 Mutators.Caceria = {
 	Name = "The Hunt",
+	Icon = "rbxassetid://101951631272373",
 	Upper = "THE HUNT",
 	Description = "Fast zombies and every shot draws them: there's nowhere to hide.",
 	Color = Color3.fromRGB(255, 120, 60),
@@ -177,6 +191,7 @@ Mutators.Caceria = {
 }
 Mutators.MalaSangre = {
 	Name = "Bad Blood",
+	Icon = "rbxassetid://99586417134856",
 	Upper = "BAD BLOOD",
 	Description = "50 health and bleeding when low, but healing is worth double.",
 	Color = Color3.fromRGB(200, 40, 70),
@@ -188,6 +203,7 @@ Mutators.MalaSangre = {
 }
 Mutators.NocheSinFin = {
 	Name = "Endless Night",
+	Icon = "rbxassetid://122445231723828",
 	Upper = "ENDLESS NIGHT",
 	Description = "The streetlights go out and thick fog covers everything.",
 	Color = Color3.fromRGB(120, 130, 200),
@@ -198,6 +214,7 @@ Mutators.NocheSinFin = {
 }
 Mutators.Apocalipsis = {
 	Name = "Apocalypse",
+	Icon = "rbxassetid://85531978216232",
 	Upper = "APOCALYPSE",
 	Description = "More Tanks, fast zombies, huge hordes, explosions and bleeding. Only for the brave.",
 	Color = Color3.fromRGB(255, 196, 60),

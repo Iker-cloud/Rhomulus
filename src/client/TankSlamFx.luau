@@ -48,7 +48,7 @@ local function windup(model)
 	end
 	local outer = disc(S.Radius, RED, 0.82, center)
 	local inner = disc(0.5, RED, 0.45, center)
-	Sfx.play3D("TankRoar", center)
+	Sfx.play3D("TankSlamRoar", center)
 	task.spawn(function()
 		while model.Parent and model:GetAttribute("SlamT0") == t0 do
 			local u = math.clamp((workspace:GetServerTimeNow() - t0) / dur, 0, 1)
@@ -65,6 +65,111 @@ local function windup(model)
 	end)
 end
 
+-- Grietas que salen en estrella desde el golpe (segmentos oscuros en zigzag) y se desvanecen
+local function cracks(center)
+	local S = Config.Zombie.Tank.Slam
+	local folder = Instance.new("Folder")
+	folder.Name = "SlamCracks"
+	folder.Parent = workspace
+	local parts = {}
+	local count = 9
+	for i = 1, count do
+		local angle = (i / count) * math.pi * 2 + (math.random() - 0.5) * 0.4
+		local position = center + Vector3.new(0, 0.12, 0)
+		local length = S.Radius * (0.45 + math.random() * 0.5)
+		local walked = 0
+		local direction = angle
+		while walked < length do
+			local step = math.min(length - walked, 1.6 + math.random() * 1.6)
+			direction += (math.random() - 0.5) * 0.7
+			local heading = Vector3.new(math.sin(direction), 0, math.cos(direction))
+			local width = math.max(0.12, 0.5 * (1 - walked / length))
+			local segment = Instance.new("Part")
+			segment.Anchored = true
+			segment.CanCollide = false
+			segment.CanQuery = false
+			segment.CanTouch = false
+			segment.CastShadow = false
+			segment.Material = Enum.Material.Slate
+			segment.Color = Color3.fromRGB(22, 18, 16)
+			segment.Size = Vector3.new(width, 0.08, step)
+			segment.CFrame = CFrame.lookAt(position + heading * step / 2, position + heading * step)
+			segment.Parent = folder
+			table.insert(parts, segment)
+			position += heading * step
+			walked += step
+		end
+	end
+	task.delay(2.2, function()
+		local start = os.clock()
+		while os.clock() - start < 1.2 and folder.Parent do
+			local u = (os.clock() - start) / 1.2
+			for _, part in parts do
+				part.Transparency = u
+			end
+			RunService.Heartbeat:Wait()
+		end
+		folder:Destroy()
+	end)
+end
+
+-- Escombros que saltan del suelo, vuelan en arco y caen (se mueven a mano: no tocan a nadie)
+local function debris(center)
+	local folder = Instance.new("Folder")
+	folder.Name = "SlamDebris"
+	folder.Parent = workspace
+	local chunks = {}
+	for _ = 1, 18 do
+		local angle = math.random() * math.pi * 2
+		local speed = 14 + math.random() * 22
+		local size = 0.5 + math.random() * 1.0
+		local part = Instance.new("Part")
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Material = Enum.Material.Slate
+		part.Color = Color3.fromRGB(96 + math.random(0, 40), 88 + math.random(0, 30), 78 + math.random(0, 24))
+		part.Size = Vector3.new(size, size * (0.6 + math.random() * 0.5), size * (0.8 + math.random() * 0.5))
+		part.CFrame = CFrame.new(center + Vector3.new(math.sin(angle) * 2, 0.6, math.cos(angle) * 2))
+		part.Parent = folder
+		table.insert(chunks, {
+			part = part,
+			position = part.Position,
+			velocity = Vector3.new(math.sin(angle) * speed, 14 + math.random() * 16, math.cos(angle) * speed),
+			spin = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 12,
+			landed = false,
+		})
+	end
+	local last = os.clock()
+	local start = last
+	task.spawn(function()
+		while folder.Parent and os.clock() - start < 3.2 do
+			local now = os.clock()
+			local dt = now - last
+			last = now
+			for _, chunk in chunks do
+				if not chunk.landed then
+					chunk.velocity += Vector3.new(0, -workspace.Gravity * 0.7 * dt, 0)
+					chunk.position += chunk.velocity * dt
+					chunk.part.CFrame = CFrame.new(chunk.position) * (chunk.part.CFrame - chunk.part.Position) * CFrame.Angles(chunk.spin.X * dt, chunk.spin.Y * dt, chunk.spin.Z * dt)
+					if chunk.position.Y <= center.Y + chunk.part.Size.Y / 2 then
+						chunk.landed = true
+						chunk.position = Vector3.new(chunk.position.X, center.Y + chunk.part.Size.Y / 2, chunk.position.Z)
+						chunk.part.CFrame = CFrame.new(chunk.position) * (chunk.part.CFrame - chunk.part.Position)
+					end
+				else
+					local fade = math.clamp((now - start - 2.2) / 1.0, 0, 1)
+					chunk.part.Transparency = fade
+				end
+			end
+			RunService.Heartbeat:Wait()
+		end
+		folder:Destroy()
+	end)
+end
+
 -- Golpe: onda que se expande, polvo, sonido, sacudida y empujón
 local function impact(model)
 	local S = Config.Zombie.Tank.Slam
@@ -73,6 +178,25 @@ local function impact(model)
 		return
 	end
 	Sfx.play3D("TankSlam", center)
+	Sfx.play3D("TankSlamRumble", center)
+	cracks(center)
+	debris(center)
+	local flash = Instance.new("Part")
+	flash.Anchored = true
+	flash.CanCollide = false
+	flash.CanQuery = false
+	flash.CanTouch = false
+	flash.Transparency = 1
+	flash.Size = Vector3.one
+	flash.Position = center + Vector3.new(0, 3, 0)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 160, 90)
+	light.Range = 30
+	light.Brightness = 6
+	light.Parent = flash
+	flash.Parent = workspace
+	game:GetService("TweenService"):Create(light, TweenInfo.new(0.4), { Brightness = 0 }):Play()
+	game:GetService("Debris"):AddItem(flash, 0.5)
 
 	local wave = disc(2, Color3.fromRGB(255, 210, 180), 0.2, center)
 	local startTime = os.clock()
