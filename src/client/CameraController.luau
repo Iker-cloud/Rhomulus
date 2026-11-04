@@ -44,6 +44,15 @@ local function faceCamera()
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not (humanoid and root) or humanoid.Health <= 0 then
+		-- Sin personaje vivo el cursor no debe quedar bloqueado en el centro
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
+	-- Alt izquierdo: suelta el cursor un momento (por si una pantalla no lo libera)
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
 		return
 	end
 	-- Si lo están cargando, el cuerpo va soldado al que carga: no se gira
