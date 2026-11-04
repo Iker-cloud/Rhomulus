@@ -51,7 +51,7 @@ local Content = {
 		Title = "WELCOME TO RHOMULUS",
 		Lines = {
 			"Cross the barrio with your team to the stadium and hold out until the van arrives.",
-			"Aim with right click and shoot with click. R reloads and Shift sprints.",
+			"Aim with right click and shoot with left click. R reloads and Shift sprints.",
 			"E revives, opens and buys. F carries a downed teammate. 3 to 7 use items.",
 			"When everyone is ready, press Y.",
 		},
