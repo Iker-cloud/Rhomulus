@@ -513,23 +513,47 @@ local function launch(player, id, direction, speed)
 			end
 		end)
 	elseif id == "Molotov" then
+		-- Estalla en el PRIMER impacto, sin rebotar: cada cuadro se lanza un rayo desde donde estaba hasta donde esta
+		-- (Touched llega tarde y la botella ya habia rebotado), con Touched de respaldo.
 		local landed = false
-		local function land()
+		local conn
+		local function land(position)
 			if landed or not part.Parent then
 				return
 			end
 			landed = true
-			local position = part.Position
+			if conn then
+				conn:Disconnect()
+			end
+			position = position or part.Position
 			model:Destroy()
 			fireZone(player, position)
 		end
-		task.delay(0.25, function() -- un instante para despegarse de la mano antes de detectar golpes
-			if part.Parent then
-				part.Touched:Connect(function(hit)
-					if not hit:IsDescendantOf(player.Character) and hit.CanCollide then
-						land()
-					end
-				end)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { model, projectiles, player.Character }
+		params.RespectCanCollide = true
+		local last = part.Position
+		local born = os.clock()
+		conn = game:GetService("RunService").Heartbeat:Connect(function()
+			if landed or not part.Parent then
+				conn:Disconnect()
+				return
+			end
+			local now = part.Position
+			local delta = now - last
+			if os.clock() - born > 0.05 and delta.Magnitude > 0.01 then
+				local hit = workspace:Raycast(last, delta + delta.Unit * 0.6, params)
+				if hit then
+					land(hit.Position + hit.Normal * 0.2)
+					return
+				end
+			end
+			last = now
+		end)
+		part.Touched:Connect(function(hit)
+			if os.clock() - born > 0.1 and hit.CanCollide and not hit:IsDescendantOf(player.Character) then
+				land()
 			end
 		end)
 		task.delay(3, land)
