@@ -1,6 +1,7 @@
 -- Primera/tercera persona (tecla V). En ambas el jugador mira hacia donde apunta la cámara.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -34,6 +35,12 @@ local function apply()
 end
 
 local function faceCamera()
+	-- Menú de Roblox abierto (Esc): el cursor es suyo, no se vuelve a bloquear al centro cada cuadro
+	if GuiService.MenuIsOpen then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+		return
+	end
 	-- En la pantalla de resultados el cursor queda libre para poder pulsar "Volver al menú"
 	local stage = workspace:GetAttribute("Stage")
 	if stage == "Result" or stage == "Vote" then
