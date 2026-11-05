@@ -82,15 +82,15 @@ Cosmetics.Rarities = {
 Cosmetics.MeleeSkins = {
 	{ Id = "Knife", Desc = "Standard issue. Quick and quiet.", Name = "Combat Knife", Rarity = "Common", Price = 0, Style = "MeleeStab", Pitch = 1.0, Volume = 0.5,
 		Color = Color3.fromRGB(170, 174, 180), Size = Vector3.new(0.14, 0.5, 1.5) },
-	{ Id = "Pan", Desc = "Cast iron. Rings like a church bell.", Name = "Frying Pan", Rarity = "Common", Price = 3, Style = "MeleeBash", Pitch = 0.7, Volume = 0.6,
+	{ Id = "Pan", Desc = "Cast iron. Rings like a church bell.", Name = "Frying Pan", Rarity = "Common", Price = 5, Style = "MeleeBash", Pitch = 0.7, Volume = 0.6,
 		Color = Color3.fromRGB(70, 72, 78), Size = Vector3.new(0.2, 1.2, 1.9) },
-	{ Id = "Bat", Desc = "Studded with nails. Leaves a mark.", Name = "Baseball Bat", Rarity = "Common", Price = 6, Style = "MeleeSweep", Pitch = 0.85, Volume = 0.6,
+	{ Id = "Bat", Desc = "Studded with nails. Leaves a mark.", Name = "Baseball Bat", Rarity = "Common", Price = 9, Style = "MeleeSweep", Pitch = 0.85, Volume = 0.6,
 		Color = Color3.fromRGB(190, 140, 80), Size = Vector3.new(0.3, 0.3, 2.6) },
-	{ Id = "Machete", Desc = "Market steel. Clears a path.", Name = "Machete", Rarity = "Rare", Price = 12, Style = "MeleeSlash", Pitch = 1.25, Volume = 0.55,
+	{ Id = "Machete", Desc = "Market steel. Clears a path.", Name = "Machete", Rarity = "Rare", Price = 18, Style = "MeleeSlash", Pitch = 1.25, Volume = 0.55,
 		Color = Color3.fromRGB(120, 130, 135), Size = Vector3.new(0.12, 0.6, 2.2) },
-	{ Id = "Axe", Desc = "Fire station red. Heavy and final.", Name = "Fire Axe", Rarity = "Epic", Price = 25, Style = "MeleeChop", Pitch = 0.6, Volume = 0.7,
+	{ Id = "Axe", Desc = "Fire station red. Heavy and final.", Name = "Fire Axe", Rarity = "Epic", Price = 38, Style = "MeleeChop", Pitch = 0.6, Volume = 0.7,
 		Color = Color3.fromRGB(200, 40, 36), Size = Vector3.new(0.3, 0.9, 2.4) },
-	{ Id = "Chainsaw", Desc = "Loud, brutal and unforgettable.", Name = "Chainsaw", Rarity = "Legendary", Price = 50, Style = "MeleeSaw", Pitch = 0.45, Volume = 0.8,
+	{ Id = "Chainsaw", Desc = "Loud, brutal and unforgettable.", Name = "Chainsaw", Rarity = "Legendary", Price = 75, Style = "MeleeSaw", Pitch = 0.45, Volume = 0.8,
 		Color = Color3.fromRGB(255, 150, 30), Size = Vector3.new(0.6, 0.9, 2.6) },
 }
 Cosmetics.DefaultMelee = "Knife"
@@ -146,18 +146,18 @@ end
 -- garantiza (la Épica también sale si cae Legendaria). Sin balancear.
 Cosmetics.Crates = {
 	Arsenal = {
-		Price = 8,
+		Price = 12,
 		Weights = { Common = 55, Rare = 28, Epic = 13, Legendary = 4 },
-		Refund = { Common = 1, Rare = 2, Epic = 4, Legendary = 10 }, -- Rhoms al sacar un repetido
+		Refund = { Common = 2, Rare = 3, Epic = 6, Legendary = 15 }, -- Rhoms al sacar un repetido
 		Pity = { Epic = 8, Legendary = 30 },
 		Drop = { Base = 0.20, Win = 0.12, Max = 0.6, Difficulty = { Calma = 0, Tension = 0.05, Crisis = 0.10, Colapso = 0.20 }, Rarity = 0.10 },
 	},
 	-- Barrio: accesorios del superviviente (gorras, gafas, mochilas, parches). Mismas reglas; el premio de ronda es la misma
 	-- probabilidad y elige Arsenal o Barrio a partes iguales (Cosmetics.crateKind).
 	Barrio = {
-		Price = 8,
+		Price = 12,
 		Weights = { Common = 55, Rare = 28, Epic = 13, Legendary = 4 },
-		Refund = { Common = 1, Rare = 2, Epic = 4, Legendary = 10 },
+		Refund = { Common = 2, Rare = 3, Epic = 6, Legendary = 15 },
 		Pity = { Epic = 8, Legendary = 30 },
 	},
 }

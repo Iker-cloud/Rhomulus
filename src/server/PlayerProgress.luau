@@ -164,7 +164,7 @@ end
 
 -- Fin de la partida: reparte el XP a todos los que siguen en el servidor y le cuenta a todos lo de todos (Remotes.XpGain), para que la
 -- pantalla de resultados muestre la barra de cada superviviente.
-function PlayerProgress.award(won)
+function PlayerProgress.award(won, reachedZone2)
 	local difficultyId = Difficulty.id()
 	local bonus = Mutators.xpBonus(Difficulty.mutators())
 	local list = {}
@@ -191,7 +191,7 @@ function PlayerProgress.award(won)
 				gained += Mutators.DiscoveryXp
 			end
 		end
-		local coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId])
+		local coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId], reachedZone2)
 		-- caja Arsenal de premio (a lo más una por ronda; la abre el menú)
 		local dropped = math.random() < Cosmetics.crateDropChance(won, difficultyId, rarities)
 		local kind = dropped and Cosmetics.crateKind(math.random()) or nil
@@ -204,7 +204,7 @@ function PlayerProgress.award(won)
 			revives = stats.Revives or 0,
 			carries = stats.Carries or 0,
 			headshots = stats.Headshots or 0,
-			games = 1,
+			games = reachedZone2 and 1 or 0,
 			wins = won and 1 or 0,
 			hardWins = (won and hard) and 1 or 0,
 			cleanWins = (won and (stats.Downs or 0) == 0) and 1 or 0,

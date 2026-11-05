@@ -65,7 +65,7 @@ end
 
 -- Rhoms: la moneda permanente del jugador (se gasta en el menú). Valores sin balancear.
 Progress.Rhoms = {
-	Finish = 1, -- por jugar la partida hasta el final (aunque se pierda)
+	Finish = 1, -- por llegar al menos a la zona 2 (aunque se pierda); si no llegan, la ronda no da Rhoms
 	Win = 2, -- extra por ganar
 	WinByDifficulty = { Crisis = 1, Colapso = 2 }, -- extra por ganar en esa dificultad
 	Mutation = 1, -- extra si en la ronda salió una mutación Épica o Legendaria
@@ -74,10 +74,10 @@ Progress.Rhoms = {
 
 -- Rhoms de una partida. `rarities` es la lista de rarezas de las mutaciones de la ronda ("Epic", "Legendary"...).
 -- Devuelve (total, desglose { finish, win, difficulty, mutation, award }).
-function Progress.roundRhoms(won, finished, difficultyId, rarities, hasAward)
+function Progress.roundRhoms(won, finished, difficultyId, rarities, hasAward, reachedZone2)
 	local cfg = Progress.Rhoms
 	local parts = { finish = 0, win = 0, difficulty = 0, mutation = 0, award = 0 }
-	if not finished then
+	if not finished or reachedZone2 == false then
 		return 0, parts
 	end
 	parts.finish = cfg.Finish

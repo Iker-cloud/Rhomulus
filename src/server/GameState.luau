@@ -42,6 +42,7 @@ local BUILDERS = { Morro = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
+local reachedZone2 = false -- el equipo llegó al menos a la zona 2: sin eso la ronda no da Rhoms
 local runStart = nil -- os.clock() al salir del lobby: el récord de extracción mide hasta la victoria
 
 -- Hacia dónde debe ir el equipo en cada orden (clave = `tone`): devuelve la posición y el nombre que muestra la guía
@@ -85,6 +86,9 @@ local OBJECTIVES = {
 -- `tone` es la clave de la orden en RadioHud.luau (define su color y quién la dice por radio)
 local function setStage(name, message, tone)
 	stage = name
+	if name == "Zone2" or name == "Zone3" or name == "Extraction" then
+		reachedZone2 = true
+	end
 	Telemetry.stage(name)
 	local objective = map and OBJECTIVES[tone]
 	if objective then
@@ -384,6 +388,7 @@ local function lobby()
 
 	setStage("Lobby", "Let's go!", "Start")
 	runStart = os.clock()
+	reachedZone2 = false
 	task.wait(2)
 	setLobbyDoors(true)
 end
@@ -579,7 +584,7 @@ local function result(won)
 			Remotes.Record:FireAllClients(Records.submit(difficultyId, seconds, names))
 		end)
 	end
-	PlayerProgress.award(won)
+	PlayerProgress.award(won, reachedZone2)
 	Telemetry.result(won)
 
 	-- Cuenta atrás hasta la siguiente partida (la pantalla de resultados la muestra). Si todos los que quedan pulsan OTRA PARTIDA
