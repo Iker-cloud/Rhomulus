@@ -8,8 +8,10 @@ local UiFit = require(script.Parent.UiFit)
 local Paper = require(script.Parent.PaperStyle)
 local localPlayer = Players.LocalPlayer
 
+local PANEL_SHOW_TIME = 6 -- el panel se esconde solo; sale al ganar latas y mientras se mantiene Tab
 local GAIN_SHOW_TIME = 1.5 -- segundos que se ve el "+25" junto al nombre
 local ROW_HEIGHT = 24
+local UserInputService = game:GetService("UserInputService")
 
 local ContribHud = {}
 
@@ -28,7 +30,8 @@ function ContribHud.start()
 	panel.Rotation = 0.6
 	panel.Parent = gui
 	Paper.paper(panel, 3)
-	UiFit.scale(panel)
+	UiFit.scale(panel, 0.85)
+	panel.Position = UDim2.new(1, -24, 0, 150)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, 6)
 	padding.PaddingBottom = UDim.new(0, 6)
@@ -51,6 +54,7 @@ function ContribHud.start()
 	title.Text = "TEAM CONTRIBUTION"
 	title.Parent = panel
 
+	local visibleUntil = 0
 	local rows = {} -- [Player] = { frame, name, number, gain, shown, gainUntil }
 
 	local function buildRow(player)
@@ -108,6 +112,7 @@ function ContribHud.start()
 			if total > row.shown then
 				row.gain.Text = `+{total - row.shown}`
 				row.gainUntil = now + GAIN_SHOW_TIME
+				visibleUntil = now + PANEL_SHOW_TIME
 			end
 			if total ~= row.shown then
 				row.shown = total
@@ -120,6 +125,7 @@ function ContribHud.start()
 			row.name.Text = player.DisplayName
 			row.frame.LayoutOrder = -total -- el que más aporta, arriba
 		end
+		panel.Visible = now < visibleUntil or UserInputService:IsKeyDown(Enum.KeyCode.Tab)
 		for player, row in rows do
 			if not player.Parent then
 				row.frame:Destroy()

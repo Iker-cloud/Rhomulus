@@ -186,6 +186,7 @@ end
 
 -- Avisa en pantalla a quien intentó cargar y no pudo (si no, el prompt parece no hacer nada)
 local function refuse(helper, reason)
+	warn(`[Revive] {helper.Name} no pudo cargar: {reason}`)
 	Remotes.Feed:FireClient(helper, `Can't carry: {reason}`)
 end
 
@@ -324,7 +325,12 @@ local function onCharacter(player, character)
 	carryPrompt.Triggered:Connect(function(helper)
 		local ok, reason = canHelp(helper, player)
 		if ok then
-			carry(helper, player)
+			local worked, err = pcall(carry, helper, player)
+			if not worked then
+				warn(`[Revive] error al cargar a {player.Name}: {err}`)
+				drop(helper)
+				Remotes.Feed:FireClient(helper, "Couldn't carry: error")
+			end
 		else
 			refuse(helper, reason)
 		end

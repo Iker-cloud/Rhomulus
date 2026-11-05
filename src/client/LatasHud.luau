@@ -32,7 +32,7 @@ function LatasHud.start()
 	frame.Size = UDim2.fromOffset(190, 72)
 	frame.BackgroundTransparency = 1
 	frame.Parent = gui
-	UiFit.scale(frame)
+	UiFit.scale(frame, 0.75) -- más chico: no tape la partida
 
 	local pill = Instance.new("Frame")
 	pill.Position = UDim2.fromOffset(48, 13)

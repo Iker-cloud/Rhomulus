@@ -37,13 +37,14 @@ function UiFit.factor()
 end
 
 -- Encoge `object` (y todo lo que lleva dentro) con la altura de la pantalla; devuelve el UIScale
-function UiFit.scale(object)
+function UiFit.scale(object, multiplier)
+	multiplier = multiplier or 1 -- para piezas que se quieren más chicas que el resto del HUD
 	local scale = Instance.new("UIScale")
 	scale.Name = "UiFit"
-	scale.Scale = UiFit.factor()
+	scale.Scale = UiFit.factor() * multiplier
 	scale.Parent = object
 	camera():GetPropertyChangedSignal("ViewportSize"):Connect(function()
-		scale.Scale = UiFit.factor()
+		scale.Scale = UiFit.factor() * multiplier
 	end)
 	return scale
 end
