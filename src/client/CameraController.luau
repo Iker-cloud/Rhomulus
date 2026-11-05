@@ -42,8 +42,7 @@ local function faceCamera()
 		return
 	end
 	-- En la pantalla de resultados el cursor queda libre para poder pulsar "Volver al menú"
-	local stage = workspace:GetAttribute("Stage")
-	if stage == "Result" or stage == "Vote" then
+	if workspace:GetAttribute("Stage") == "Result" then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 		return
@@ -75,10 +74,8 @@ local function faceCamera()
 	end
 	-- En modo táctil el ratón (si lo hay) queda libre para pulsar los botones
 	local touch = Controls.isTouch()
-	-- En el lobby el cursor queda libre (para pulsar botones); con clic derecho apretado gira la cámara y apunta
-	local freeCursor = touch or (stage == "Lobby" and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2))
-	UserInputService.MouseBehavior = freeCursor and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
-	UserInputService.MouseIconEnabled = freeCursor
+	UserInputService.MouseBehavior = touch and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
+	UserInputService.MouseIconEnabled = touch
 	humanoid.AutoRotate = false
 
 	local look = workspace.CurrentCamera.CFrame.LookVector
