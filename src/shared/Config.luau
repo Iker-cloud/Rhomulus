@@ -490,6 +490,7 @@ return {
 		HoldTime = 4, -- segundos manteniendo E
 		CarryHoldTime = 1,
 		CarryOffset = CFrame.new(0.5, 1.5, 0) * CFrame.Angles(0, 0, math.rad(90)), -- el caído acostado sobre los hombros de quien lo carga (marco de quien carga)
+		CarryLift = { Time = 0.45, Arc = 1.1, Bob = 0.12, Roll = 5, Pitch = 2, Hang = 6 }, -- animación al cargar: segundos de subida, altura del arco (studs), vaivén vertical, mecida y cabeza caída (grados) al caminar
 		PromptDistance = 7,
 		MaxDistance = 12, -- validación en el servidor (un poco más holgada que el prompt)
 		ReplyDelay = 1.5, -- el caído responde esto después de la frase de quien revive

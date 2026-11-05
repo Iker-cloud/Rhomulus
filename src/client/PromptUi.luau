@@ -32,7 +32,8 @@ end
 local function show(prompt)
 	local gui = Instance.new("BillboardGui")
 	gui.Adornee = prompt.Parent
-	gui.Size = UDim2.fromOffset(460, 90)
+	gui.Size = UDim2.fromOffset(460, 90 + math.abs(prompt.UIOffset.Y) * 2)
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 	gui.AlwaysOnTop = true
 	gui.ResetOnSpawn = false
 	gui.MaxDistance = 1000
@@ -71,10 +72,17 @@ local function show(prompt)
 	local object = label(plateHolder, 14, YELLOW, UDim2.fromOffset(SLANT + 12, 0))
 
 	-- Barra de mantener presionado
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = YELLOW
+	fill.BackgroundTransparency = 0.55
+	fill.BorderSizePixel = 0
+	fill.Size = UDim2.fromOffset(0, HEIGHT)
+	fill.ZIndex = 4
+	fill.Parent = plateHolder
 	local bar = Instance.new("Frame")
 	bar.BackgroundColor3 = YELLOW
 	bar.BorderSizePixel = 0
-	bar.Size = UDim2.fromOffset(0, 4)
+	bar.Size = UDim2.fromOffset(0, 6)
 	bar.ZIndex = 6
 	bar.Parent = plateHolder
 
@@ -94,8 +102,10 @@ local function show(prompt)
 			object.Size = UDim2.fromOffset(width, 16)
 			object.Position = UDim2.fromOffset(SLANT + 12, HEIGHT - 20)
 		end
-		bar.Position = UDim2.fromOffset(SLANT / 2, HEIGHT - 4)
-		bar.Size = UDim2.fromOffset(0, 4)
+		bar.Position = UDim2.fromOffset(SLANT / 2, HEIGHT - 6)
+		bar.Size = UDim2.fromOffset(0, 6)
+		fill.Position = UDim2.fromOffset(SLANT / 2, 0)
+		fill.Size = UDim2.fromOffset(0, HEIGHT)
 	end
 	render()
 
@@ -106,12 +116,14 @@ local function show(prompt)
 	table.insert(connections, prompt.PromptButtonHoldBegan:Connect(function()
 		if prompt.HoldDuration > 0 then
 			local full = plateHolder.AbsoluteSize.X - SLANT
-			TweenService:Create(bar, TweenInfo.new(prompt.HoldDuration, Enum.EasingStyle.Linear), { Size = UDim2.fromOffset(full, 4) }):Play()
+			TweenService:Create(bar, TweenInfo.new(prompt.HoldDuration, Enum.EasingStyle.Linear), { Size = UDim2.fromOffset(full, 6) }):Play()
+			TweenService:Create(fill, TweenInfo.new(prompt.HoldDuration, Enum.EasingStyle.Linear), { Size = UDim2.fromOffset(full, HEIGHT) }):Play()
 		end
 		TweenService:Create(scale, TweenInfo.new(0.1), { Scale = 1.05 }):Play()
 	end))
 	table.insert(connections, prompt.PromptButtonHoldEnded:Connect(function()
-		TweenService:Create(bar, TweenInfo.new(0.12), { Size = UDim2.fromOffset(0, 4) }):Play()
+		TweenService:Create(bar, TweenInfo.new(0.12), { Size = UDim2.fromOffset(0, 6) }):Play()
+		TweenService:Create(fill, TweenInfo.new(0.12), { Size = UDim2.fromOffset(0, HEIGHT) }):Play()
 		TweenService:Create(scale, TweenInfo.new(0.1), { Scale = 1 }):Play()
 	end))
 	table.insert(connections, prompt.Triggered:Connect(function()
