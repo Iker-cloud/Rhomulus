@@ -10,6 +10,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ItemUse = require(script.Parent.ItemUse)
 local Controls = require(script.Parent.Controls)
+local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
+local Shooting = require(script.Parent.Shooting)
 
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(246, 196, 70)
@@ -91,6 +93,12 @@ function ICONS.Flare(p)
 	box(p, UDim2.fromOffset(3, 3), UDim2.fromOffset(15, 2), Color3.fromRGB(255, 240, 160))
 end
 
+function ICONS.Melee(p)
+	box(p, UDim2.fromOffset(20, 7), UDim2.fromOffset(13, 6), Color3.fromRGB(214, 218, 222), -40) -- hoja
+	box(p, UDim2.fromOffset(10, 6), UDim2.fromOffset(7, 18), Color3.fromRGB(120, 84, 46), -40) -- mango
+	box(p, UDim2.fromOffset(4, 10), UDim2.fromOffset(15, 14), Color3.fromRGB(90, 90, 94), -40) -- guarda
+end
+
 local function buildSlot(parent, index, id, label)
 	local slot = Instance.new("TextButton")
 	slot.Name = "Slot" .. index
@@ -128,7 +136,7 @@ function Inventory.start()
 	gui.DisplayOrder = 5
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	local total = 2 + #Config.Items.Order
+	local total = 3 + #Config.Items.Order -- armas, objetos y la ranura del arma cuerpo a cuerpo (tecla X)
 	local bar = Instance.new("Frame")
 	bar.AnchorPoint = Vector2.new(1, 1)
 	bar.Position = UDim2.new(1, -20, 1, -20)
@@ -146,6 +154,14 @@ function Inventory.start()
 		slots[i + 2] = slot
 	end
 	ICONS.Pistol(slots[2].icon)
+
+	-- Arma cuerpo a cuerpo: no se saca, se golpea con X (en celular ya existe el botón MELEE, así que allí no se muestra)
+	local melee = buildSlot(bar, #slots + 1, "Melee", "")
+	melee.number.Text = "X"
+	ICONS.Melee(melee.icon)
+	melee.frame.Activated:Connect(function()
+		Shooting.melee()
+	end)
 
 	-- Se pulsa una ranura en celular; en PC, la tecla
 	slots[1].frame.Activated:Connect(function()
@@ -196,6 +212,12 @@ function Inventory.start()
 			s.icon.Position = touch and UDim2.new(0.5, 0, 0.5, 1) or UDim2.new(0.5, -20, 0, 14)
 			s.iconScale.Scale = touch and 0.72 or 1
 		end
+		melee.frame.Visible = not touch
+		melee.frame.Size = UDim2.fromOffset(size, size)
+		melee.frame.Position = UDim2.fromOffset(x, 0)
+		if not touch then
+			x += size + gap
+		end
 		bar.Size = UDim2.fromOffset(math.max(x - gap, 0), size)
 		bar.AnchorPoint = touch and Vector2.new(0.5, 1) or Vector2.new(1, 1)
 		bar.Position = touch and UDim2.new(0.5, 0, 1, -10) or UDim2.new(1, -20, 1, -20)
@@ -221,6 +243,11 @@ function Inventory.start()
 			slots[1].name.Text = weapon and string.upper(weapon.Name) or "—"
 			slots[1].frame.BackgroundTransparency = primaryKey and 0.12 or 0.45
 		end
+		local skin = Cosmetics.melee(player:GetAttribute("MeleeSkin")) or Cosmetics.melee(Cosmetics.DefaultMelee)
+		melee.name.Text = skin and string.upper(skin.Name) or "KNIFE"
+		local swinging = player:GetAttribute("Swinging") ~= nil
+		melee.stroke.Color = swinging and GOLD or Color3.fromRGB(60, 60, 64)
+		melee.number.TextColor3 = swinging and GOLD or Color3.fromRGB(150, 146, 140)
 		local itemInHand = player:GetAttribute("ItemReady")
 		local primaryActive = weaponKey ~= nil and weaponKey ~= "Pistol"
 		for i = 1, 2 do
