@@ -17,6 +17,9 @@
         "Progress": {
           "$path": "src/shared/Progress.luau"
         },
+        "Missions": {
+          "$path": "src/shared/Missions.luau"
+        },
         "Cosmetics": {
           "$path": "src/shared/Cosmetics.luau"
         },

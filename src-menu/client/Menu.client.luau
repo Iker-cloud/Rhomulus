@@ -49,6 +49,7 @@ local Difficulties = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChi
 local HelpContent = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("HelpContent")).get(TOUCH)
 local Progress = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Progress"))
 local Cosmetics = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Cosmetics"))
+local Missions = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Missions"))
 local profileRequest = ReplicatedStorage:WaitForChild("ProfileRequest")
 local request = ReplicatedStorage:WaitForChild("MenuRequest")
 local roomUpdate = ReplicatedStorage:WaitForChild("RoomUpdate")
@@ -484,6 +485,11 @@ button(main, TEXT_RIGHT - 340, 642, 340, 60, function()
 	setStatus(nil)
 	show("wardrobe")
 end).Name = "Armario"
+text(main, spaced("MISSIONS", 4) .. " →", ANTON, 40, Vector2.new(TEXT_RIGHT, 732), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 500, color = INK })
+button(main, TEXT_RIGHT - 340, 702, 340, 60, function()
+	setStatus(nil)
+	show("missions")
+end).Name = "Misiones"
 local function refreshCrates()
 	local boxes = (player:GetAttribute("Crates") or 0) + (player:GetAttribute("CratesBarrio") or 0)
 	cratesLink.TextColor3 = boxes > 0 and RED or INK
@@ -770,6 +776,59 @@ builders.profile = function()
 		text(s, spaced(`{coins} RHOMS`, 3), ANTON, 44, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = INK })
 	end
 	text(s, spaced(`LEVEL {level}`, 3), OSW_BOLD, 30, Vector2.new(1800, 262), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 600, color = RED })
+	backButton(s, "main")
+	smallVersion(s, 1800, 1010)
+end
+
+-- 5b) Misiones diarias: 3 por día (fácil, media y difícil) que pagan Rhoms al terminar la ronda ---------------------------------------
+-- Las elige shared/Missions según el jugador y el día UTC; la partida cuenta el progreso y lo guarda (server/PlayerProgress). Aquí solo se
+-- muestran: el servidor del menú pone los atributos MissionDay, MissionProg, MissionDone y MissionStreak.
+local missionsScreen = newScreen("missions")
+local missionConns = {}
+builders.missions = function()
+	local s = missionsScreen
+	for _, c in missionConns do
+		c:Disconnect()
+	end
+	table.clear(missionConns)
+	clear(s)
+	header(s, "DAILY MISSIONS")
+	local today = Missions.today()
+	local fresh = player:GetAttribute("MissionDay") == today
+	local prog = fresh and string.split(player:GetAttribute("MissionProg") or "0,0,0", ",") or { "0", "0", "0" }
+	local done = fresh and string.split(player:GetAttribute("MissionDone") or "0,0,0", ",") or { "0", "0", "0" }
+	local picked = Missions.pick(player.UserId, today)
+	local tierNames = { "EASY", "MEDIUM", "HARD" }
+	for i, mission in picked do
+		local y = 390 + 150 * (i - 1)
+		local count = math.min(mission.Target, tonumber(prog[i]) or 0)
+		local finished = done[i] == "1"
+		text(s, spaced(tierNames[i], 4), OSW_BOLD, 22, Vector2.new(140, y - 40), { width = 400, color = finished and DIM or RED })
+		text(s, upperEs(Missions.text(mission)), ANTON, 54, Vector2.new(140, y), { width = 1100, color = finished and DIM or INK })
+		local back = make("Frame", { BackgroundColor3 = Color3.fromRGB(40, 38, 36), BorderSizePixel = 0, Position = UDim2.fromOffset(140, y + 42), Size = UDim2.fromOffset(1000, 12) }, s)
+		make("Frame", { BackgroundColor3 = finished and DIM or RED, BorderSizePixel = 0, Size = UDim2.fromScale(count / mission.Target, 1) }, back)
+		text(s, spaced(`{count} / {mission.Target}`, 2), OSW_BOLD, 26, Vector2.new(1170, y + 48), { width = 300, color = INK })
+		text(s, finished and spaced("DONE", 3) or spaced(`+{mission.Rhoms} RHOMS`, 3), ANTON, 44, Vector2.new(1800, y),
+			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 520, color = finished and DIM or RED })
+		rule(s, 120, y + 92, 1680)
+	end
+	local resets = text(s, "", OSW_BOLD, 30, Vector2.new(1800, 205), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 900, color = RED })
+	local function tick()
+		local left = Missions.secondsLeft()
+		resets.Text = spaced(`RESETS IN {string.format("%02d:%02d:%02d", left // 3600, left % 3600 // 60, left % 60)}`, 2)
+	end
+	tick()
+	local lastTick = os.clock()
+	table.insert(missionConns, RunService.Heartbeat:Connect(function()
+		if os.clock() - lastTick >= 1 then
+			lastTick = os.clock()
+			tick()
+		end
+	end))
+	local streak = player:GetAttribute("MissionStreak") or 0
+	text(s, spaced(`STREAK {streak} / {Missions.StreakCycle}`, 3), OSW_BOLD, 30, Vector2.new(140, 842), { width = 800, color = streak > 0 and RED or INK })
+	text(s, spaced(`DAY 3: +{Missions.StreakBonus[3]} RHOMS · DAY {Missions.StreakCycle}: +{Missions.StreakBonus[7]} RHOMS`, 2), OSW, 24, Vector2.new(140, 878),
+		{ width = 1200, color = DIM })
 	backButton(s, "main")
 	smallVersion(s, 1800, 1010)
 end

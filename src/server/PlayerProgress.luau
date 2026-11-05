@@ -13,6 +13,7 @@ local Progress = require(ReplicatedStorage.Shared.Progress)
 local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
 local Accessories = require(ReplicatedStorage.Shared.Accessories)
 local Mutators = require(ReplicatedStorage.Shared.Mutators)
+local Missions = require(ReplicatedStorage.Shared.Missions)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Difficulty = require(script.Parent.Difficulty)
 local Stats = require(script.Parent.Stats)
@@ -27,6 +28,8 @@ local crates = {} -- [Player] = cajas Arsenal sin abrir (las abre el menú)
 local cratesB = {} -- [Player] = cajas Barrio sin abrir
 local worn = {} -- [Player] = { owned = {ids}, equipped = { [ranura] = id } }: accesorios (caja Barrio)
 local look = {} -- [Player] = { frame, title }: el marco y el título que lleva puestos
+local dailyState = {} -- [Player] = lo guardado de las misiones del día (shared/Missions)
+local streakState = {} -- [Player] = { last, count }: la racha de días con misiones
 local seen = {} -- [Player] = { [id de mutación] = true }: las mutaciones que ya le salieron alguna vez (dan XP único la primera vez)
 
 local store
@@ -56,6 +59,13 @@ local function publish(player)
 	player:SetAttribute("MeleeSkin", Cosmetics.validMelee(owned, chosen.melee)) -- server/Melee
 	player:SetAttribute("FrameId", Cosmetics.valid("frame", chosen.frame, level))
 	player:SetAttribute("TitleId", Cosmetics.valid("title", chosen.title, level))
+	-- Misiones diarias: día, progreso y cuáles están hechas (el menú calcula cuáles son con Missions.pick)
+	local today = Missions.today()
+	local state = Missions.normalize(dailyState[player], today)
+	player:SetAttribute("MissionDay", today)
+	player:SetAttribute("MissionProg", table.concat(state.prog, ","))
+	player:SetAttribute("MissionDone", (state.done[1] and "1" or "0") .. "," .. (state.done[2] and "1" or "0") .. "," .. (state.done[3] and "1" or "0"))
+	player:SetAttribute("MissionStreak", Missions.streakCount(streakState[player], today))
 	local ids = {}
 	for id in seen[player] or {} do
 		table.insert(ids, id)
@@ -90,6 +100,8 @@ local function load(player)
 					end
 				end
 			end
+			dailyState[player] = value.daily
+			streakState[player] = value.streak
 			chosen = { frame = value.frame, title = value.title, melee = value.melee, owned = {} }
 			if typeof(value.skins) == "table" then
 				for id, flag in value.skins do
@@ -120,7 +132,7 @@ local function load(player)
 end
 
 -- Suma lo ganado en una partida a lo guardado (UpdateAsync: seguro aunque el menú u otro servidor lo lea a la vez)
-local function save(userId, gained, stats, won, finished, discovered, coins, boxes, boxesB)
+local function save(userId, gained, stats, won, finished, discovered, coins, boxes, boxesB, daily, streak)
 	if not store or (gained <= 0 and (coins or 0) <= 0 and (boxes or 0) <= 0 and (boxesB or 0) <= 0) then
 		return
 	end
@@ -135,6 +147,10 @@ local function save(userId, gained, stats, won, finished, discovered, coins, box
 			old.wins = (old.wins or 0) + (won and finished and 1 or 0)
 			old.kills = (old.kills or 0) + (stats.Kills or 0)
 			old.revives = (old.revives or 0) + (stats.Revives or 0)
+			if daily then
+				old.daily = daily
+				old.streak = streak
+			end
 			if discovered and #discovered > 0 then
 				old.seen = typeof(old.seen) == "table" and old.seen or {}
 				for _, id in discovered do
@@ -181,14 +197,29 @@ function PlayerProgress.award(won)
 		local kind = dropped and Cosmetics.crateKind(math.random()) or nil
 		local box = kind == "Arsenal" and 1 or 0
 		local boxB = kind == "Barrio" and 1 or 0
+		-- Misiones diarias: lo de esta ronda se suma al progreso del día; las que se completan pagan Rhoms (y la racha, a veces un bono)
+		local hard = difficultyId == "Crisis" or difficultyId == "Colapso"
+		local state, newStreak, mission = Missions.apply(player.UserId, dailyState[player], streakState[player], Missions.today(), {
+			kills = stats.Kills or 0,
+			revives = stats.Revives or 0,
+			carries = stats.Carries or 0,
+			headshots = stats.Headshots or 0,
+			games = 1,
+			wins = won and 1 or 0,
+			hardWins = (won and hard) and 1 or 0,
+			cleanWins = (won and (stats.Downs or 0) == 0) and 1 or 0,
+		})
+		dailyState[player] = state
+		streakState[player] = newStreak
+		coins += mission.rhoms
 		local before = totals[player] or 0
 		totals[player] = before + gained
 		rhoms[player] = (rhoms[player] or 0) + coins
 		crates[player] = (crates[player] or 0) + box
 		cratesB[player] = (cratesB[player] or 0) + boxB
 		publish(player)
-		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player], rhoms = coins, crate = kind })
-		task.spawn(save, player.UserId, gained, stats, won, true, discovered, coins, box, boxB)
+		table.insert(list, { userId = player.UserId, gained = gained, before = before, after = totals[player], rhoms = coins, crate = kind, missionRhoms = mission.rhoms, missions = mission.completed })
+		task.spawn(save, player.UserId, gained, stats, won, true, discovered, coins, box, boxB, state, newStreak)
 	end
 	Remotes.XpGain:FireAllClients(list)
 end
@@ -219,6 +250,8 @@ function PlayerProgress.start()
 		worn[player] = nil
 		look[player] = nil
 		seen[player] = nil
+		dailyState[player] = nil
+		streakState[player] = nil
 	end)
 end
 

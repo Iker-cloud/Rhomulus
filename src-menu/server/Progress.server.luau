@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Progress = require(ReplicatedStorage.Shared.Progress)
 local Cosmetics = require(ReplicatedStorage.Shared.Cosmetics)
 local Accessories = require(ReplicatedStorage.Shared.Accessories)
+local Missions = require(ReplicatedStorage.Shared.Missions)
 
 local profile = Instance.new("RemoteFunction")
 profile.Name = "ProfileRequest"
@@ -58,6 +59,7 @@ local function load(player)
 	local total, coins, frame, title, boxes, boxesB = 0, 0, nil, nil, 0, 0
 	local acc, accEq = nil, nil
 	local skins, melee = nil, nil
+	local daily, streakData = nil, nil
 	local readOk, value = pcall(function()
 		return store:GetAsync("p_" .. player.UserId)
 	end)
@@ -69,10 +71,18 @@ local function load(player)
 		acc, accEq = value.acc, value.accEq
 		frame, title = value.frame, value.title
 		skins, melee = value.skins, value.melee
+		daily, streakData = value.daily, value.streak
 	end
 	if player.Parent == Players then
 		publish(player, total, coins, frame, title)
 		publishSkins(player, ownedList(skins), melee)
+		-- Misiones diarias (el menú calcula cuáles son con Missions.pick y las dibuja)
+		local today = Missions.today()
+		local state = Missions.normalize(daily, today)
+		player:SetAttribute("MissionDay", today)
+		player:SetAttribute("MissionProg", table.concat(state.prog, ","))
+		player:SetAttribute("MissionDone", (state.done[1] and "1" or "0") .. "," .. (state.done[2] and "1" or "0") .. "," .. (state.done[3] and "1" or "0"))
+		player:SetAttribute("MissionStreak", Missions.streakCount(streakData, today))
 		player:SetAttribute("Crates", boxes)
 		player:SetAttribute("CratesBarrio", boxesB)
 		local list = {}
