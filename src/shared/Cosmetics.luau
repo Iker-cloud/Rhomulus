@@ -8,15 +8,17 @@ local Accessories = require(script.Parent:WaitForChild("Accessories"))
 local Cosmetics = {}
 
 -- Marcos: `Color` es el aro; `Level` el nivel que hace falta
+-- `Image` es el marco dibujado (PNG con el hueco al centro: el avatar va debajo, ocupando ~61 % del ancho de la imagen)
+Cosmetics.FrameHole = 0.61
 Cosmetics.Frames = {
-	{ Id = "Blood", Name = "Blood", Level = 1, Color = Color3.fromRGB(208, 18, 24) },
-	{ Id = "Bone", Name = "Bone", Level = 3, Color = Color3.fromRGB(226, 216, 196) },
-	{ Id = "Moss", Name = "Moss", Level = 6, Color = Color3.fromRGB(110, 170, 90) },
-	{ Id = "Brass", Name = "Brass", Level = 10, Color = Color3.fromRGB(205, 150, 60) },
-	{ Id = "Ice", Name = "Ice", Level = 15, Color = Color3.fromRGB(120, 200, 235) },
-	{ Id = "Violet", Name = "Violet", Level = 20, Color = Color3.fromRGB(165, 110, 225) },
-	{ Id = "Gold", Name = "Gold", Level = 30, Color = Color3.fromRGB(246, 196, 40) },
-	{ Id = "Glow", Name = "Glow", Level = 40, Color = Color3.fromRGB(255, 120, 40) },
+	{ Id = "Blood", Name = "Blood", Level = 1, Color = Color3.fromRGB(208, 18, 24), Image = "rbxassetid://118590250299536" },
+	{ Id = "Bone", Name = "Bone", Level = 3, Color = Color3.fromRGB(226, 216, 196), Image = "rbxassetid://77256522527280" },
+	{ Id = "Moss", Name = "Moss", Level = 6, Color = Color3.fromRGB(110, 170, 90), Image = "rbxassetid://92489767535651" },
+	{ Id = "Rust", Name = "Rust", Level = 10, Color = Color3.fromRGB(170, 90, 50), Image = "rbxassetid://105611933386287" },
+	{ Id = "Toxic", Name = "Toxic", Level = 15, Color = Color3.fromRGB(140, 220, 60), Image = "rbxassetid://132145916587580" },
+	{ Id = "Wire", Name = "Wire", Level = 20, Color = Color3.fromRGB(150, 160, 170), Image = "rbxassetid://100655810882191" },
+	{ Id = "Gold", Name = "Gold", Level = 30, Color = Color3.fromRGB(246, 196, 40), Image = "rbxassetid://121146892721478" },
+	{ Id = "Fire", Name = "Fire", Level = 40, Color = Color3.fromRGB(255, 120, 40), Image = "rbxassetid://88580378819050" },
 }
 
 -- Títulos: el texto va en inglés y se traduce solo

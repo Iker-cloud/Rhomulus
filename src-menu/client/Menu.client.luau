@@ -229,6 +229,16 @@ local function button(parent, x, y, w, h, onClick)
 		BackgroundTransparency = 1, Text = "", AutoButtonColor = false,
 		Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), ZIndex = 5,
 	}, parent)
+	-- Destello al pulsar: la zona se tiñe un instante y vuelve (la respuesta se siente al momento)
+	b.BackgroundColor3 = Color3.fromRGB(255, 244, 228)
+	b.MouseButton1Down:Connect(function()
+		TweenService:Create(b, TweenInfo.new(0.06), { BackgroundTransparency = 0.82 }):Play()
+	end)
+	local function release()
+		TweenService:Create(b, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 1 }):Play()
+	end
+	b.MouseButton1Up:Connect(release)
+	b.MouseLeave:Connect(release)
 	b.Activated:Connect(function(...)
 		uiSound("Click")
 		onClick(...)
@@ -317,18 +327,27 @@ local function show(name)
 		builders[name]()
 	end
 	if current then
+		-- La que sale se desvanece rápido y se corre un poco a la izquierda
 		local old = current
-		fade(old, 0.2, { GroupTransparency = 1 })
-		task.delay(0.2, function()
+		TweenService:Create(old, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			GroupTransparency = 1, Position = UDim2.fromOffset(-28, 0),
+		}):Play()
+		task.delay(0.15, function()
 			if current ~= old then
 				old.Visible = false
+				old.Position = UDim2.fromOffset(0, 0)
 			end
 		end)
 	end
 	local s = screens[name]
 	current = s
+	-- La que entra espera un instante, llega deslizándose desde la derecha y se aclara (sin que se encimen las dos)
+	s.Position = UDim2.fromOffset(36, 0)
+	s.GroupTransparency = 1
 	s.Visible = true
-	fade(s, 0.3, { GroupTransparency = 0 })
+	TweenService:Create(s, TweenInfo.new(0.34, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, false, 0.08), {
+		GroupTransparency = 0, Position = UDim2.fromOffset(0, 0),
+	}):Play()
 end
 
 local function clear(s)
@@ -382,14 +401,15 @@ drips(main, 120, 426, { { 70, 66, 12 }, { 250, 36, 10 }, { 480, 116, 14 }, { 540
 -- Perfil del jugador (arriba a la derecha): su avatar, su nombre y su nivel con la barra de lo que le falta para el siguiente.
 -- El nivel lo guarda la partida; aquí solo se muestra. Sin datos (Studio sin publicar) se ve el avatar y el nombre sin nivel.
 local AVATAR_X, AVATAR_Y = 1700, 292
-local profileRing = make("Frame", {
-	BackgroundColor3 = RED, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.fromOffset(AVATAR_X, AVATAR_Y), Size = UDim2.fromOffset(190, 190),
-}, main)
-make("UICorner", { CornerRadius = UDim.new(1, 0) }, profileRing)
+local PROFILE_FRAME = 290 -- tamaño de la imagen del marco; el hueco mide Cosmetics.FrameHole de eso
+local PROFILE_AVATAR = math.floor(PROFILE_FRAME * Cosmetics.FrameHole + 0.5)
 local profileAvatar = make("Frame", {
 	BackgroundColor3 = PANEL, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
-	Position = UDim2.fromOffset(AVATAR_X - 6, AVATAR_Y + 4), Size = UDim2.fromOffset(168, 168), ClipsDescendants = true,
+	Position = UDim2.fromOffset(AVATAR_X, AVATAR_Y), Size = UDim2.fromOffset(PROFILE_AVATAR, PROFILE_AVATAR), ClipsDescendants = true,
+}, main)
+local profileRing = make("ImageLabel", {
+	BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), ScaleType = Enum.ScaleType.Fit,
+	Position = UDim2.fromOffset(AVATAR_X, AVATAR_Y), Size = UDim2.fromOffset(PROFILE_FRAME, PROFILE_FRAME), ZIndex = 2,
 }, main)
 make("UICorner", { CornerRadius = UDim.new(1, 0) }, profileAvatar)
 local profileImage = make("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Crop }, profileAvatar)
@@ -434,7 +454,7 @@ local profileLink = text(main, spaced("PROFILE", 4) .. " →", ANTON, 40, Vector
 local function refreshLook()
 	local frame = Cosmetics.get("frame", player:GetAttribute("FrameId"))
 	local title = Cosmetics.get("title", player:GetAttribute("TitleId"))
-	profileRing.BackgroundColor3 = frame and frame.Color or RED
+	profileRing.Image = (frame and frame.Image) or ""
 	profileTitle.Text = title and spaced(upperEs(title.Name), 3) or ""
 	local coins = player:GetAttribute("Rhoms")
 	rhomsText.Visible = typeof(coins) == "number"
@@ -693,17 +713,17 @@ builders.profile = function()
 	for i, f in Cosmetics.Frames do
 		local col, row = (i - 1) % 4, (i - 1) // 4
 		local cx, cy = 195 + 195 * col, 490 + 235 * row
-		local ring = make("Frame", { BackgroundColor3 = f.Color, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(130, 130) }, s)
-		make("UICorner", { CornerRadius = UDim.new(1, 0) }, ring)
+		local holeSize = math.floor(150 * Cosmetics.FrameHole + 0.5)
 		local hole = make("Frame", { BackgroundColor3 = PANEL, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(106, 106) }, s)
+			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(holeSize, holeSize) }, s)
 		make("UICorner", { CornerRadius = UDim.new(1, 0) }, hole)
+		local ring = make("ImageLabel", { BackgroundTransparency = 1, Image = f.Image or "", ScaleType = Enum.ScaleType.Fit, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(150, 150), ZIndex = 2 }, s)
 		local label = text(s, "", OSW_BOLD, 24, Vector2.new(cx, cy + 92), { anchor = Vector2.new(0.5, 0.5), align = Enum.TextXAlignment.Center, width = 180 })
 		local locked = level < f.Level
 		label.Text = locked and spaced(`LEVEL {f.Level}`, 2) or spaced(upperEs(f.Name), 2)
 		label.TextColor3 = locked and DIM or INK
-		ring.BackgroundTransparency = locked and 0.7 or 0
+		ring.ImageTransparency = locked and 0.7 or 0
 		frameParts[f.Id] = hole
 		button(s, cx - 90, cy - 70, 180, 190, function()
 			equip("frame", f.Id)
