@@ -176,6 +176,12 @@ local function newProjectile(player, direction, id)
 	local model = ItemModel.build(PROJECTILE_MODEL[id])
 	local part = model.PrimaryPart
 	part.CanCollide = true
+	-- Sin rebote y con mucho roce: cae donde se ve que cae y se queda ahí (con la física normal rebotaba por todos lados)
+	for _, piece in model:GetDescendants() do
+		if piece:IsA("BasePart") then
+			piece.CustomPhysicalProperties = PhysicalProperties.new(2, 1, 0, 100, 1)
+		end
+	end
 	local origin = head.Position + direction * 2.5
 	model:PivotTo(CFrame.new(origin, origin + direction))
 	model.Parent = projectiles

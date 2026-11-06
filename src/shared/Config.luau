@@ -527,6 +527,7 @@ return {
 		Explosive = { Chance = 0.3, Fuse = 0.9, Radius = 10, Damage = 20 }, -- mutador "Explosivos" (nunca el Tanque)
 		ThinkInterval = 0.2, -- cada cuánto decide (ataque, objetivo)
 		RepathInterval = 0.5, -- cada cuánto recalcula la ruta
+		Stuck = { Time = 4, Distance = 2.5 }, -- Survival: si en `Time` s no se movió más de `Distance` studs sin estar atacando, reaparece en un punto de entrada
 		CorpseTime = 3.6, -- segundos que el cadáver queda antes de borrarse (caída, espasmo y desvanecimiento; ver ZombieAnimator)
 		DeathFade = 0.9, -- los últimos segundos del cadáver se desvanece y se hunde
 		-- Trepar a los autobuses: si un jugador está sobre el techo de un autobús, los zombies cercanos suben por el costado con
@@ -797,25 +798,26 @@ return {
 	Survival = {
 		ForceInStudio = false, -- true: en Studio la partida arranca directo en Survival (solo para probar)
 		FirstWaveDelay = 20, -- segundos para comprar y colocarse antes de la primera oleada
-		BreakTime = 20, -- pausa entre oleadas
+		BreakTime = 15, -- pausa entre oleadas
 		BossBreakTime = 28, -- pausa después de una oleada de jefes (cada BossEvery)
 		SpawnDelay = 0.35, -- pausa entre zombies al soltar la oleada
 		SpawnRetry = 0.5, -- si no hay hueco o punto libre, reintenta tras esto
 		MinSpawnDistance = 30, -- más cerca que esto de un jugador no aparece nadie (el estadio es pequeño)
 		PlayersScale = { 0.6, 0.85, 1.0, 1.15 }, -- tamaño de la oleada según jugadores (1 a 4)
-		BaseCount = 6, -- zombies de la oleada 1 (al 100 %)
-		PerWave = 2.2, -- zombies más por cada oleada
-		AliveCap = { 12, 18, 24, 28 }, -- máximo de vivos a la vez por jugadores, antes de sumar CapPerWave
+		BaseCount = 10, -- zombies de la oleada 1 (al 100 %)
+		PerWave = 2.8, -- zombies más por cada oleada
+		AliveCap = { 16, 22, 26, 30 }, -- máximo de vivos a la vez por jugadores, antes de sumar CapPerWave
 		CapPerWave = 0.5, -- vivos extra por oleada (tope global: Difficulties.MaxAliveCap)
-		Fast = { Start = 0.1, PerWave = 0.015, Max = 0.55 }, -- probabilidad de zombie rápido
-		Health = { Start = 0.85, PerWave = 0.07, Max = 3.5 }, -- multiplicador de vida (también el Tanque)
-		Speed = { Start = 0.92, PerWave = 0.01, Max = 1.3 },
-		Damage = { Start = 0.8, PerWave = 0.04, Max = 2.4 },
+		Fast = { Start = 0.2, PerWave = 0.02, Max = 0.55 }, -- probabilidad de zombie rápido
+		Health = { Start = 1.1, PerWave = 0.09, Max = 3.8 }, -- multiplicador de vida (también el Tanque)
+		Speed = { Start = 1.0, PerWave = 0.012, Max = 1.3 },
+		Damage = { Start = 1.0, PerWave = 0.05, Max = 2.5 },
 		BossEvery = 5, -- cada tantas oleadas hay jefes
 		TankFrom = 5, -- primera oleada con Tanque
 		GrabberFrom = 10, -- primera oleada con Atrapador
 		SuppliesEvery = 5, -- cada tantas oleadas se reponen munición, botiquines, latas sueltas y las vitrinas de Phial
 		StragglerTime = 90, -- segundos tras soltar toda la oleada: si quedan pocos, se dan por vencidos
+		CansMult = 0.55, -- todas las latas que se ganan en Survival se multiplican por esto (se ganaban demasiadas)
 		WaveBonus = { Base = 50, PerWave = 10, Clean = 100 }, -- latas del equipo al limpiar una oleada (+Clean si nadie cayó)
 	},
 

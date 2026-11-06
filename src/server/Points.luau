@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Config = require(ReplicatedStorage.Shared.Config)
 local Difficulty = require(script.Parent.Difficulty)
 
 local Points = {}
@@ -25,6 +26,9 @@ end
 -- `contributor` (opcional): el jugador al que se le cuenta lo que suma
 function Points.add(amount, contributor)
 	amount = math.floor(amount * Difficulty.get().Reward + 0.5) -- las dificultades altas dan algo más de latas
+	if workspace:GetAttribute("MapId") == "Survival" then
+		amount = math.max(1, math.floor(amount * Config.Survival.CansMult + 0.5))
+	end
 	total += amount
 	publish()
 	if contributor and contributor.Parent then

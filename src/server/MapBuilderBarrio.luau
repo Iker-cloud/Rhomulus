@@ -4160,6 +4160,22 @@ function MapBuilderBarrio.build(config, options)
 		table.insert(refs.gas.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
 	end
 
+	-- Survival: nada de lo del modo historia se recoge ni estorba (botiquines, latas sueltas, rótulo de la entrada de la furgoneta)
+	if options.survival then
+		for _, list in { refs.medkits, refs.canPiles } do
+			for _, item in list do
+				item.model:Destroy()
+			end
+			table.clear(list)
+		end
+		for _, item in map:GetDescendants() do
+			if item.Name == "CartelRescate" or (item.Name == "RotuloPorton" and item:IsA("BasePart") and item.Position.Z > 390)
+				or ((item.Name == "PortonPilar" or item.Name == "PortonFranja") and item:IsA("BasePart") and item.Position.Z > 390) then
+				item:Destroy()
+			end
+		end
+	end
+
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
 	local params = OverlapParams.new()
 	params.RespectCanCollide = true

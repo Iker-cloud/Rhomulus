@@ -46,6 +46,31 @@ local function nearestTarget(fromPosition)
 	return best, bestDistance
 end
 
+-- Survival: pasa a un zombie atascado a uno de los puntos de entrada que no esté a la vista de nadie (el más lejano de los jugadores)
+local function relocate(model, root)
+	local points = workspace:FindFirstChild("SpawnPoints") and workspace.SpawnPoints:FindFirstChild("Survival")
+	if not points then
+		return
+	end
+	local best, bestDistance
+	for _, point in points:GetChildren() do
+		local nearest = math.huge
+		for _, player in Players:GetPlayers() do
+			local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if playerRoot then
+				nearest = math.min(nearest, (playerRoot.Position - point.Position).Magnitude)
+			end
+		end
+		if nearest >= Config.Survival.MinSpawnDistance and (not bestDistance or nearest > bestDistance) then
+			best, bestDistance = point, nearest
+		end
+	end
+	if best then
+		model:PivotTo(CFrame.new(best.Position + Vector3.new(0, 3, 0)))
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
 -- Ruidos recientes (mutador "Ruidoso"): { Position, Range, Expires }
 local noises = {}
 
@@ -300,8 +325,23 @@ local function think(humanoid, root, stats)
 	-- Desfase aleatorio para que 25 zombies no calculen ruta en el mismo frame
 	local lastPath = os.clock() - math.random() * Config.Zombie.RepathInterval
 
+	local stuckFrom, stuckSince = root.Position, os.clock()
 	while humanoid.Health > 0 and root.Parent do
 		local target, distance = nearestTarget(root.Position)
+		-- Survival: si lleva varios segundos sin avanzar y no está pegando (atascado entre edificios), reaparece en otro punto de entrada
+		if target and distance > stats.AttackRange + 3 and workspace:GetAttribute("MapId") == "Survival" then
+			local now = os.clock()
+			if (root.Position - stuckFrom).Magnitude > Config.Zombie.Stuck.Distance then
+				stuckFrom = root.Position
+				stuckSince = now
+			elseif now - stuckSince >= Config.Zombie.Stuck.Time then
+				stuckSince = now
+				relocate(root.Parent, root)
+			end
+		else
+			stuckFrom = root.Position
+			stuckSince = os.clock()
+		end
 		-- Una bengala encendida atrae a los zombies que no tienen a nadie al alcance de un golpe
 		local lure = findLure(root.Position)
 		if lure and not (target and distance <= stats.AttackRange) then

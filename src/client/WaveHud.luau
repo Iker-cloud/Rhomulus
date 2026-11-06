@@ -1,27 +1,56 @@
 -- Marcador del modo Survival: oleada actual y cuántos zombies quedan (o la cuenta atrás de la pausa), y un aviso grande al empezar cada
 -- oleada. Lee los atributos de Workspace que publica GameState.survival: Wave, WaveTotal, WaveLeft, WaveBoss y WaveBreakEnd.
+-- Mismo lenguaje visual que el resto del HUD (placas inclinadas, letra pesada en cursiva, rojo sobre negro).
 -- Los textos van en inglés; Lang.watch los traduce solo (pares con {1} en shared/LangEs).
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
-local Paper = require(script.Parent.PaperStyle)
 local Sfx = require(script.Parent.Sfx)
+local Slant = require(script.Parent.Slant)
 local UiFit = require(script.Parent.UiFit)
 
 local player = Players.LocalPlayer
 
 local WaveHud = {}
 
-local function label(parent, font, size, color)
+local DARK = Color3.fromRGB(14, 16, 12)
+local RED = Color3.fromRGB(200, 38, 38)
+local AMBER = Color3.fromRGB(245, 190, 50)
+local GREEN = Color3.fromRGB(70, 160, 90)
+local CREAM = Color3.fromRGB(245, 245, 235)
+local BLACK = Color3.fromRGB(16, 12, 10)
+
+local function label(parent, size, color)
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
-	text.FontFace = font
+	text.FontFace = Slant.FONT
 	text.TextSize = size
 	text.TextColor3 = color
+	text.TextScaled = true
 	text.Parent = parent
+	local limit = Instance.new("UITextSizeConstraint")
+	limit.MaxTextSize = size
+	limit.MinTextSize = 8
+	limit.Parent = text
 	return text
+end
+
+-- Placa inclinada (paralelogramo) con sombra dura debajo, para que no se pierda sobre el cielo
+local function plate(parent, x, y, width, height, slant, color)
+	local shadow = Instance.new("Frame")
+	shadow.BackgroundTransparency = 1
+	shadow.Position = UDim2.fromOffset(x + 3, y + 3)
+	shadow.Parent = parent
+	Slant.fill(shadow, width, height, slant, Color3.fromRGB(0, 0, 0))
+	for _, strip in shadow:GetChildren() do
+		strip.BackgroundTransparency = 0.55
+	end
+	local holder = Instance.new("Frame")
+	holder.BackgroundTransparency = 1
+	holder.Position = UDim2.fromOffset(x, y)
+	holder.Parent = parent
+	Slant.fill(holder, width, height, slant, color)
+	return holder
 end
 
 function WaveHud.start()
@@ -32,91 +61,89 @@ function WaveHud.start()
 	gui.DisplayOrder = 3
 	gui.Parent = player:WaitForChild("PlayerGui")
 
-	-- Panel de expediente arriba al centro (donde va la etiqueta de dificultad en las demás partidas)
+	-- Marcador arriba al centro (donde va la etiqueta de dificultad en las demás partidas): etiqueta roja con la oleada + placa oscura
 	local panel = Instance.new("Frame")
 	panel.AnchorPoint = Vector2.new(0.5, 0)
-	panel.Position = UDim2.new(0.5, 0, 0, 8)
-	panel.Size = UDim2.fromOffset(250, 0)
-	panel.AutomaticSize = Enum.AutomaticSize.Y
-	panel.Rotation = -0.6
+	panel.Position = UDim2.new(0.5, 0, 0, 12)
+	panel.Size = UDim2.fromOffset(420, 58)
+	panel.BackgroundTransparency = 1
 	panel.Visible = false
 	panel.Parent = gui
-	Paper.paper(panel, 3)
 	UiFit.scale(panel, 0.9)
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UDim.new(0, 6)
-	padding.PaddingBottom = UDim.new(0, 8)
-	padding.PaddingLeft = UDim.new(0, 12)
-	padding.PaddingRight = UDim.new(0, 12)
-	padding.Parent = panel
-	local layout = Instance.new("UIListLayout")
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.Padding = UDim.new(0, 2)
-	layout.Parent = panel
 
-	local title = label(panel, Paper.Head, 34, Paper.Ink)
-	title.LayoutOrder = 1
-	title.Size = UDim2.new(1, 0, 0, 38)
-	local status = label(panel, Paper.Typewriter, 16, Paper.Soft)
-	status.LayoutOrder = 2
-	status.Size = UDim2.new(1, 0, 0, 20)
+	plate(panel, 150, 0, 270, 46, 14, DARK)
+	local tag = plate(panel, 0, 0, 190, 46, 14, RED)
+	local title = label(tag, 26, CREAM)
+	title.Position = UDim2.fromOffset(22, 4)
+	title.Size = UDim2.fromOffset(150, 38)
+	local status = label(panel, 20, CREAM)
+	status.TextXAlignment = Enum.TextXAlignment.Left
+	status.Position = UDim2.fromOffset(212, 4)
+	status.Size = UDim2.fromOffset(190, 38)
+
 	local track = Instance.new("Frame")
-	track.LayoutOrder = 3
-	track.Size = UDim2.new(1, 0, 0, 6)
-	track.BackgroundColor3 = Paper.PaperDark
+	track.Position = UDim2.fromOffset(170, 50)
+	track.Size = UDim2.fromOffset(240, 4)
+	track.BackgroundColor3 = DARK
+	track.BackgroundTransparency = 0.25
 	track.BorderSizePixel = 0
 	track.Parent = panel
-	local trackStroke = Instance.new("UIStroke")
-	trackStroke.Color = Paper.Ink
-	trackStroke.Thickness = 1.5
-	trackStroke.Parent = track
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Paper.Red
+	fill.BackgroundColor3 = RED
 	fill.BorderSizePixel = 0
 	fill.Parent = track
 
-	-- Aviso grande al empezar una oleada
+	-- Aviso grande al empezar una oleada: placa roja inclinada atravesando la pantalla y una tira oscura debajo
 	local banner = Instance.new("CanvasGroup")
 	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = UDim2.fromScale(0.5, 0.3)
-	banner.Size = UDim2.fromOffset(640, 150)
+	banner.Position = UDim2.fromScale(0.5, 0.4)
+	banner.Size = UDim2.fromOffset(560, 130)
 	banner.BackgroundTransparency = 1
 	banner.GroupTransparency = 1
 	banner.Parent = gui
 	local bannerScale = Instance.new("UIScale")
 	bannerScale.Parent = banner
 	UiFit.scale(banner, 0.9)
-	local bannerTitle = label(banner, Paper.Head, 96, Color3.fromRGB(240, 232, 214))
-	bannerTitle.Size = UDim2.new(1, 0, 0, 100)
-	bannerTitle.TextStrokeColor3 = Color3.fromRGB(20, 12, 10)
-	bannerTitle.TextStrokeTransparency = 0.15
-	local bannerSub = label(banner, Paper.Typewriter, 26, Paper.Red)
-	bannerSub.Position = UDim2.fromOffset(0, 104)
-	bannerSub.Size = UDim2.new(1, 0, 0, 34)
-	bannerSub.TextStrokeColor3 = Color3.fromRGB(20, 12, 10)
-	bannerSub.TextStrokeTransparency = 0.2
+	local bannerPlate = plate(banner, 20, 0, 520, 84, 30, RED)
+	local bannerTitle = label(banner, 62, CREAM)
+	bannerTitle.Position = UDim2.fromOffset(60, 6)
+	bannerTitle.Size = UDim2.fromOffset(440, 72)
+	local bannerSubPlate = plate(banner, 120, 90, 320, 32, 14, DARK)
+	local bannerSub = label(banner, 20, AMBER)
+	bannerSub.Position = UDim2.fromOffset(150, 92)
+	bannerSub.Size = UDim2.fromOffset(260, 28)
 
 	local bannerToken = 0
 	local function showBanner(wave, boss)
 		bannerToken += 1
 		local token = bannerToken
 		bannerTitle.Text = `WAVE {wave}`
-		bannerTitle.TextColor3 = boss and Color3.fromRGB(235, 80, 66) or Color3.fromRGB(240, 232, 214)
+		bannerTitle.TextColor3 = boss and BLACK or CREAM
+		for _, strip in bannerPlate:GetChildren() do
+			strip.BackgroundColor3 = boss and AMBER or RED
+		end
 		bannerSub.Text = boss and "BOSS WAVE" or ""
+		bannerSubPlate.Visible = boss
+		bannerSub.Visible = boss
 		banner.GroupTransparency = 1
-		bannerScale.Scale = 1.35
-		TweenService:Create(banner, TweenInfo.new(0.25), { GroupTransparency = 0 }):Play()
-		TweenService:Create(bannerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		bannerScale.Scale = 1.25
+		TweenService:Create(banner, TweenInfo.new(0.2), { GroupTransparency = 0 }):Play()
+		TweenService:Create(bannerScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 		if boss then
 			Sfx.play("AlertTank", 0.5)
 		end
-		task.delay(1.9, function()
+		task.delay(1.8, function()
 			if token == bannerToken then
-				TweenService:Create(banner, TweenInfo.new(0.6), { GroupTransparency = 1 }):Play()
+				TweenService:Create(banner, TweenInfo.new(0.5), { GroupTransparency = 1 }):Play()
 			end
 		end)
+	end
+
+	local function paintTag(color)
+		for _, strip in tag:GetChildren() do
+			strip.BackgroundColor3 = color
+		end
 	end
 
 	local function hidden()
@@ -137,17 +164,17 @@ function WaveHud.start()
 			local left = math.clamp(workspace:GetAttribute("WaveLeft") or total, 0, total)
 			local boss = workspace:GetAttribute("WaveBoss") == true
 			title.Text = `WAVE {wave}`
-			title.TextColor3 = boss and Paper.Red or Paper.Ink
+			title.TextColor3 = boss and BLACK or CREAM
+			paintTag(boss and AMBER or RED)
 			status.Text = boss and `BOSS WAVE · {left} LEFT` or `{left} LEFT`
-			status.TextColor3 = boss and Paper.Red or Paper.Soft
 			fill.Size = UDim2.fromScale(1 - left / total, 1)
 			track.Visible = true
 		else
 			local remaining = math.max(0, (workspace:GetAttribute("WaveBreakEnd") or 0) - workspace:GetServerTimeNow())
 			title.Text = wave == 0 and "GET READY" or `WAVE {wave} CLEARED`
-			title.TextColor3 = Paper.Green
+			title.TextColor3 = CREAM
+			paintTag(GREEN)
 			status.Text = `NEXT WAVE IN {math.ceil(remaining)}`
-			status.TextColor3 = Paper.Soft
 			track.Visible = false
 		end
 	end
