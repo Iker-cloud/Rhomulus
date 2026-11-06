@@ -1241,7 +1241,13 @@ local function shopAwning(map, base, u, v, width, depth, color)
 	light.Parent = bulb
 end
 
+-- Survival: solo hay la Tienda del estadio; las del barrio (una por tramo) no se construyen
+local survivalBuild = false
+
 local function buildShop(map, refs, cfg)
+	if survivalBuild and cfg.zone ~= "Survival" then
+		return
+	end
 	local f = cfg.forward
 	local right = Vector3.new(-f.Z, 0, f.X)
 	local W, D = cfg.width, cfg.depth
@@ -4096,6 +4102,7 @@ end
 -- options.survival = true arma el mapa para el modo Survival (Tienda en el estadio, portón norte abierto, puntos de aparición propios)
 function MapBuilderBarrio.build(config, options)
 	options = options or {}
+	survivalBuild = options.survival == true
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
 		if old then
