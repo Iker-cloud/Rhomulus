@@ -97,10 +97,15 @@ function ResultHud.start()
 
 	local recordSink = nil -- recibe el récord de extracción cuando el servidor lo manda (Remotes.Record)
 
-	local function show(won, stats, awards)
+	local function show(won, stats, awards, extra)
 		recordSink = nil
 		clear()
 		local palette = won and PALETTES.Victory or PALETTES.Defeat
+		local survivalWaves = extra and extra.waves -- modo Survival: no hay victoria, el título es la oleada a la que llegaron
+		if survivalWaves then
+			palette = table.clone(PALETTES.Defeat)
+			palette.title = survivalWaves > 0 and `WAVE {survivalWaves}` or "OVERRUN"
+		end
 
 		local holder = Instance.new("Frame")
 		holder.BackgroundTransparency = 1
@@ -403,7 +408,7 @@ function ResultHud.start()
 			seconds = math.max(0, math.floor(seconds + 0.5))
 			return string.format("%d:%02d", seconds // 60, seconds % 60)
 		end
-		if won then
+		if won or survivalWaves then
 			recordSink = function(info)
 				if not extras.Parent or extras:FindFirstChild("RecordLine") then
 					return
@@ -419,7 +424,17 @@ function ResultHud.start()
 				line.RichText = true
 				line.TextColor3 = Color3.fromRGB(190, 184, 176)
 				local accent = string.format("#%02X%02X%02X", palette.accent.R * 255, palette.accent.G * 255, palette.accent.B * 255)
-				if info.isRecord then
+				if info.waves then
+					-- (el texto enriquecido no se traduce solo: se traducen las piezas antes de armarlo)
+					local wave = Lang.tr("WAVE")
+					if info.isRecord then
+						line.Text = `{wave} {info.waves}  ·  <font color="{accent}">{Lang.tr("NEW RECORD!")}</font>`
+					elseif info.best then
+						line.Text = `{wave} {info.waves}  ·  {Lang.tr("RECORD")}: <font color="{accent}">{wave} {info.best}</font>`
+					else
+						line.Text = `{wave} {info.waves}`
+					end
+				elseif info.isRecord then
 					line.Text = `TIME {clock(info.time)}  ·  <font color="{accent}">NEW {difficulty.Upper} RECORD!</font>`
 				elseif info.best then
 					line.Text = `TIME {clock(info.time)}  ·  {difficulty.Upper} RECORD: <font color="{accent}">{clock(info.best)}</font>`

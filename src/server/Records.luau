@@ -37,4 +37,27 @@ function Records.submit(difficultyId, seconds, names)
 	return info
 end
 
+-- Survival: la oleada más alta que ha aguantado un equipo de `players` jugadores (clave waves_<jugadores>).
+-- Devuelve { waves, players, best, bestNames, isRecord } (best nil si no hay guardado)
+function Records.submitWaves(players, waves, names)
+	local info = { waves = waves, players = players, isRecord = false }
+	if not store then
+		return info
+	end
+	local ok, value = pcall(function()
+		return store:UpdateAsync("waves_" .. players, function(old)
+			if typeof(old) == "table" and typeof(old.waves) == "number" and old.waves >= waves then
+				return old
+			end
+			info.isRecord = true
+			return { waves = waves, names = names, at = os.time() }
+		end)
+	end)
+	if ok and typeof(value) == "table" then
+		info.best = value.waves
+		info.bestNames = value.names
+	end
+	return info
+end
+
 return Records

@@ -25,6 +25,7 @@ local SAFE = {
 	ItemUse = true,
 	DifficultyVote = true,
 	MutatorHud = true,
+	WaveHud = true,
 	PhialSlot = true,
 }
 

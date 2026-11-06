@@ -3,6 +3,7 @@
 --   stage          (valor 1)       cada jugador, al entrar a cada etapa de la partida: sirve de embudo (¿en cuál se pierde la gente?)
 --   player_downed  (valor 1)       un jugador cae; campo 1 = etapa
 --   player_died    (valor 1)       un jugador muere (se desangró o murió); campo 1 = etapa
+--   survival_wave  (oleada)        modo Survival: empieza cada oleada
 --   round_end      (segundos)      fin de partida; campo 1 = "win" o "loss"; el valor es lo que duró desde que salieron del lobby
 -- Si AnalyticsService falla (Studio sin publicar, por ejemplo) no pasa nada: todo va dentro de pcall.
 local AnalyticsService = game:GetService("AnalyticsService")
@@ -31,7 +32,7 @@ function Telemetry.stage(name)
 		return
 	end
 	lastStage = name
-	if name == "Zone1" then
+	if name == "Zone1" or (name == "WaveBreak" and roundStart == nil) then
 		roundStart = os.clock()
 	end
 	for _, player in Players:GetPlayers() do
@@ -44,6 +45,13 @@ function Telemetry.mutators(ids)
 	local text = #ids > 0 and table.concat(ids, ",") or "ninguno"
 	for _, player in Players:GetPlayers() do
 		log(player, "round_mutators", 1, text)
+	end
+end
+
+-- Survival: cada oleada que empieza (valor = número de oleada; campo 1 = "wave")
+function Telemetry.wave(wave, players)
+	for _, player in Players:GetPlayers() do
+		log(player, "survival_wave", wave, "wave")
 	end
 end
 

@@ -12,6 +12,7 @@ local Difficulty = {}
 
 local currentId = Difficulties.Default
 local currentMutators = {} -- ids de los mutadores de la ronda
+local waveScale = { Health = 1, Speed = 1, Damage = 1 } -- Survival: lo que sube cada oleada (server/SurvivalWaves)
 local effective = Mutators.apply(Difficulties[currentId], currentMutators) -- la dificultad con los mutadores aplicados (lo que leen los demás sistemas); con Flags desde el principio
 workspace:SetAttribute("Difficulty", currentId)
 workspace:SetAttribute("Mutators", "")
@@ -25,6 +26,7 @@ end
 function Difficulty.set(id)
 	currentId = Difficulties.isValid(id) and id or Difficulties.Default
 	currentMutators = {}
+	waveScale = { Health = 1, Speed = 1, Damage = 1 }
 	workspace:SetAttribute("Difficulty", currentId)
 	rebuild()
 end
@@ -38,6 +40,11 @@ function Difficulty.setMutators(ids)
 		end
 	end
 	rebuild()
+end
+
+-- Survival: multiplicadores extra de vida, velocidad y daño de los zombies que aparezcan a partir de ahora
+function Difficulty.setWaveScale(health, speed, damage)
+	waveScale = { Health = health, Speed = speed, Damage = damage }
 end
 
 function Difficulty.mutators()
@@ -63,9 +70,9 @@ function Difficulty.zombieStats(kind)
 	local base = Config.Zombie[kind]
 	local d = effective
 	local stats = table.clone(base)
-	stats.Health = math.max(1, math.floor(base.Health * d.Health + 0.5))
-	stats.Speed = base.Speed * d.Speed
-	stats.Damage = math.max(1, math.floor(base.Damage * d.Damage + 0.5))
+	stats.Health = math.max(1, math.floor(base.Health * d.Health * waveScale.Health + 0.5))
+	stats.Speed = base.Speed * d.Speed * waveScale.Speed
+	stats.Damage = math.max(1, math.floor(base.Damage * d.Damage * waveScale.Damage + 0.5))
 	return stats
 end
 

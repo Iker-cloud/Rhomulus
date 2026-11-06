@@ -12,12 +12,18 @@ local Zombies = require(script.Parent.Zombies)
 local Director = {}
 
 local zone = nil
+local survival = false -- modo Survival: GameState suelta las oleadas a mano (spawnKind) y el director no aparece zombies solo
 local boost = false
 local boostStart = 0 -- os.clock() en que empezó la extracción
 local nextWave = math.huge
 
 function Director.setZone(name)
 	zone = name
+end
+
+-- Modo Survival: el director deja de aparecer zombies por su cuenta; los puntos pueden estar más cerca (el estadio es pequeño)
+function Director.setSurvival(on)
+	survival = on
 end
 
 -- Presión de la extracción: llegan despacio y con un tope más bajo (ver Config.Director)
@@ -96,7 +102,7 @@ local function isHidden(point, relaxed)
 		if head then
 			local eye = point + Vector3.new(0, 3, 0)
 			local delta = eye - head.Position
-			if delta.Magnitude < Config.Director.MinSpawnDistance then
+			if delta.Magnitude < (survival and Config.Survival.MinSpawnDistance or Config.Director.MinSpawnDistance) then
 				return false
 			end
 			-- Muy lejos se considera fuera de vista aunque no haya paredes en medio
@@ -112,6 +118,7 @@ local function isHidden(point, relaxed)
 end
 
 local function pickPoint(relaxed)
+	relaxed = relaxed or survival -- en Survival no hace falta línea de vista: los muros del estadio los esconden
 	local candidates = {}
 	for _, point in getSpawnPoints() do
 		if isHidden(point, relaxed) then
@@ -165,6 +172,16 @@ local function spawnWave(size)
 		spawnOne()
 		task.wait(Config.Director.HordeSpawnDelay)
 	end
+end
+
+-- Survival: un zombie del tipo dado (respeta el máximo de Tanques y Atrapadores vivos). Devuelve false si no pudo aparecer.
+function Director.spawnKind(kind)
+	if kind == "Tank" then
+		return spawnTank()
+	elseif kind == "Grabber" then
+		return spawnGrabber()
+	end
+	return spawnOne(kind)
 end
 
 -- Horda: aparece de golpe, respetando el límite de vivos. size es el tamaño al 100% (4 jugadores).
@@ -243,7 +260,7 @@ function Director.start()
 				pause = lerp(E.IntervalStart, E.IntervalEnd, extractionProgress()) / (Difficulty.get().ExtractPressure or 1)
 			end
 			pause *= Difficulty.get().SpawnInterval
-			if zone and #Players:GetPlayers() > 0 then
+			if zone and not survival and #Players:GetPlayers() > 0 then
 				if boost and os.clock() >= nextTankTime and spawnTank() then
 					nextTankTime = os.clock() + Config.Director.Tank.ExtractionInterval * Difficulty.get().TankEvery
 				end

@@ -97,4 +97,21 @@ function Progress.roundRhoms(won, finished, difficultyId, rarities, hasAward, re
 	return parts.finish + parts.win + parts.difficulty + parts.mutation + parts.award, parts
 end
 
+-- Survival: no hay victoria; el XP y los Rhoms salen de las oleadas que aguantó el equipo. Valores sin balancear.
+Progress.Survival = {
+	MinWaves = 3, -- con menos oleadas la partida no da Rhoms ni el bono de terminar
+	XpPerWave = 20,
+	RhomsPerWaves = 3, -- 1 Rhom por cada tantas oleadas...
+	RhomsCap = 12, -- ...hasta este tope por partida (así no se farmea la tienda)
+}
+
+-- Rhoms de una partida de Survival (+1 si recibió un reconocimiento al final)
+function Progress.survivalRhoms(waves, hasAward)
+	local cfg = Progress.Survival
+	if waves < cfg.MinWaves then
+		return 0
+	end
+	return math.min(cfg.RhomsCap, waves // cfg.RhomsPerWaves) + (hasAward and Progress.Rhoms.Award or 0)
+end
+
 return Progress

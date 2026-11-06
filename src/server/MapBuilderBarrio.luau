@@ -3637,7 +3637,7 @@ end
 -- la furgoneta entra por el portón norte (x -12..12, 18 de alto) hacia -Z y frena en la cancha en (0, 0, 365).
 -- Campamento del Refugio Remo sobre la cancha y las gradas (unas 110 piezas, todo decoración sin colisión).
 -- Deja libre el pasillo central de la furgoneta (|x| < 16).
-local function buildStadiumCamp(map, rng)
+local function buildStadiumCamp(map, rng, options)
 	local BLOOD = Color3.fromRGB(105, 16, 16)
 	local folder = Instance.new("Folder")
 	folder.Name = "Campamento"
@@ -3648,6 +3648,9 @@ local function buildStadiumCamp(map, rng)
 	local tentColors = { C.lonaAzul, C.lonaNaranja, C.lonaVerde, C.mostaza, C.lonaAzul, C.terracota }
 	for i, spot in { { -28, 394 }, { 28, 394 }, { -62, 394 }, { 62, 394 }, { -66, 338 }, { 66, 338 } } do
 		local cx, cz = spot[1], spot[2]
+		if options.survival and cx == -28 and cz == 394 then
+			continue -- ahí va la Tienda del modo Survival
+		end
 		local color = tentColors[i]
 		for _, side in { -1, 1 } do
 			deco(block(folder, "CarpaLona", Vector3.new(0.15, 3.9, 5), CFrame.new(cx + side * 1.25, y + 1.5, cz) * CFrame.Angles(0, 0, side * math.rad(39.8)), color, Enum.Material.Fabric))
@@ -3734,7 +3737,7 @@ local function buildStadiumCamp(map, rng)
 	end
 end
 
-local function buildStadium(map, refs, rng, spawns, config)
+local function buildStadium(map, refs, rng, spawns, config, options)
 	local wall = C.concreto
 	floor(map, "EstadioPiso", -120, 120, 330, 400, Color3.fromRGB(125, 122, 118), Enum.Material.Concrete)
 	-- Cancha de tierra y pasto seco (160 × 60), apenas más alta que el piso
@@ -3800,7 +3803,9 @@ local function buildStadium(map, refs, rng, spawns, config)
 
 	-- Cobertura baja repartida (fuera del pasillo de 16 hasta la furgoneta y del espacio de 28 × 28 donde frena)
 	for _, b in { { -50, 345, 0 }, { 50, 345, 0 }, { -45, 392, 0 }, { 45, 392, 0 } } do
-		bench(map, b[1], b[2], b[3])
+		if not (options.survival and b[1] == -45 and b[2] == 392) then -- ahí va la Tienda del modo Survival
+			bench(map, b[1], b[2], b[3])
+		end
 	end
 	car(map, -55, 380, 80, C.concreto)
 	crates(map, 40, 372)
@@ -3846,7 +3851,21 @@ local function buildStadium(map, refs, rng, spawns, config)
 		marker(spawns, point)
 	end
 
-	buildStadiumCamp(map, Random.new(config.Seed + 303))
+	-- Modo Survival: Tienda dentro del estadio (caja de armas, munición y objetos, farmacia), sitio de aparición del equipo y puntos por
+	-- donde entran los zombies: la carretera norte (el portón queda abierto) y la calle junto a la puerta sur
+	if options.survival then
+		buildShop(map, refs, { origin = Vector3.new(-37, 0, 366), forward = Vector3.new(0, 0, 1), width = 20, depth = 30, zone = "Survival", signWidth = 14 })
+		refs.survivalSpawn = CFrame.lookAt(Vector3.new(0, 1, 352), Vector3.new(0, 1, 380))
+		for _, point in {
+			Vector3.new(0, 0, 440), Vector3.new(-7, 0, 430), Vector3.new(7, 0, 430), Vector3.new(0, 0, 446),
+			Vector3.new(-52, 0, 326), Vector3.new(52, 0, 326), Vector3.new(-76, 0, 326), Vector3.new(-82, 0, 329),
+			Vector3.new(78, 0, 326), Vector3.new(55, 0, 314), Vector3.new(-56, 0, 256), Vector3.new(56, 0, 270),
+		} do
+			marker(options.survivalSpawns, point)
+		end
+	end
+
+	buildStadiumCamp(map, Random.new(config.Seed + 303), options)
 	stadiumDetails(map, Random.new(config.Seed + 404))
 end
 
@@ -4025,7 +4044,7 @@ end
 local CAP_NAMES = { "^Casa$", "^TiendaBloque", "^IglesiaBloque", "^EstadioMuro", "^MercadoMuro", "^LobbyLado", "^LobbyFondo", "^LobbyFrente", "^Iglesia[FL]", "^Tienda[FL]" }
 local CAP_TOP = 60 -- las tapas llegan hasta esta altura: con saltos de 7 desde una azotea de 10 no se alcanza
 
-local function buildLimits(map)
+local function buildLimits(map, options)
 	local folder = Instance.new("Folder")
 	folder.Name = "Limites"
 	folder.Parent = map
@@ -4063,7 +4082,9 @@ local function buildLimits(map)
 	invisible(Vector3.new(2, H, 860), CFrame.new(125, H / 2, 20)) -- este
 	invisible(Vector3.new(256, H, 2), CFrame.new(0, H / 2, -403)) -- detrás del lobby
 	invisible(Vector3.new(30, H, 2), CFrame.new(0, H / 2, 451)) -- fin de la carretera norte (el suelo llega a z 450)
-	invisible(Vector3.new(26, H, 2), CFrame.new(0, H / 2, 399)) -- cierra el portón norte del estadio (la furgoneta entra animada, no choca)
+	if not options.survival then -- en Survival los zombies entran por el portón norte
+		invisible(Vector3.new(26, H, 2), CFrame.new(0, H / 2, 399)) -- cierra el portón norte del estadio (la furgoneta entra animada, no choca)
+	end
 	for _, side in { -1, 1 } do
 		invisible(Vector3.new(3, H, 58), CFrame.new(side * 13.5, H / 2, 423)) -- a los lados de la carretera (z 394..452)
 	end
@@ -4072,7 +4093,9 @@ local function buildLimits(map)
 	return caps
 end
 
-function MapBuilderBarrio.build(config)
+-- options.survival = true arma el mapa para el modo Survival (Tienda en el estadio, portón norte abierto, puntos de aparición propios)
+function MapBuilderBarrio.build(config, options)
+	options = options or {}
 	for _, name in { "Map", "SpawnPoints" } do
 		local old = workspace:FindFirstChild(name)
 		if old then
@@ -4099,6 +4122,10 @@ function MapBuilderBarrio.build(config)
 	local extractionSpawns = Instance.new("Folder")
 	extractionSpawns.Name = "Extraction"
 	extractionSpawns.Parent = spawnRoot
+	local survivalSpawns = Instance.new("Folder")
+	survivalSpawns.Name = "Survival"
+	survivalSpawns.Parent = spawnRoot
+	options.survivalSpawns = survivalSpawns
 
 	local rng = Random.new(config.Seed)
 	favelaRng = Random.new(config.Seed + 2026)
@@ -4117,9 +4144,9 @@ function MapBuilderBarrio.build(config)
 	buildTerminal(map, refs, rng, zone3Spawns)
 	buildAvenue(map, refs, rng, zone3Spawns)
 	buildAndenes(map, refs, rng, zone3Spawns)
-	buildStadium(map, refs, rng, extractionSpawns, config)
+	buildStadium(map, refs, rng, extractionSpawns, config, options)
 	buildArt(map, Random.new(config.Seed + 101))
-	buildLimits(map)
+	buildLimits(map, options)
 
 	-- Las garrafas se entregan junto al generador; con cada entrega llegan zombies de la zona 2
 	local generatorPosition = refs.generator.Position

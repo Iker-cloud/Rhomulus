@@ -14,7 +14,7 @@ local N = Config.Sounds.Night
 
 local NightSounds = {}
 
-local OUTSIDE = { Zone1 = true, Zone2 = true, Extraction = true }
+local OUTSIDE = { Zone1 = true, Zone2 = true, Extraction = true, Wave = true, WaveBreak = true }
 
 local function isOutside()
 	return OUTSIDE[workspace:GetAttribute("Stage")] == true

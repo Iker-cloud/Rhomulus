@@ -35,6 +35,7 @@ local OSW_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWei
 
 local MAPS = {
 	{ id = "Morro", name = "MORRO ESPERANZA" },
+	{ id = "Survival", name = "SURVIVAL" },
 }
 local function mapName(id)
 	for _, m in MAPS do
@@ -1699,7 +1700,7 @@ builders.list = function()
 			end
 			text(row, upperEs(item.name), ANTON, 54, Vector2.new(nameX, 50), { width = 800, transparency = alpha })
 			text(row, spaced(string.upper(mapName(item.map)), 4), OSW_BOLD, 22, Vector2.new(740, 32), { width = 480, color = RED, transparency = alpha })
-			text(row, spaced(difficultyName(item.difficulty), 3), OSW_BOLD, 22, Vector2.new(740, 72), { width = 480, color = DIM, transparency = alpha })
+			text(row, spaced(item.map == "Survival" and "ENDLESS" or difficultyName(item.difficulty), 3), OSW_BOLD, 22, Vector2.new(740, 72), { width = 480, color = DIM, transparency = alpha })
 			text(row, `{item.count}/{item.max}`, ANTON, 64, Vector2.new(1600, 40),
 				{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, transparency = alpha })
 			if full then
@@ -1789,7 +1790,7 @@ builders.setup = function()
 		text(card, upperEs((player.DisplayName ~= "" and player.DisplayName or player.Name) .. "'s room"), ANTON, 60, Vector2.new(nameX, 68), { width = 560 })
 		text(card, spaced(upperEs(mapName(setupState.map)), 5), OSW_BOLD, 22, Vector2.new(34, 130), { width = 520, color = RED })
 		text(card, "1/4", ANTON, 78, Vector2.new(745, 70), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
-		text(card, spaced(difficultyName(setupState.difficulty), 3), OSW_BOLD, 20, Vector2.new(745, 128),
+		text(card, spaced(setupState.map == "Survival" and "ENDLESS" or difficultyName(setupState.difficulty), 3), OSW_BOLD, 20, Vector2.new(745, 128),
 			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 330, color = DIM })
 		text(previewHolder, setupState.public and "Anyone can join with a tap." or "Asks for a 4-letter code that we'll give you when you create the room.",
 			OSW, 24, Vector2.new(2, 203), { width = 770, color = DIM })
@@ -1811,12 +1812,19 @@ builders.setup = function()
 	end)
 	describeVisibility()
 
-	tag(s, "MAP", 120, 550)
-	choiceRow(s, 120, 574, 84, { { "Morro", "MORRO ESPERANZA", 520 } }, 52, function(id)
+	tag(s, "MODE", 120, 550)
+	local describeDifficultyAgain = nil -- se asigna más abajo: al cambiar de modo se actualiza el texto de la dificultad
+	choiceRow(s, 120, 574, 84, { { "Morro", "STORY", 300 }, { "Survival", "SURVIVAL", 380 } }, 52, function(id)
 		return setupState.map == id
 	end, function(id)
 		setupState.map = id
+		if id == "Survival" then
+			setupState.difficulty = Difficulties.Default
+		end
 		drawPreview()
+		if describeDifficultyAgain then
+			describeDifficultyAgain()
+		end
 	end)
 
 	-- Los mutadores se encienden o apagan después, en la sala del anfitrión (aquí se crea con ellos activados)
@@ -1824,8 +1832,10 @@ builders.setup = function()
 	tag(s, "DIFFICULTY", 120, 698)
 	local difficultyDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 830), { width = 1000, color = DIM })
 	local function describeDifficulty()
-		difficultyDesc.Text = Difficulties.get(setupState.difficulty).Description
+		difficultyDesc.Text = setupState.map == "Survival" and "Survival ignores this: the horde gets harder by itself every wave."
+			or Difficulties.get(setupState.difficulty).Description
 	end
+	describeDifficultyAgain = describeDifficulty
 	local items = {}
 	for _, id in Difficulties.Order do
 		table.insert(items, { id, Difficulties[id].Upper, 190 })
@@ -1948,16 +1958,18 @@ builders.create = function()
 		end
 	end)
 
-	tag(s, "MUTATIONS", 1368, 703)
-	choiceRow(s, 1368, 728, 80, { { true, "YES", 110 }, { false, "NO", 110 } }, 54, function(id)
-		return st.mutators ~= false == id
-	end, function(id)
-		st.mutators = id
-		hostRequest("setMutators", id)
-	end)
+	if st.map ~= "Survival" then -- Survival no sortea mutaciones
+		tag(s, "MUTATIONS", 1368, 703)
+		choiceRow(s, 1368, 728, 80, { { true, "YES", 110 }, { false, "NO", 110 } }, 54, function(id)
+			return st.mutators ~= false == id
+		end, function(id)
+			st.mutators = id
+			hostRequest("setMutators", id)
+		end)
+	end
 
-	tag(s, "MAP", 900, 703)
-	choiceRow(s, 900, 728, 80, { { "Morro", "MORRO ESPERANZA", 440 } }, 54, function(id)
+	tag(s, "MODE", 900, 703)
+	choiceRow(s, 900, 728, 80, { { "Morro", "STORY", 190 }, { "Survival", "SURVIVAL", 238 } }, 46, function(id)
 		return st.map == id
 	end, function(id)
 		st.map = id
@@ -1973,7 +1985,8 @@ builders.create = function()
 	diffDesc.TextWrapped = true
 	diffDesc.TextYAlignment = Enum.TextYAlignment.Top
 	local function describeDifficulty()
-		diffDesc.Text = Difficulties.get(st.difficulty).Description
+		diffDesc.Text = st.map == "Survival" and "Survival ignores this: the horde gets harder by itself every wave."
+			or Difficulties.get(st.difficulty).Description
 	end
 	local diffItems = {}
 	for _, id in Difficulties.Order do
@@ -2017,12 +2030,16 @@ builders.joined = function()
 	playerList(s, st.names, st.hostIndex, st.youIndex, st.ids)
 	-- Lo que eligió el anfitrión (solo se ve)
 	tag(s, "DIFFICULTY", 120, 662)
-	text(s, spaced(Difficulties.get(st.difficulty).Upper, 3), ANTON, 54, Vector2.new(120, 725), { width = 700 })
-	text(s, Difficulties.get(st.difficulty).Description, OSW_LIGHT, 24, Vector2.new(120, 790), { width = 700, color = DIM })
-	tag(s, "MAP", 900, 703)
+	local survival = st.map == "Survival"
+	text(s, spaced(survival and "ENDLESS" or Difficulties.get(st.difficulty).Upper, 3), ANTON, 54, Vector2.new(120, 725), { width = 700 })
+	text(s, survival and "Waves of zombies that never stop. Hold the stadium for as long as you can." or Difficulties.get(st.difficulty).Description,
+		OSW_LIGHT, 24, Vector2.new(120, 790), { width = 700, color = DIM })
+	tag(s, "MODE", 900, 703)
 	text(s, upperEs(mapName(st.map)), ANTON, 54, Vector2.new(900, 765), { width = 460 })
-	tag(s, "MUTATIONS", 1368, 703)
-	text(s, st.mutators ~= false and "YES" or "NO", ANTON, 54, Vector2.new(1368, 765), { width = 300 })
+	if not survival then
+		tag(s, "MUTATIONS", 1368, 703)
+		text(s, st.mutators ~= false and "YES" or "NO", ANTON, 54, Vector2.new(1368, 765), { width = 300 })
+	end
 	rule(s, 120, 869, 1680)
 	backButton(s, "main", true)
 	text(s, spaced(st.started and "STARTING…" or "WAITING FOR THE HOST", 3), ANTON, 54, Vector2.new(1800, 948),

@@ -23,7 +23,7 @@ local ROOM_TTL = 3600
 local INDEX_TTL = 10 -- una entrada de la lista caduca si ningún servidor la refresca en este tiempo
 local LIST_CACHE = 2 -- la lista se lee de MemoryStore como mucho cada tantos segundos por servidor
 local MAX_LIST = 40
-local MAPS = { Morro = true }
+local MAPS = { Morro = true, Survival = true } -- Survival: oleadas sin fin en el estadio de Morro Esperanza (no usa dificultad ni mutadores)
 local LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 Players.CharacterAutoLoads = false
@@ -303,7 +303,10 @@ function actions.create(player, options)
 	end
 	local map = MAPS[options.map] and options.map or "Morro"
 	local difficulty = Difficulties.isValid(options.difficulty) and options.difficulty or Difficulties.Default
-	if not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
+	if map == "Survival" then
+		difficulty = Difficulties.Default -- en Survival la dificultad sube sola
+	end
+	if map ~= "Survival" and not Progress.isUnlocked(difficulty, player:GetAttribute("ProgXP")) then
 		return { error = `{Difficulties.get(difficulty).Name} unlocks at level {Progress.requiredLevel(difficulty)}` }
 	end
 	local isPublic = options.public ~= false
@@ -460,6 +463,9 @@ function actions.setMap(player, map)
 	end
 	return hostChange(player, function(r)
 		r.map = map
+		if map == "Survival" then
+			r.difficulty = Difficulties.Default
+		end
 		return true
 	end)
 end

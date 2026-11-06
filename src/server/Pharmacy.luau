@@ -600,6 +600,16 @@ local function build(position, yaw)
 	return { model = model, base = base, light = light, syringes = syringes, angle = 0, state = "idle", prompt = prompt, rollId = 0, uses = 0 }
 end
 
+-- Survival: cada tanto se reponen los usos de todas las vitrinas (las agotadas vuelven a abrirse)
+function Pharmacy.restock()
+	for machine in machines do
+		machine.uses = 0
+		if machine.state == "idle" then
+			resetToIdle(machine)
+		end
+	end
+end
+
 -- Quita las máquinas (fin de ronda o cambio de mapa)
 function Pharmacy.clear()
 	for machine in machines do

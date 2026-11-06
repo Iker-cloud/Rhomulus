@@ -164,7 +164,8 @@ end
 
 -- Fin de la partida: reparte el XP a todos los que siguen en el servidor y le cuenta a todos lo de todos (Remotes.XpGain), para que la
 -- pantalla de resultados muestre la barra de cada superviviente.
-function PlayerProgress.award(won, reachedZone2)
+-- `waves` solo viene en el modo Survival (oleadas que aguantó el equipo): no hay victoria y el XP y los Rhoms salen de las oleadas
+function PlayerProgress.award(won, reachedZone2, waves)
 	local difficultyId = Difficulty.id()
 	local bonus = Mutators.xpBonus(Difficulty.mutators())
 	local list = {}
@@ -180,7 +181,10 @@ function PlayerProgress.award(won, reachedZone2)
 	end
 	for _, player in Players:GetPlayers() do
 		local stats = Stats.get(player)
-		local gained = Progress.roundXp(stats, won, true, difficultyId, bonus)
+		local gained = Progress.roundXp(stats, won, not waves or waves >= Progress.Survival.MinWaves, difficultyId, bonus)
+		if waves then
+			gained += waves * Progress.Survival.XpPerWave
+		end
 		-- XP único por cada mutación que le sale por primera vez
 		local discovered = {}
 		seen[player] = seen[player] or {}
@@ -191,7 +195,12 @@ function PlayerProgress.award(won, reachedZone2)
 				gained += Mutators.DiscoveryXp
 			end
 		end
-		local coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId], reachedZone2)
+		local coins
+		if waves then
+			coins = Progress.survivalRhoms(waves, rewarded[player.UserId])
+		else
+			coins = Progress.roundRhoms(won, true, difficultyId, rarities, rewarded[player.UserId], reachedZone2)
+		end
 		-- caja Arsenal de premio (a lo más una por ronda; la abre el menú)
 		local dropped = math.random() < Cosmetics.crateDropChance(won, difficultyId, rarities)
 		local kind = dropped and Cosmetics.crateKind(math.random()) or nil
@@ -204,7 +213,7 @@ function PlayerProgress.award(won, reachedZone2)
 			revives = stats.Revives or 0,
 			carries = stats.Carries or 0,
 			headshots = stats.Headshots or 0,
-			games = reachedZone2 and 1 or 0,
+			games = ((waves and waves >= Progress.Survival.MinWaves) or reachedZone2) and 1 or 0,
 			wins = won and 1 or 0,
 			hardWins = (won and hard) and 1 or 0,
 			cleanWins = (won and (stats.Downs or 0) == 0) and 1 or 0,

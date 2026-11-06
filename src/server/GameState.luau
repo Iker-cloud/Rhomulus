@@ -3,12 +3,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
+local SurvivalWaves = require(script.Parent.SurvivalWaves)
 local Boarding = require(script.Parent.Boarding)
 local CanPiles = require(script.Parent.CanPiles)
 local Director = require(script.Parent.Director)
@@ -38,7 +40,8 @@ local Zombies = require(script.Parent.Zombies)
 local GameState = {}
 
 -- Constructor de cada mapa votable (las claves son los id de Config.Maps)
-local BUILDERS = { Morro = MapBuilderBarrio }
+-- (Survival es el mismo mapa con la Tienda dentro del estadio: lo pide el anfitrión de una sala desde el menú)
+local BUILDERS = { Morro = MapBuilderBarrio, Survival = MapBuilderBarrio }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
@@ -100,7 +103,7 @@ local function setStage(name, message, tone)
 		workspace:SetAttribute("ObjectiveName", nil)
 	end
 	-- La Tienda de la zona en curso (Zone1 a Zone3) tiene su propia guía en pantalla
-	workspace:SetAttribute("ShopPos", map and map.shopPositions and map.shopPositions[name] or nil)
+	workspace:SetAttribute("ShopPos", map and map.shopPositions and map.shopPositions[name == "WaveBreak" and "Survival" or name] or nil)
 	workspace:SetAttribute("Stage", name)
 	workspace:SetAttribute("Tone", tone)
 	workspace:SetAttribute("Message", message)
@@ -225,6 +228,15 @@ local function setLobbyDoors(open)
 	end
 end
 
+-- Atributos del modo Survival que lee el cliente (client/WaveHud)
+local WAVE_ATTRIBUTES = { "Wave", "WaveTotal", "WaveLeft", "WaveBoss", "WaveBreakEnd" }
+
+local function clearWaveAttributes()
+	for _, name in WAVE_ATTRIBUTES do
+		workspace:SetAttribute(name, nil)
+	end
+end
+
 local function resetMap()
 	setLobbyDoors(false)
 	setDoor(map.safeEntryDoor, true)
@@ -261,7 +273,7 @@ local function loadMap(id)
 	Pharmacy.clear()
 	WeaponBox.clear()
 	Zombies.clear()
-	map = BUILDERS[id].build(Config.Game)
+	map = BUILDERS[id].build(Config.Game, { survival = id == "Survival" })
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)
 	Pharmacy.place(map.pharmacySpots)
@@ -280,6 +292,10 @@ local privateDifficulty
 local privateMutators = true -- el anfitrión puede apagar los mutadores en el menú
 local function privateMap()
 	if privateChoice then
+		return privateChoice
+	end
+	if Config.Survival.ForceInStudio and RunService:IsStudio() then
+		privateChoice = "Survival" -- solo para probar el modo en Studio
 		return privateChoice
 	end
 	if game.PrivateServerId == "" or game.PrivateServerOwnerId ~= 0 then
@@ -307,7 +323,9 @@ end
 -- Votación del mapa en la sala aparte; al terminar se construye el ganador
 local function vote()
 	Director.setZone(nil)
+	Director.setSurvival(false)
 	Director.setBoost(false)
+	clearWaveAttributes()
 	Ambushes.disarm()
 	Zombies.clear()
 	WeaponBox.clear()
@@ -319,8 +337,8 @@ local function vote()
 
 	local fixed = privateMap()
 	if fixed then
-		Difficulty.set(privateDifficulty) -- la eligió el anfitrión en el menú (nil = la de por defecto)
-		if privateMutators then
+		Difficulty.set(fixed ~= "Survival" and privateDifficulty or nil) -- la eligió el anfitrión en el menú (nil = la de por defecto); Survival sube sola
+		if privateMutators and fixed ~= "Survival" then
 			rollMutators()
 		else
 			Telemetry.mutators({})
@@ -349,8 +367,10 @@ local function vote()
 	loadMap(winner)
 end
 
-local function lobby()
+-- Limpia lo de la ronda anterior (lo usan el lobby y el modo Survival)
+local function resetRound()
 	Director.setZone(nil)
+	Director.setSurvival(false)
 	Director.setBoost(false)
 	Ambushes.disarm()
 	Zombies.clear()
@@ -364,9 +384,14 @@ local function lobby()
 	WeaponBox.clear()
 	Weapons.resetAll()
 	resetMap()
+	clearWaveAttributes()
 	for _, player in Players:GetPlayers() do
 		player:SetAttribute("Ready", false)
 	end
+end
+
+local function lobby()
+	resetRound()
 
 	PlayerState.setSafePoint(map.lobbySpawn)
 	-- Las mutaciones de la ronda las muestran la ruleta y las fichas del cliente (no van en este texto: así se puede traducir entero)
@@ -563,15 +588,174 @@ local function zone3()
 	return ok
 end
 
-local function result(won)
+-- Cuántas veces han caído o muerto los jugadores en total (para saber si una oleada se limpió sin caídas)
+local function downsTotal()
+	local total = 0
+	for _, entry in Stats.all() do
+		total += entry.downs + entry.deaths
+	end
+	return total
+end
+
+-- Pausa entre oleadas con cuenta atrás en pantalla (WaveBreakEnd). Devuelve false si el equipo cae.
+local function waveBreak(seconds, message)
+	local finish = workspace:GetServerTimeNow() + seconds
+	workspace:SetAttribute("WaveBreakEnd", finish)
+	workspace:SetAttribute("WaveLeft", nil)
+	setStage("WaveBreak", message, "Survival")
+	return waitUntil(function()
+		return workspace:GetServerTimeNow() >= finish
+	end, true)
+end
+
+-- Modo Survival: el equipo aparece en el estadio y aguanta oleadas cada vez peores hasta que caen todos. Los muertos reaparecen al
+-- empezar cada pausa. Devuelve la última oleada que se limpió (0 si cayeron en la primera).
+local function survival()
+	local S = Config.Survival
+	resetRound()
+	Director.setSurvival(true)
+	Director.setZone("Survival")
+	PlayerState.setSafePoint(map.survivalSpawn)
+	for _, player in Players:GetPlayers() do
+		player:SetAttribute("Ready", true)
+	end
+	respawn(false)
+	runStart = os.clock()
+	reachedZone2 = false
+	WeaponBox.place("Survival")
+	for _, prompt in { map.generatorPrompt, map.radioPrompt } do
+		prompt.Enabled = false -- los eventos del modo historia no se usan aquí
+	end
+
+	-- Espera a que todos tengan personaje (si no, el equipo parece vencido de entrada)
+	local loadDeadline = os.clock() + 20
+	while os.clock() < loadDeadline do
+		local loaded = #Players:GetPlayers() > 0
+		for _, player in Players:GetPlayers() do
+			if PlayerState.get(player) == "Dead" or not getRoot(player) then
+				loaded = false
+			end
+		end
+		if loaded then
+			break
+		end
+		task.wait(0.25)
+	end
+
+	local reached = 0
+	local wave = 0
+	local alive = waveBreak(S.FirstWaveDelay, "Hold the stadium! The first wave is coming. Shop first")
+	while alive do
+		wave += 1
+		local composition = SurvivalWaves.compose(wave, #Players:GetPlayers())
+		Difficulty.setWaveScale(composition.health, composition.speed, composition.damage)
+		PlayerState.resetSelfRevives()
+		workspace:SetAttribute("Wave", wave)
+		workspace:SetAttribute("WaveTotal", composition.total)
+		workspace:SetAttribute("WaveLeft", composition.total)
+		workspace:SetAttribute("WaveBoss", composition.boss)
+		workspace:SetAttribute("WaveBreakEnd", nil)
+		if composition.boss then
+			setStage("Wave", `Wave {wave}: boss wave! Something big is coming`, "Boss")
+			playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 10)
+		else
+			setStage("Wave", `Wave {wave}: here they come!`, "Wave")
+		end
+		Telemetry.wave(wave, #Players:GetPlayers())
+
+		-- Suelta la oleada respetando el máximo de vivos; termina al caer todos los zombies (o si el equipo cae)
+		local queue = table.clone(composition.kinds)
+		local downsBefore = downsTotal()
+		local allSpawnedAt = nil
+		while true do
+			if #Players:GetPlayers() == 0 or teamWiped() then
+				alive = false
+				break
+			end
+			local living = Zombies.getAlive()
+			if #queue > 0 and living < composition.cap then
+				local kind = table.remove(queue, 1)
+				if Director.spawnKind(kind) then
+					task.wait(S.SpawnDelay)
+				else
+					table.insert(queue, kind) -- sin hueco para ese tipo o sin punto libre: lo intenta más tarde
+					task.wait(S.SpawnRetry)
+				end
+			else
+				if #queue == 0 then
+					allSpawnedAt = allSpawnedAt or os.clock()
+					if living == 0 then
+						break
+					end
+					local waited = os.clock() - allSpawnedAt
+					if (living <= 3 and waited > S.StragglerTime) or waited > S.StragglerTime * 2 then
+						Zombies.clear() -- alguno quedó atascado fuera de alcance: la oleada se da por limpia
+						break
+					end
+				end
+				task.wait(0.25)
+			end
+			workspace:SetAttribute("WaveLeft", #queue + Zombies.getAlive())
+		end
+		if not alive then
+			break
+		end
+
+		-- Oleada limpia: latas del equipo, los muertos vuelven y, cada tanto, se reponen los suministros
+		reached = wave
+		local bonus = S.WaveBonus.Base + S.WaveBonus.PerWave * wave
+		local clean = downsTotal() == downsBefore
+		if clean then
+			bonus += S.WaveBonus.Clean
+		end
+		Points.add(bonus)
+		respawn(true)
+		local supplies = wave % S.SuppliesEvery == 0
+		if supplies then
+			Weapons.refillAll()
+			CanPiles.reset()
+			Medkits.reset()
+			Pharmacy.restock()
+		end
+		local message = supplies and `Wave {wave} cleared! +{bonus} cans. Supplies restocked, regroup at the shop`
+			or `Wave {wave} cleared! +{bonus} cans. Regroup at the shop`
+		alive = waveBreak(composition.boss and S.BossBreakTime or S.BreakTime, message)
+	end
+
+	Director.setSurvival(false)
 	Director.setZone(nil)
+	Difficulty.setWaveScale(1, 1, 1)
+	return reached
+end
+
+local function result(won, waves)
+	Director.setZone(nil)
+	Director.setSurvival(false)
 	Ambushes.disarm()
 	Director.setBoost(false)
+	Difficulty.setWaveScale(1, 1, 1)
 	Zombies.clear()
 	WeaponBox.clear()
-	setStage("Result", won and "Victory!" or "Defeat", won and "Victory" or "Defeat")
+	clearWaveAttributes()
+	local isSurvival = waves ~= nil -- Survival: `waves` = oleadas que aguantó el equipo (no hay victoria, solo récord)
+	if isSurvival then
+		setStage("Result", `You held out {waves} waves`, "Defeat")
+	else
+		setStage("Result", won and "Victory!" or "Defeat", won and "Victory" or "Defeat")
+	end
 	local stats = Stats.all()
-	Remotes.Results:FireAllClients(won, stats, Awards.compute(stats))
+	Remotes.Results:FireAllClients(won, stats, Awards.compute(stats), isSurvival and { waves = waves } or nil)
+	-- Récord de oleadas (Survival): por número de jugadores; el DataStore tarda, así que se avisa aparte cuando contesta
+	if isSurvival then
+		local names = {}
+		for _, entry in stats do
+			table.insert(names, entry.name)
+		end
+		local teamSize = math.clamp(#Players:GetPlayers(), 1, 4)
+		task.spawn(function()
+			Remotes.Record:FireAllClients(Records.submitWaves(teamSize, waves, names))
+		end)
+	end
 	-- Récord de extracción rápida: solo cuenta ganar; el DataStore tarda, así que se avisa aparte cuando contesta
 	if won and runStart then
 		local seconds = os.clock() - runStart
@@ -584,7 +768,7 @@ local function result(won)
 			Remotes.Record:FireAllClients(Records.submit(difficultyId, seconds, names))
 		end)
 	end
-	PlayerProgress.award(won, reachedZone2)
+	PlayerProgress.award(won, reachedZone2, waves)
 	Telemetry.result(won)
 
 	-- Cuenta atrás hasta la siguiente partida (la pantalla de resultados la muestra). Si todos los que quedan pulsan OTRA PARTIDA
@@ -663,6 +847,10 @@ function GameState.start()
 	task.spawn(function()
 		while true do
 			vote()
+			if workspace:GetAttribute("MapId") == "Survival" then
+				result(false, survival())
+				continue
+			end
 			lobby()
 			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, extraExits = map.safeExtraExits, spawn = map.safeSpawn })
 			if won then

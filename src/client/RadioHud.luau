@@ -14,6 +14,9 @@ local player = Players.LocalPlayer
 -- clave -> { color, remitente }
 local TONES = {
 	Lobby = { Color3.fromRGB(155, 214, 70), "COMMANDER" },
+	Survival = { Color3.fromRGB(245, 190, 50), "COMMANDER" },
+	Wave = { Color3.fromRGB(235, 70, 60), "LOOKOUT" },
+	Boss = { Color3.fromRGB(255, 60, 120), "LOOKOUT" },
 	Waiting = { Color3.fromRGB(120, 190, 120), "COMMANDER" },
 	Start = { Color3.fromRGB(70, 215, 200), "COMMANDER" },
 	Advance = { Color3.fromRGB(245, 190, 50), "COMMANDER" },

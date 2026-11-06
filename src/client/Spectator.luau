@@ -170,6 +170,11 @@ local function buildUi()
 
 	local hint = label(gui, "You'll respawn at the next safe room", UDim2.fromOffset(420, 18), UDim2.new(0.5, -210, 1, -106), 15, Color3.fromRGB(190, 185, 176))
 	hint.TextStrokeTransparency = 0.6
+	local function refreshHint()
+		hint.Text = workspace:GetAttribute("MapId") == "Survival" and "You'll respawn when the next wave starts" or "You'll respawn at the next safe room"
+	end
+	refreshHint()
+	workspace:GetAttributeChangedSignal("MapId"):Connect(refreshHint)
 
 	-- Fundido a negro para los cambios largos
 	local fade = Instance.new("Frame")

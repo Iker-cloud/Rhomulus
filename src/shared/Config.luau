@@ -792,6 +792,33 @@ return {
 		ResultMinTime = 3, -- aunque todos pidan "otra partida", se espera esto para poder leer las estadísticas
 	},
 
+	-- Modo Survival (server/SurvivalWaves + GameState.survival): el equipo aparece en el estadio y aguanta oleadas sin fin que suben
+	-- solas. Se elige en el menú (mapa "Survival" de una sala) y no usa la votación, el lobby ni los mutadores. Valores sin balancear.
+	Survival = {
+		ForceInStudio = false, -- true: en Studio la partida arranca directo en Survival (solo para probar)
+		FirstWaveDelay = 20, -- segundos para comprar y colocarse antes de la primera oleada
+		BreakTime = 20, -- pausa entre oleadas
+		BossBreakTime = 28, -- pausa después de una oleada de jefes (cada BossEvery)
+		SpawnDelay = 0.35, -- pausa entre zombies al soltar la oleada
+		SpawnRetry = 0.5, -- si no hay hueco o punto libre, reintenta tras esto
+		MinSpawnDistance = 30, -- más cerca que esto de un jugador no aparece nadie (el estadio es pequeño)
+		PlayersScale = { 0.6, 0.85, 1.0, 1.15 }, -- tamaño de la oleada según jugadores (1 a 4)
+		BaseCount = 6, -- zombies de la oleada 1 (al 100 %)
+		PerWave = 2.2, -- zombies más por cada oleada
+		AliveCap = { 12, 18, 24, 28 }, -- máximo de vivos a la vez por jugadores, antes de sumar CapPerWave
+		CapPerWave = 0.5, -- vivos extra por oleada (tope global: Difficulties.MaxAliveCap)
+		Fast = { Start = 0.1, PerWave = 0.015, Max = 0.55 }, -- probabilidad de zombie rápido
+		Health = { Start = 0.85, PerWave = 0.07, Max = 3.5 }, -- multiplicador de vida (también el Tanque)
+		Speed = { Start = 0.92, PerWave = 0.01, Max = 1.3 },
+		Damage = { Start = 0.8, PerWave = 0.04, Max = 2.4 },
+		BossEvery = 5, -- cada tantas oleadas hay jefes
+		TankFrom = 5, -- primera oleada con Tanque
+		GrabberFrom = 10, -- primera oleada con Atrapador
+		SuppliesEvery = 5, -- cada tantas oleadas se reponen munición, botiquines, latas sueltas y las vitrinas de Phial
+		StragglerTime = 90, -- segundos tras soltar toda la oleada: si quedan pocos, se dan por vencidos
+		WaveBonus = { Base = 50, PerWave = 10, Clean = 100 }, -- latas del equipo al limpiar una oleada (+Clean si nadie cayó)
+	},
+
 	-- Subir a la furgoneta (server/Boarding, client/BoardingAnimator): se mantiene E en la puerta lateral y el sobreviviente (con el
 	-- compañero caído que cargue) sube con su animación y se sienta. Al terminar el margen la furgoneta arranca y se va (client/VanAnimator).
 	Boarding = {
