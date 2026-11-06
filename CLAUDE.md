@@ -4,7 +4,7 @@
 
 - **Responde en español.** Ve al grano: Iker quiere terminar el juego, no aprender. No conviertas las tareas en lecciones ni propongas ejercicios; construye lo que pide y explica solo lo indispensable.
 - Iker trabaja con su socio, Isaac.
-- **Flujo:** Rojo 7.7 (gestionado con Aftman) + Git + GitHub (`Iker-cloud/JuegoZombies`, rama `main`). El código vive en `src/` y Rojo lo sincroniza con Studio según `default.project.json`. Los archivos son la fuente de verdad: nunca edites scripts dentro de Studio, porque Rojo los sobrescribe.
+- **Flujo:** Rojo 7.7 (gestionado con Aftman) + Git + GitHub (`Iker-cloud/Rhomulus`, rama `main`). El código vive en `src/` y Rojo lo sincroniza con Studio según `default.project.json`. Los archivos son la fuente de verdad: nunca edites scripts dentro de Studio, porque Rojo los sobrescribe.
 - Mapas, modelos e iluminación se hacen en Studio (no están en los archivos).
 - Al terminar algo que funcione, propón un commit con un mensaje corto en español.
 - Sigue la arquitectura del GDD: el servidor es la autoridad, un `ModuleScript` por sistema, valores de balance en un módulo de configuración.
