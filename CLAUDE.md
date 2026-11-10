@@ -120,7 +120,7 @@
 - `MapBuilderBarrio.luau` pasa de 200.000 caracteres: desde `execute_luau` no se puede asignar su `Source` (límite de la herramienta); se prueba con Rojo o con un archivo `.rbxl` recién compilado.
 - Las propiedades de streaming del `Workspace` (`StreamingTargetRadius`, `StreamingMinRadius`) son `Not Scriptable` y no hay radio por cliente: se ponen a mano en Studio y valen para todas las plataformas.
 
-**Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (las capturas de Studio funcionan con la herramienta de captura, pero la cámara del juego a veces las pisa); proponer commit con mensaje corto en español y pedir confirmación antes del `push`. Iker comparte capturas de diseños de referencia para la interfaz.
+**Cómo trabaja Iker:** responder en español y al grano; **hacer preguntas de diseño antes de empezar cada fase o cambio grande**; probar en Studio antes de dar algo por hecho y decir qué no se pudo ver (las capturas de Studio funcionan con la herramienta de captura, pero la cámara del juego a veces las pisa); proponer commit con mensaje corto en español. **Los push van siempre a `main` de GitHub (además de la rama) y ya no hace falta pedir confirmación**, pero solo se sube lo que ya se probó en Studio. Iker comparte capturas de diseños de referencia para la interfaz.
 
 **Mapa 1 (después del MVP):** diseño en `docs/mapa-1-barrio.md` — barrio Morro Esperanza (referencia Brasil, todo en español) de la ciudad Rhomulus; 3 rutas por tramo que se juntan en cada punto seguro, 3 tramos y 2 puntos seguros, mapa de unos 800×240 studs, evento nuevo "Las garrafas" en el mercado, extracción en el estadio (Refugio Remo), botiquines, guía grande de objetivos (columna de luz, flecha en pantalla, flechas pintadas, un color por ruta). Primero mapa gris a nivel de calle; escaleras y azoteas después.
 
@@ -174,7 +174,7 @@ El juego tiene tres mapas previstos, cada uno con su propio vehículo de extracc
 | Centro comercial | Pasillos, tiendas, escaleras eléctricas, estacionamiento | Un auto deportivo en el estacionamiento | Después |
 | Aeropuerto | Terminal, bandas de equipaje, hangar y pista | Un avión que hay que alcanzar en la pista | Después |
 
-Los mapas nuevos reutilizan todos los sistemas. El diseño del mapa 1 está en `docs/mapa-1-barrio.md`.
+Los mapas nuevos reutilizan todos los sistemas. El diseño del mapa 1 está en `docs/mapa-1-barrio.md`. El del **mapa 2, Last Call (aeropuerto)**, está en `docs/mapa-2-aeropuerto.md` (diseño escrito el 10 de noviembre de 2026, sin construir; nombres y decisiones confirmadas por Iker).
 
 Estructura de cada partida:
 
