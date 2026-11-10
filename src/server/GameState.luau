@@ -13,6 +13,7 @@ local Atmosphere = require(script.Parent.Atmosphere)
 local SurvivalWaves = require(script.Parent.SurvivalWaves)
 local Boarding = require(script.Parent.Boarding)
 local CanPiles = require(script.Parent.CanPiles)
+local CrewCall = require(script.Parent.CrewCall)
 local Director = require(script.Parent.Director)
 local Difficulty = require(script.Parent.Difficulty)
 local RateLimit = require(script.Parent.RateLimit)
@@ -295,6 +296,7 @@ local function loadMap(id)
 	CanPiles.init(map.canPiles)
 	Medkits.init(map.medkits)
 	GasCans.init(map.gas)
+	CrewCall.init(map.crew)
 	map.gateText = map.gateText or { label = "GATE", open = "open the gate", run = "to the gate" }
 	map.texts = setmetatable(map.texts or {}, { __index = DEFAULT_TEXTS })
 	workspace:SetAttribute("MapId", id)
@@ -397,6 +399,7 @@ local function resetRound()
 	Items.resetAll()
 	Pharmacy.resetEffects()
 	GasCans.reset()
+	CrewCall.reset()
 	WeaponBox.clear()
 	Weapons.resetAll()
 	resetMap()
@@ -489,15 +492,78 @@ local function fuelGenerator()
 	end, true)
 end
 
+-- Posición media de los jugadores que siguen en el mapa (para que la guía apunte al objetivo más cercano al equipo)
+local function teamCenter()
+	local sum, count = Vector3.zero, 0
+	for _, player in livingPlayers() do
+		sum += getRoot(player).Position
+		count += 1
+	end
+	return count > 0 and sum / count or nil
+end
+
+-- Last Call: Crew Call. Tres tripulantes infectados llevan las tarjetas del control de seguridad; con las 3, el control se abre
+-- manteniendo E en su lector, y al empezar llega una horda corta. Devuelve false si el equipo cae.
+local function crewCall()
+	local C = Config.CrewCall
+	CrewCall.start()
+	local lastKey
+	local gotCards = waitUntil(function()
+		local taken, total, loose = CrewCall.cards(), CrewCall.total(), CrewCall.looseCards()
+		local key = `{taken}{loose}`
+		if key ~= lastKey then
+			lastKey = key
+			if loose > 0 then
+				setStage("Zone2", `Grab the access card before the horde gets it ({taken}/{total})`, "Crew")
+			else
+				setStage("Zone2", `Crew Call: three infected crew members carry the security access cards. Take them down ({taken}/{total})`, "Crew")
+			end
+		end
+		-- La guía sigue a la tarjeta suelta o al tripulante más cercano al equipo
+		local position, label = CrewCall.objective(teamCenter())
+		workspace:SetAttribute("ObjectivePos", position)
+		workspace:SetAttribute("ObjectiveName", label)
+		return taken >= total
+	end, true)
+	if not gotCards then
+		return false
+	end
+
+	setStage("Zone2", "You have the access cards. Swipe them at the security checkpoint", "Checkpoint")
+	local hordeSent = false
+	local function sendHorde()
+		if not hordeSent then
+			hordeSent = true
+			playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
+			task.spawn(Director.spawnAmbush, C.DoorHorde, map.crew.hordePoints)
+		end
+	end
+	-- La alarma salta en cuanto alguien empieza a pasar las tarjetas
+	local connection = map.gatePrompt.PromptButtonHoldBegan:Connect(function()
+		if not hordeSent then
+			sendHorde()
+			setStage("Zone2", "Horde incoming! Keep holding the card reader", "Warning")
+		end
+	end)
+	local opened = waitForPrompt(map.gatePrompt)
+	connection:Disconnect()
+	if not opened then
+		return false
+	end
+	sendHorde()
+	setDoor(map.gate, true)
+	setStage("Zone2", `HORDE! Run {map.gateText.run}`, "Horde")
+	Atmosphere.blackout(map.gate.Position) -- la alarma revienta las luces cercanas
+	return true
+end
+
 local function zone2()
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
 	Ambushes.arm(map.ambushesZone2)
-	if map.gatePrompt then
-		-- Last Call: el control de seguridad se abre en su lector de tarjetas
-		setStage("Zone2", "Open the security checkpoint at the card reader", "Checkpoint")
-		if not waitForPrompt(map.gatePrompt) then
+	if map.crew then
+		if not crewCall() then
 			return false
 		end
 	else
@@ -509,16 +575,16 @@ local function zone2()
 			return false
 		end
 		setLight(map.generatorModel, "luz_estado", LIGHT_ON) -- el generador arranca
-	end
 
-	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
-	setStage("Zone2", "Horde incoming! Get ready", "Warning")
-	setDoor(map.gate, true)
-	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
-	task.wait(Config.Game.HordeWarning)
-	setStage("Zone2", `HORDE! Run {map.gateText.run}`, "Horde")
-	Atmosphere.blackout((map.generator or map.gate).Position) -- la red se sobrecarga: los faroles cercanos revientan
-	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
+		-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
+		setStage("Zone2", "Horde incoming! Get ready", "Warning")
+		setDoor(map.gate, true)
+		playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
+		task.wait(Config.Game.HordeWarning)
+		setStage("Zone2", `HORDE! Run {map.gateText.run}`, "Horde")
+		Atmosphere.blackout(map.generator.Position) -- el generador sobrecarga la red: los faroles cercanos revientan
+		task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
+	end
 
 	-- El segundo punto seguro: la iglesia (Morro Esperanza) o la Fire Station (Last Call)
 	local second = map.safe2 or map.church

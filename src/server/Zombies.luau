@@ -335,8 +335,20 @@ local function think(humanoid, root, stats)
 	local lastPath = os.clock() - math.random() * Config.Zombie.RepathInterval
 
 	local stuckFrom, stuckSince = root.Position, os.clock()
+	local patrolGoal, nextPatrol = stats.Home, 0
 	while humanoid.Health > 0 and root.Parent do
 		local target, distance = nearestTarget(root.Position)
+		-- De guardia (stats.Home): solo persigue a quien entra en su zona; si no hay nadie, patrulla alrededor de su puesto
+		if stats.Home and not (target and (target.root.Position - stats.Home).Magnitude <= stats.LeashRadius) then
+			if os.clock() >= nextPatrol then
+				nextPatrol = os.clock() + 3 + math.random() * 3
+				local angle = math.random() * math.pi * 2
+				patrolGoal = stats.Home + Vector3.new(math.cos(angle), 0, math.sin(angle)) * math.random() * (stats.PatrolRadius or 10)
+			end
+			humanoid:MoveTo(patrolGoal)
+			task.wait(Config.Zombie.ThinkInterval)
+			continue
+		end
 		-- Survival: si lleva varios segundos sin avanzar y no está pegando (atascado entre edificios), reaparece en otro punto de entrada
 		if target and distance > stats.AttackRange + 3 and workspace:GetAttribute("MapId") == "Survival" then
 			local now = os.clock()
@@ -429,8 +441,13 @@ end
 
 -- Crea un zombie del tipo dado ("Common", "Fast", "Tank" o "Grabber") en la posición (a nivel del suelo). Devuelve el modelo.
 -- Se anima en el cliente (ZombieAnimator), así que aquí solo se construye y se le da la IA.
-function Zombies.spawn(kind, position)
+-- `overrides` (opcional) cambia estadísticas de este zombie: vida, velocidad, daño, nombre... y, con Home + LeashRadius, lo deja de
+-- guardia en una zona (los tripulantes del Crew Call).
+function Zombies.spawn(kind, position, overrides)
 	local stats = Difficulty.zombieStats(kind) -- vida, velocidad y daño según la dificultad
+	for key, value in overrides or {} do
+		stats[key] = value
+	end
 	local model, humanoid, root = ZombieModel.build(MODELS[kind], stats, position)
 	model:SetAttribute("Kind", kind)
 	model.Parent = folder

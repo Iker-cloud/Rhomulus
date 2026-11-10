@@ -821,6 +821,31 @@ return {
 		WaveBonus = { Base = 50, PerWave = 10, Clean = 100 }, -- latas del equipo al limpiar una oleada (+Clean si nadie cayó)
 	},
 
+	-- Crew Call (server/CrewCall): el evento del sector 2 de Last Call. Tres tripulantes infectados (zombies comunes reforzados, uno
+	-- por ruta) llevan las tarjetas de acceso del control de seguridad. Al caer sueltan la suya (se recoge con E); con las 3 se abre
+	-- el control manteniendo E en el lector, y al empezar llega una horda corta. Valores sin balancear.
+	CrewCall = {
+		Health = 400, -- vida de cada tripulante en Tensión (común 50, Tanque 1500); la dificultad la multiplica como al zombie común
+		HealthPerPlayer = 0.35, -- vida extra por cada jugador de más (con 4: ×2,05)
+		Speed = 1.1, -- velocidad respecto al zombie común
+		Damage = 1.8, -- daño respecto al zombie común
+		LeashRadius = 55, -- persigue a quien esté a menos de esto de su puesto; si no hay nadie, patrulla
+		PatrolRadius = 12,
+		Reward = 100, -- latas del equipo por cada tripulante que cae
+		CardReward = 25, -- latas por recoger una tarjeta
+		PickupTime = 0.4, -- segundos manteniendo E sobre la tarjeta
+		DeathHorde = 6, -- zombies que atrae cada tripulante al caer (al 100 %: 4 jugadores)
+		NoiseRange = 90, -- los zombies a menos de esto van hacia el ruido
+		NoiseTime = 8,
+		ReaderHoldTime = 4, -- segundos manteniendo E en el lector del control
+		DoorHorde = 18, -- horda corta que llega al empezar a abrir el control (al 100 %)
+		Members = { -- id, nombre en la guía, nombre sobre su barra de vida y colores del uniforme
+			{ id = "Captain", name = "CAPTAIN", display = "Captain", uniform = Color3.fromRGB(28, 40, 74), trim = Color3.fromRGB(232, 196, 84) },
+			{ id = "Attendant", name = "FLIGHT ATTENDANT", display = "Flight Attendant", uniform = Color3.fromRGB(150, 28, 44), trim = Color3.fromRGB(236, 232, 220) },
+			{ id = "Security", name = "SECURITY CHIEF", display = "Security Chief", uniform = Color3.fromRGB(34, 36, 40), trim = Color3.fromRGB(240, 200, 40) },
+		},
+	},
+
 	-- Subir a la furgoneta (server/Boarding, client/BoardingAnimator): se mantiene E en la puerta lateral y el sobreviviente (con el
 	-- compañero caído que cargue) sube con su animación y se sienta. Al terminar el margen la furgoneta arranca y se va (client/VanAnimator).
 	Boarding = {

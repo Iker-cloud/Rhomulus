@@ -49,12 +49,12 @@ local DOOR_H = 14
 
 -- Paleta del aeropuerto: fría y gris, con los tres colores de ruta
 local P = {
-	wall = hex("#A7AEB5"),
-	tile = hex("#C4C9CE"), -- piso del terminal
+	wall = hex("#858D95"),
+	tile = hex("#989EA4"), -- piso del terminal
 	serviceFloor = hex("#63666A"), -- piso de los túneles de servicio
 	asphalt = hex("#34363B"),
 	sidewalk = hex("#7B7F85"),
-	ceiling = hex("#D5D9DD"),
+	ceiling = hex("#A4AAB0"),
 	fence = hex("#474C52"),
 	steel = hex("#6E757D"),
 	dark = Color3.fromRGB(34, 36, 40),
@@ -148,7 +148,7 @@ local function tube(parent, position, range, brightness, alongZ)
 	light.Face = Enum.NormalId.Bottom
 	light.Angle = 140
 	light.Color = P.tube
-	light.Brightness = brightness or 2.2
+	light.Brightness = brightness or 1.2
 	light.Range = range or 34
 	light.Shadows = false
 	light.Parent = bulb
@@ -165,7 +165,7 @@ local function mast(parent, x, z)
 	light.Face = Enum.NormalId.Bottom
 	light.Angle = 130
 	light.Color = P.mast
-	light.Brightness = 2.6
+	light.Brightness = 1.7
 	light.Range = 46
 	light.Shadows = false
 	light.Parent = bulb
@@ -335,9 +335,9 @@ local function buildLights(map)
 			if ch == "." or ch == "s" then
 				local zone = band(col)
 				if zone == "Concourse" and row % 3 == 1 and (col == 11 or col == 15) then
-					tube(lights, center + Vector3.new(5, WALL_H - 0.2, 0), 36, 2.4)
+					tube(lights, center + Vector3.new(5, WALL_H - 0.2, 0), 36, 1.2)
 				elseif zone ~= "Concourse" and (row * 7 + col * 3) % 9 == 0 then
-					tube(lights, center + Vector3.new(0, WALL_H - 0.2, 0), 30, 1.6, true)
+					tube(lights, center + Vector3.new(0, WALL_H - 0.2, 0), 30, 0.9, true)
 				end
 			elseif ch == "," and row % 5 == 2 and (col == 20 or col == 25 or (row >= 78 and (col == 3 or col == 9 or col == 15))) then
 				mast(lights, center.X, center.Z)
@@ -374,8 +374,8 @@ local function buildLobby(map, refs, rng)
 	refs.extraLobbyDoors = { makeDoor(lobby, "lobbyWest", "LobbyDoorW"), makeDoor(lobby, "lobbyEast", "LobbyDoorE") }
 	refs.lobbySpawn = CFrame.lookAt(Vector3.new(0, 3, -424), Vector3.new(0, 3, -400))
 
-	tube(lobby, Vector3.new(-18, WALL_H - 0.2, -420), 40, 3)
-	tube(lobby, Vector3.new(18, WALL_H - 0.2, -420), 40, 3)
+	tube(lobby, Vector3.new(-18, WALL_H - 0.2, -420), 40, 1.4)
+	tube(lobby, Vector3.new(18, WALL_H - 0.2, -420), 40, 1.4)
 
 	-- Estanterías de objetos perdidos con maletas (pared norte, a la derecha de la puerta) y el plano a la izquierda
 	local colors = { C.cobalto, C.terracota, C.lima, C.mostaza, C.salmon, C.oscuro }
@@ -532,8 +532,8 @@ local function buildLounge(map, refs)
 	refs.safeVolume = volume(lounge, "SafeVolume", -30, 30, -180, -140, 12)
 	refs.safeSpawn = CFrame.lookAt(Vector3.new(0, 3, -164), Vector3.new(0, 3, -140))
 
-	tube(lounge, Vector3.new(-14, WALL_H - 0.2, -160), 36, 2.6)
-	tube(lounge, Vector3.new(14, WALL_H - 0.2, -160), 36, 2.6)
+	tube(lounge, Vector3.new(-14, WALL_H - 0.2, -160), 36, 1.3)
+	tube(lounge, Vector3.new(14, WALL_H - 0.2, -160), 36, 1.3)
 	hangSign(lounge, Vector3.new(0, 16.4, -190.4), -Vector3.zAxis, 18, "SKY LOUNGE  ·  MEMBERS ONLY")
 	sofa(lounge, -26, -172, true)
 	sofa(lounge, -26, -148, true)
@@ -668,7 +668,7 @@ local function buildDepartures(map, refs, rng)
 	deco(block(s, "LectorLuz", Vector3.new(1, 0.5, 0.2), Vector3.new(14, 3.6, 116.1), C.rojo, Enum.Material.Neon))
 	label(reader, "CARD READER", P.signYellow, 26)
 	refs.gateReader = reader
-	refs.gatePrompt = prompt(reader, "Open security", 3)
+	refs.gatePrompt = prompt(reader, "Swipe the access cards", Config.CrewCall.ReaderHoldTime)
 	hangSign(s, Vector3.new(0, 16.4, 119.4), -Vector3.zAxis, 22, "SECURITY CHECKPOINT  ·  STAFF ONLY")
 	floorLine(s, 0, -130, 0, 120, P.red)
 
@@ -724,6 +724,16 @@ local function buildDepartures(map, refs, rng)
 	addMedkit(refs, s, Vector3.new(86, 0, 72))
 	addAmbush(refs.ambushesZone2, s, "Rampa", 37, 19, 44, 26, { { 36, 26 }, { 45, 26 } })
 
+	-- Crew Call: el puesto de cada tripulante (uno por ruta) y los puntos de donde sale la horda que atrae cada caída
+	refs.crew = {
+		members = {
+			{ id = "Captain", home = Vector3.new(0, 0, -45) }, -- CONCOURSE: entre los mostradores de facturación
+			{ id = "Attendant", home = Vector3.new(-95, 0, -34) }, -- SERVICE: la sala de la cinta de equipaje
+			{ id = "Security", home = Vector3.new(104, 0, -8) }, -- APRON: la plataforma
+		},
+		hordePoints = {},
+	}
+
 	-- Tienda 2: Duty Free, hueco de la pared este del terminal (columnas 18 a 20, filas 48 y 49)
 	MapKit.buildShop(map, refs, { zone = "Zone2", origin = Vector3.new(40, 0, 40), forward = Vector3.xAxis, width = 20, depth = 30, title = "DUTY FREE" })
 end
@@ -739,8 +749,8 @@ local function buildFireStation(map, refs)
 		extraExits = { makeDoor(station, "stationWest", "StationExitDoorW"), makeDoor(station, "stationEast", "StationExitDoorE") },
 		spawn = CFrame.lookAt(Vector3.new(0, 3, 146), Vector3.new(0, 3, 170)),
 	}
-	tube(station, Vector3.new(-14, WALL_H - 0.2, 150), 36, 2.6)
-	tube(station, Vector3.new(14, WALL_H - 0.2, 150), 36, 2.6)
+	tube(station, Vector3.new(-14, WALL_H - 0.2, 150), 36, 1.3)
+	tube(station, Vector3.new(14, WALL_H - 0.2, 150), 36, 1.3)
 	-- Camioneta de bomberos, taquillas, literas y un banco con el botiquín
 	block(station, "CamionetaBomberos", Vector3.new(16, 6, 7), Vector3.new(20, 3.6, 137), C.rojo, Enum.Material.Metal)
 	deco(block(station, "CamionetaRuedas", Vector3.new(12, 2, 7.2), Vector3.new(20, 1, 137), P.dark, Enum.Material.Rubber))
@@ -922,6 +932,9 @@ function MapBuilderAirport.build(config, options)
 	buildFireStation(map, refs)
 	buildGates(map, refs, config, rng, spawnRoot)
 	buildLimits(map)
+	for _, point in spawnRoot.Zone2:GetChildren() do
+		table.insert(refs.crew.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
+	end
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
 	local params = OverlapParams.new()
