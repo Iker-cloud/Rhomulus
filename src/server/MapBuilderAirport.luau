@@ -8,11 +8,15 @@
 -- -> Sky Lounge -> sector 2 (Departures, evento Crew Call) -> Fire Station -> sector 3 (Gates & Hangars) -> plataforma y pista.
 -- Ejes: X lateral, Y altura (suelo en 0), Z avance. Rótulos solo en inglés.
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local AirportLayout = require(script.Parent.AirportLayout)
 local MapKit = require(script.Parent.MapKit)
 local PropModel = require(script.Parent.PropModel)
 local Radio = require(script.Parent.ZombieData.Radio)
+local AvionAparcado = require(script.Parent.ZombieData.AvionAparcado)
 
 local MapBuilderAirport = {}
 
@@ -544,12 +548,120 @@ local function buildLounge(map, refs)
 end
 
 ---------------------------------------------------------------------------------------------------
--- Sector 2 (Departures), Fire Station, sector 3 (Gates & Hangars) y la plataforma: de momento solo lo que necesita la partida
--- (puertas, volúmenes, Tiendas, radio); los muebles y los eventos llegan en las fases siguientes.
+-- Piezas de los sectores 2 y 3
 
-local function buildDepartures(map, refs)
+-- Isla de facturación: mostrador largo con la cinta detrás y su rótulo
+local function checkIn(parent, x, z, name)
+	counter(parent, x, z, 22, 3.5, P.steel)
+	deco(block(parent, "CheckInCinta", Vector3.new(22, 1.2, 3), Vector3.new(x, 0.6, z + 3.4), P.dark, Enum.Material.Rubber))
+	hangSign(parent, Vector3.new(x, 13, z), -Vector3.zAxis, 14, name)
+end
+
+-- Mesa redonda de la zona de comida con dos bancos
+local function foodTable(parent, x, z)
+	pole(parent, "MesaComida", Vector3.new(x, 0, z), 3, 5, C.blanco, Enum.Material.SmoothPlastic)
+	for _, dx in { -4.2, 4.2 } do
+		deco(block(parent, "BancoComida", Vector3.new(1.6, 1.6, 4), Vector3.new(x + dx, 0.8, z), C.terracota, Enum.Material.SmoothPlastic))
+	end
+end
+
+-- Carril del control: arco detector (se pasa por dentro) y máquina de rayos X al lado (cobertura)
+local function securityLane(parent, x, z)
+	for _, dx in { -2.2, 2.2 } do
+		block(parent, "ArcoPoste", Vector3.new(0.8, 8, 2), Vector3.new(x + dx, 4, z), P.steel, Enum.Material.Metal)
+	end
+	deco(block(parent, "ArcoDintel", Vector3.new(5.2, 0.8, 2), Vector3.new(x, 8.4, z), P.steel, Enum.Material.Metal))
+	block(parent, "RayosX", Vector3.new(3.4, 3.4, 10), Vector3.new(x + 5.6, 1.7, z), P.dark, Enum.Material.Metal)
+end
+
+-- Contenedor de carga aérea (6 × 6 × 6): cobertura alta
+local function cargo(parent, x, z, angle)
+	block(parent, "ContenedorCarga", Vector3.new(6, 6, 6), CFrame.new(x, 3, z) * CFrame.Angles(0, math.rad(angle or 0), 0), hex("#B9C0C7"), Enum.Material.Metal)
+end
+
+-- Tractor de equipaje con su tren de carritos, en fila hacia +Z
+local function baggageTrain(parent, x, z, carts, rng)
+	block(parent, "Tractor", Vector3.new(4, 3, 6), Vector3.new(x, 1.7, z), P.signYellow, Enum.Material.Metal)
+	deco(block(parent, "TractorRuedas", Vector3.new(4.4, 1.4, 4.6), Vector3.new(x, 0.7, z), P.dark, Enum.Material.Rubber))
+	for i = 1, carts do
+		cart(parent, x, z + i * 9, 0, rng)
+	end
+end
+
+-- Camión de combustible (8 × 9 × 19) con cisterna cilíndrica: cobertura alta. `alongX` = a lo largo de X.
+local function fuelTruck(parent, x, z, alongX)
+	local base = CFrame.new(x, 0, z) * CFrame.Angles(0, alongX and math.pi / 2 or 0, 0)
+	block(parent, "CamionCabina", Vector3.new(8, 7, 5), base * CFrame.new(0, 4, -7), C.rojo, Enum.Material.Metal)
+	block(parent, "CamionChasis", Vector3.new(8, 2.4, 19), base * CFrame.new(0, 1.8, 0), P.dark, Enum.Material.Metal)
+	local tank = block(parent, "CamionCisterna", Vector3.new(13, 6.4, 6.4), base * CFrame.new(0, 6, 2.6) * CFrame.Angles(0, math.pi / 2, 0), hex("#C9CED3"), Enum.Material.Metal)
+	tank.Shape = Enum.PartType.Cylinder
+end
+
+-- Motor de avión sobre su caballete (taller del hangar): cobertura
+local function engineStand(parent, x, z, alongX)
+	local base = CFrame.new(x, 0, z) * CFrame.Angles(0, alongX and math.pi / 2 or 0, 0)
+	block(parent, "Caballete", Vector3.new(4, 2.4, 8), base * CFrame.new(0, 1.2, 0), P.signYellow, Enum.Material.Metal)
+	local engine = block(parent, "MotorAvion", Vector3.new(10, 5, 5), base * CFrame.new(0, 4.9, 0) * CFrame.Angles(0, math.pi / 2, 0), P.steel, Enum.Material.Metal)
+	engine.Shape = Enum.PartType.Cylinder
+end
+
+-- Puerta de embarque: mostrador, rótulo y dos filas de asientos en su sala (x1..x2, z1..z2)
+local function gateBay(parent, x1, x2, z1, z2, name)
+	local cx = (x1 + x2) / 2
+	local inner = math.abs(x1) < math.abs(x2) and x1 or x2 -- el lado que da al pasillo
+	local outer = inner == x1 and x2 or x1
+	seats(parent, cx, z1 + 3, false)
+	seats(parent, cx, z2 - 3, false)
+	local sign = math.sign(outer - inner)
+	counter(parent, outer - sign * 2.5, (z1 + z2) / 2, 3, 6, P.steel)
+	hangSign(parent, Vector3.new(outer - sign * 0.4, 12, (z1 + z2) / 2), Vector3.new(-sign, 0, 0), 8, name)
+end
+
+-- Piezas del avión aparcado que chocan (el resto es adorno); las ventanillas no se ponen (menos piezas)
+local PARKED_SOLID = {
+	Fuselage_Main = true, Fuselage_Nose = true, Fuselage_TailCone = true, Wing_Left = true, Wing_Right = true,
+	Engine_Left_Nacelle = true, Engine_Right_Nacelle = true, Tail_Fin = true, HStab_Left = true, HStab_Right = true,
+}
+local function parkedPlane(parent, position, yaw)
+	local model = MapKit.placeModel(parent, AvionAparcado, position, yaw, PARKED_SOLID, nil, function(name)
+		return string.find(name, "Window_", 1, true) ~= nil
+	end)
+	model.Name = "AvionAparcado"
+	return model
+end
+
+---------------------------------------------------------------------------------------------------
+-- Sector 2: Departures (z -130..120). Facturación, zona de comida y el control de seguridad, donde se juntan las tres rutas.
+
+local function buildDepartures(map, refs, rng)
 	local s = newFolder(map, "Sector2")
-	-- La puerta del control de seguridad (la abre el evento del sector) y su lector de tarjetas
+
+	-- CONCOURSE: facturación (z -130..0)
+	for i, spot in { { -20, -104 }, { 20, -104 }, { -20, -62 }, { 20, -62 }, { -20, -20 } } do
+		checkIn(s, spot[1], spot[2], "CHECK-IN " .. string.char(64 + i))
+	end
+	cart(s, 24, -24, 70, rng)
+	cart(s, 6, -84, 10, rng)
+	hangSign(s, Vector3.new(0, 16.4, -129.4), -Vector3.zAxis, 22, "DEPARTURES  ·  CHECK-IN", P.red)
+	addCans(refs, s, Vector3.new(-35, 0, -126))
+	-- Zona de comida (z 10..100): mesas al centro, locales en la pared oeste; la Tienda 2 (Duty Free) se abre en la pared este
+	hangSign(s, Vector3.new(-20, 16.4, -0.6), -Vector3.zAxis, 16, "↑ FOOD COURT", P.red)
+	hangSign(s, Vector3.new(20, 16.4, -0.6), -Vector3.zAxis, 16, "DUTY FREE →", P.red)
+	for _, spot in { { -14, 24 }, { 8, 30 }, { -8, 52 }, { 16, 62 }, { -16, 80 }, { 6, 88 } } do
+		foodTable(s, spot[1], spot[2])
+	end
+	for i, z in { 22, 44 } do
+		counter(s, -35.5, z, 3, 12, C.terracota)
+		local names = { "BURGERS", "COFFEE" }
+		hangSign(s, Vector3.new(-39.6, 10, z), Vector3.xAxis, 10, names[i])
+	end
+	addMedkit(refs, s, Vector3.new(-35.5, 3.6, 44))
+	addCans(refs, s, Vector3.new(34, 0, 94))
+	-- Control de seguridad (z 100..120): carriles con arcos y rayos X
+	for _, x in { -30, -16, 22 } do
+		securityLane(s, x, 106)
+	end
+	-- La puerta del control (la abre el evento del sector) y su lector de tarjetas
 	refs.gate = makeDoor(s, "security", "SecurityGate")
 	refs.gateText = { label = "SECURITY", open = "open the security checkpoint", run = "through security" }
 	local reader = block(s, "LectorTarjetas", Vector3.new(1.6, 4.4, 1.6), Vector3.new(14, 2.2, 117), P.dark, Enum.Material.Metal)
@@ -560,9 +672,64 @@ local function buildDepartures(map, refs)
 	hangSign(s, Vector3.new(0, 16.4, 119.4), -Vector3.zAxis, 22, "SECURITY CHECKPOINT  ·  STAFF ONLY")
 	floorLine(s, 0, -130, 0, 120, P.red)
 
+	-- SERVICE: salas de equipaje D (z -130..-100), E (la de la cinta, z -60..-10) y F (z 50..80) unidas por pasillos estrechos
+	cart(s, -112, -110, 90, rng)
+	crates(s, -66, -106)
+	block(s, "CintaServicio", Vector3.new(44, 3, 4), Vector3.new(-98, 1.5, -46), P.steel, Enum.Material.Metal)
+	block(s, "CintaServicio", Vector3.new(44, 3, 4), Vector3.new(-92, 1.5, -22), P.steel, Enum.Material.Metal)
+	block(s, "CintaServicio", Vector3.new(4, 3, 20), Vector3.new(-124, 1.5, -34), P.steel, Enum.Material.Metal)
+	crates(s, -66, -16)
+	cart(s, -68, -54, 0, rng)
+	crates(s, -114, 56)
+	cart(s, -64, 71, 20, rng)
+	block(s, "Mesa", Vector3.new(5, 3, 3), Vector3.new(-116, 1.5, 77), C.madera, Enum.Material.Wood)
+	addMedkit(refs, s, Vector3.new(-116, 3, 77))
+	addCans(refs, s, Vector3.new(-66, 0, -75), 75) -- el cuartito del pasillo (de ahí salen zombies)
+	addCans(refs, s, Vector3.new(-126, 0, -14))
+	for _, run in { { -94, -100, -60 }, { -106, -10, 50 }, { -74, 80, 100 } } do
+		local pipe = deco(block(s, "Tuberia", Vector3.new(run[3] - run[2], 1, 1), CFrame.new(run[1], WALL_H - 1.6, (run[2] + run[3]) / 2) * CFrame.Angles(0, math.pi / 2, 0), C.oxido, Enum.Material.Metal))
+		pipe.Shape = Enum.PartType.Cylinder
+	end
+	floorLine(s, -95, -100, -95, -60, P.yellow)
+	floorLine(s, -105, -10, -105, 50, P.yellow)
+	floorLine(s, -75, 80, -75, 110, P.yellow)
+	floorLine(s, -75, 110, -40, 110, P.yellow)
+	addAmbush(refs.ambushesZone2, s, "SalaE", 39, 1, 43, 7, { { 37, 8 }, { 46, 5 } })
+	addAmbush(refs.ambushesZone2, s, "SalaF", 50, 2, 52, 7, { { 46, 5 }, { 53, 9 } })
+
+	-- APRON: la plataforma junto a las puertas de la planta baja, con camiones, contenedores y trenes de equipaje
+	for _, r in rects(function(ch, row)
+		return ch == "B" and row > 31 and row < 57 and "truck" or nil
+	end) do
+		if r.row == 35 then
+			fuelTruck(s, (r.x1 + r.x2) / 2, (r.z1 + r.z2) / 2, false)
+		else
+			shuttle(s, (r.x1 + r.x2) / 2, (r.z1 + r.z2) / 2, true, C.blanco)
+		end
+	end
+	baggageTrain(s, 64, -122, 2, rng)
+	baggageTrain(s, 112, 84, 2, rng)
+	for _, spot in { { 112, -112, 0 }, { 119, -112, 8 }, { 114, -64, 0 }, { 121, -60, 30 }, { 68, 6, 0 }, { 104, 34, 12 }, { 110, 34, 0 }, { 120, 58, 0 }, { 64, 84, 20 } } do
+		cargo(s, spot[1], spot[2], spot[3])
+	end
+	car(s, 66, -6, 4, C.blanco)
+	for _, z in { -70, -46, 74, 98 } do
+		barrier(s, 78, z, false)
+	end
+	for _, line in { { 60, -130, 60, 14 }, { 60, 14, 90, 14 }, { 90, 14, 90, 66 }, { 60, 66, 90, 66 }, { 60, 66, 60, 110 }, { 45, 110, 60, 110 } } do
+		floorLine(s, line[1], line[2], line[3], line[4], P.blue)
+	end
+	addCans(refs, s, Vector3.new(125, 0, -125))
+	addCans(refs, s, Vector3.new(125, 0, 114), 75)
+	addMedkit(refs, s, Vector3.new(86, 0, 72))
+	addAmbush(refs.ambushesZone2, s, "Rampa", 37, 19, 44, 26, { { 36, 26 }, { 45, 26 } })
+
 	-- Tienda 2: Duty Free, hueco de la pared este del terminal (columnas 18 a 20, filas 48 y 49)
 	MapKit.buildShop(map, refs, { zone = "Zone2", origin = Vector3.new(40, 0, 40), forward = Vector3.xAxis, width = 20, depth = 30, title = "DUTY FREE" })
 end
+
+---------------------------------------------------------------------------------------------------
+-- Punto seguro 2: Fire Station, el cuartel de bomberos del aeropuerto (x -30..30, z 130..170)
 
 local function buildFireStation(map, refs)
 	local station = newFolder(map, "FireStation")
@@ -574,12 +741,81 @@ local function buildFireStation(map, refs)
 	}
 	tube(station, Vector3.new(-14, WALL_H - 0.2, 150), 36, 2.6)
 	tube(station, Vector3.new(14, WALL_H - 0.2, 150), 36, 2.6)
+	-- Camioneta de bomberos, taquillas, literas y un banco con el botiquín
+	block(station, "CamionetaBomberos", Vector3.new(16, 6, 7), Vector3.new(20, 3.6, 137), C.rojo, Enum.Material.Metal)
+	deco(block(station, "CamionetaRuedas", Vector3.new(12, 2, 7.2), Vector3.new(20, 1, 137), P.dark, Enum.Material.Rubber))
+	deco(block(station, "CamionetaBaliza", Vector3.new(3, 0.6, 1), Vector3.new(24, 6.9, 137), C.azul, Enum.Material.Neon))
+	for i = 0, 3 do
+		block(station, "Taquilla", Vector3.new(3, 8, 2), Vector3.new(-27 + i * 3.2, 4, 168.8), P.steel, Enum.Material.Metal)
+	end
+	for _, y in { 1.5, 5 } do
+		block(station, "Litera", Vector3.new(4, 0.8, 9), Vector3.new(-27.6, y, 138), C.cobalto, Enum.Material.Fabric)
+	end
+	block(station, "Banco", Vector3.new(8, 2, 2.4), Vector3.new(20, 1, 168.4), C.madera, Enum.Material.Wood)
+	addMedkit(refs, station, Vector3.new(20, 2, 168.4))
+	hangSign(station, Vector3.new(0, 16.4, 130.6), Vector3.zAxis, 16, "AIRPORT FIRE STATION")
 	hangSign(station, Vector3.new(0, 16.4, 169.4), -Vector3.zAxis, 14, "↑ GATES", P.red)
+	hangSign(station, Vector3.new(-29.6, 16.4, 155), Vector3.xAxis, 9, "↑ HANGARS", P.yellow)
+	hangSign(station, Vector3.new(29.6, 16.4, 155), -Vector3.xAxis, 9, "↑ APRON", P.blue)
 end
 
-local function buildGates(map, refs, config)
+---------------------------------------------------------------------------------------------------
+-- Sector 3: Gates & Hangars (z 180..330) y la plataforma de la extracción (z 330..410)
+
+local function buildGates(map, refs, config, rng, spawnRoot)
 	local s = newFolder(map, "Sector3")
+
+	-- CONCOURSE: el pasillo de las puertas de embarque, largo y recto (x -20..20), con una sala a cada lado
+	gateBay(s, -40, -20, 200, 210, "GATE A1")
+	gateBay(s, 20, 40, 230, 240, "GATE A2")
+	gateBay(s, -40, -20, 280, 290, "GATE A3")
+	gateBay(s, 20, 40, 300, 310, "GATE A4")
+	seats(s, -9, 236, true)
+	seats(s, 9, 262, true)
+	seats(s, -9, 316, true)
+	cart(s, 12, 196, 30, rng)
+	hangSign(s, Vector3.new(0, 16.4, 181), -Vector3.zAxis, 20, "GATES A1 – A4  ·  RUNWAY ↑", P.red)
+	hangSign(s, Vector3.new(0, 16.4, 322), -Vector3.zAxis, 16, "↑ RUNWAY", P.red)
+	addCans(refs, s, Vector3.new(-36, 0, 286))
 	floorLine(s, 0, 180, 0, 330, P.red)
+
+	-- SERVICE: el hangar y sus talleres (x -100..-50, z 190..330), con motores desarmados, la grúa y poca luz
+	engineStand(s, -86, 214, false)
+	engineStand(s, -64, 246, true)
+	engineStand(s, -88, 302, false)
+	for _, x in { -97, -53 } do
+		deco(pole(s, "GruaPoste", Vector3.new(x, 0, 272), 17, 1, P.signYellow))
+	end
+	deco(block(s, "GruaViga", Vector3.new(46, 1.4, 1.4), Vector3.new(-75, 17, 272), P.signYellow, Enum.Material.Metal))
+	deco(block(s, "GruaGancho", Vector3.new(0.4, 6, 0.4), Vector3.new(-70, 13.4, 272), P.dark, Enum.Material.Metal))
+	for _, z in { 198, 286 } do
+		block(s, "CajonHerramientas", Vector3.new(2.4, 4, 5), Vector3.new(-51.6, 2, z), C.rojo, Enum.Material.Metal)
+	end
+	addMedkit(refs, s, Vector3.new(-51.6, 4, 198))
+	crates(s, -94, 196)
+	crates(s, -56, 314)
+	barrel(s, -96, 240)
+	barrel(s, -93, 243, C.lonaAzul)
+	barrel(s, -55, 304)
+	addCans(refs, s, Vector3.new(-116, 0, 205), 75) -- el fondo del taller (de ahí salen zombies)
+	addCans(refs, s, Vector3.new(-96, 0, 314))
+	floorLine(s, -65, 180, -65, 192, P.yellow)
+	floorLine(s, -75, 192, -65, 192, P.yellow)
+	floorLine(s, -75, 192, -75, 330, P.yellow)
+	addAmbush(refs.ambushesZone3, s, "Hangar", 67, 4, 73, 8, { { 65, 1 }, { 74, 1 } }, Config.Ambush.FieldSize)
+
+	-- APRON: la plataforma con dos aviones aparcados (se rodean; las alas cierran el paso) y el Tanque en el hueco entre ellos
+	parkedPlane(s, Vector3.new(92, 0, 222), math.pi / 2)
+	parkedPlane(s, Vector3.new(92, 0, 296), math.pi / 2)
+	for _, spot in { { 56, 258, 0 }, { 124, 252, 10 }, { 118, 262, 0 }, { 60, 190, 0 } } do
+		cargo(s, spot[1], spot[2], spot[3])
+	end
+	barrier(s, 86, 259, true)
+	barrier(s, 100, 259, true)
+	floorLine(s, 55, 180, 55, 330, P.blue)
+	addMedkit(refs, s, Vector3.new(124, 0, 186))
+	addCans(refs, s, Vector3.new(126, 0, 326), 75)
+	addAmbush(refs.ambushesZone3, s, "Plataforma", 69, 19, 72, 26, { { 68, 26 }, { 76, 26 } }, Config.Ambush.TerminalSize, true)
 
 	-- Tienda 3: Ground Crew Workshop, hueco del lado oeste del hangar (columnas 1 a 3, filas 70 y 71)
 	MapKit.buildShop(map, refs, { zone = "Zone3", origin = Vector3.new(-100, 0, 260), forward = -Vector3.xAxis, width = 20, depth = 30, title = "WORKSHOP" })
@@ -597,11 +833,26 @@ local function buildGates(map, refs, config)
 	refs.radioModel = radioModel
 	refs.radioPrompt = prompt(radio, "Use the radio", config.RadioHoldTime)
 	label(radio, "RADIO", Color3.fromRGB(110, 225, 150))
+	-- Cobertura alrededor de la radio y por la plataforma
+	barrier(tarmac, -78, 354, true)
+	barrier(tarmac, -78, 376, true)
+	for _, spot in { { -40, 340, 0 }, { -34, 340, 0 }, { 30, 350, 15 }, { 84, 344, 0 }, { 90, 350, 0 }, { 110, 396, 0 }, { -110, 398, 0 }, { 20, 398, 30 } } do
+		cargo(tarmac, spot[1], spot[2], spot[3])
+	end
+	fuelTruck(tarmac, 64, 386, true)
+	baggageTrain(tarmac, -10, 342, 2, rng)
+	addMedkit(refs, tarmac, Vector3.new(-80, 0, 347))
+	addCans(refs, tarmac, Vector3.new(124, 0, 404))
 
 	-- La pista sigue hacia el norte, fuera del límite jugable
 	floor(tarmac, "Pista", -700, 700, 410, 480, P.asphalt, Enum.Material.Asphalt)
 	for x = -660, 660, 60 do
 		deco(block(tarmac, "PistaRaya", Vector3.new(24, 0.06, 1.6), Vector3.new(x, FLOOR_TOP + 0.04, 445), C.blanco, Enum.Material.SmoothPlastic))
+	end
+
+	-- Más entradas de zombies durante la extracción: las bocas de las tres rutas y las esquinas de la plataforma
+	for _, point in { Vector3.new(0, 0, 322), Vector3.new(-75, 0, 322), Vector3.new(95, 0, 322), Vector3.new(125, 0, 336), Vector3.new(-124, 0, 402), Vector3.new(124, 0, 388) } do
+		marker(spawnRoot.Extraction, point)
 	end
 
 	refs.extractionArea = volume(tarmac, "ExtractionArea", -130, 130, 330, 410, 40) -- toda la plataforma: basta con que el equipo esté en ella
@@ -610,7 +861,7 @@ local function buildGates(map, refs, config)
 	refs.vanStart = CFrame.new(-30, 0, 470)
 	refs.vanStop = CFrame.new(-30, 0, 392)
 	refs.vanVolume = volume(tarmac, "VanVolume", -44, -16, 378, 406, 14)
-	refs.boxSpots.Extraction = { { Vector3.new(-60, 0, 340), Vector3.new(40, 0, 345), Vector3.new(100, 0, 380) } }
+	refs.boxSpots.Extraction = { { Vector3.new(-52, 0, 358), Vector3.new(44, 0, 340), Vector3.new(100, 0, 376) } }
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -667,9 +918,9 @@ function MapBuilderAirport.build(config, options)
 	buildLobby(map, refs, rng)
 	buildArrivals(map, refs, rng)
 	buildLounge(map, refs)
-	buildDepartures(map, refs)
+	buildDepartures(map, refs, rng)
 	buildFireStation(map, refs)
-	buildGates(map, refs, config)
+	buildGates(map, refs, config, rng, spawnRoot)
 	buildLimits(map)
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo

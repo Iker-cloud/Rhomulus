@@ -238,11 +238,14 @@ local METAL_NAMES = { "cromo", "parachoques", "parrilla", "tapacubo", "manija", 
 local CAR_BODY = Color3.fromRGB(47, 156, 132) -- color de la carrocería del carro abandonado
 local CAR_BODY_DARK = Color3.fromRGB(31, 107, 91)
 
-local function placeModel(parent, data, position, yaw, solid, bodyColor)
+local function placeModel(parent, data, position, yaw, solid, bodyColor, skip)
 	local origin = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
 	local model = Instance.new("Model")
 	model.Name = data.rig
 	for _, piece in data.parts do
+		if skip and skip(piece.name) then -- piezas que no se ponen (p. ej. las ventanillas de un avión aparcado: menos piezas)
+			continue
+		end
 		local color = piece.color
 		if bodyColor and color == CAR_BODY then
 			color = bodyColor
