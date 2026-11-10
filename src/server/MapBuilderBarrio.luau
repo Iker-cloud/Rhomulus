@@ -4167,6 +4167,33 @@ function MapBuilderBarrio.build(config, options)
 		table.insert(refs.gas.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
 	end
 
+	-- Survival: las dos puertas del estadio dejan pasar a los zombies pero no a los jugadores (grupo de colisión "GateWall")
+	if options.survival then
+		local PhysicsService = game:GetService("PhysicsService")
+		for _, name in { "Zombie", "GateWall" } do
+			pcall(function()
+				PhysicsService:RegisterCollisionGroup(name)
+			end)
+		end
+		PhysicsService:CollisionGroupSetCollidable("Zombie", "GateWall", false)
+		for _, gate in { { Vector3.new(26, 30, 3), CFrame.new(0, 15, 399) }, { Vector3.new(22, 30, 3), CFrame.new(0, 15, 331) } } do
+			local wall = Instance.new("Part")
+			wall.Name = "PuertaSoloZombies"
+			wall.Anchored = true
+			wall.CanQuery = false -- las balas y la vista de los zombies la atraviesan
+			wall.CanTouch = false
+			wall.CastShadow = false
+			wall.Transparency = 1
+			wall.Size = gate[1]
+			wall.CFrame = gate[2]
+			wall.CollisionGroup = "GateWall"
+			local modifier = Instance.new("PathfindingModifier")
+			modifier.PassThrough = true -- para la ruta de los zombies no es un obstáculo
+			modifier.Parent = wall
+			wall.Parent = map
+		end
+	end
+
 	-- Survival: nada de lo del modo historia se recoge ni estorba (botiquines, latas sueltas, rótulo de la entrada de la furgoneta)
 	if options.survival then
 		for _, list in { refs.medkits, refs.canPiles } do

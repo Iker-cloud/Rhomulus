@@ -510,15 +510,7 @@ local function launch(player, id, direction, speed)
 	Items.add(player, id, -1)
 	throw(part, direction, speed)
 
-	if id == "Grenade" then
-		task.delay(cfg.Fuse, function()
-			if part.Parent then
-				local position = part.Position
-				model:Destroy()
-				explode(player, position)
-			end
-		end)
-	elseif id == "Molotov" then
+	if id == "Molotov" or id == "Grenade" then
 		-- Estalla en el PRIMER impacto, sin rebotar: cada cuadro se lanza un rayo desde donde estaba hasta donde esta
 		-- (Touched llega tarde y la botella ya habia rebotado), con Touched de respaldo.
 		local landed = false
@@ -533,7 +525,11 @@ local function launch(player, id, direction, speed)
 			end
 			position = position or part.Position
 			model:Destroy()
-			fireZone(player, position)
+			if id == "Grenade" then
+				explode(player, position) -- sin rebotes ni mecha: explota donde cae
+			else
+				fireZone(player, position)
+			end
 		end
 		local params = RaycastParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude

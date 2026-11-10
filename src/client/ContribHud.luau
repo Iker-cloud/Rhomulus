@@ -125,7 +125,7 @@ function ContribHud.start()
 			row.name.Text = player.DisplayName
 			row.frame.LayoutOrder = -total -- el que más aporta, arriba
 		end
-		panel.Visible = now < visibleUntil or UserInputService:IsKeyDown(Enum.KeyCode.Tab)
+		panel.Visible = true -- siempre a la vista (Tab choca con la lista de jugadores de Roblox)
 		for player, row in rows do
 			if not player.Parent then
 				row.frame:Destroy()

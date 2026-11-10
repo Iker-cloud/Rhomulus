@@ -421,14 +421,22 @@ function Revive.start()
 	end
 
 	-- El caído a cuestas sigue a quien lo carga (en el servidor, para que la zona, la furgoneta y los demás sistemas lo vean donde está)
-	RunService.Heartbeat:Connect(function()
+	-- El servidor solo coloca el cuerpo unas 12 veces por segundo (para que los zombies y el resto sepan dónde está): los clientes lo pegan
+	-- cada cuadro (client/CarryAttach). Moverlo en cada Heartbeat mandaba actualizaciones que se peleaban con la del cliente y lo hacían temblar.
+	local sinceMove = 0
+	RunService.Heartbeat:Connect(function(dt)
+		sinceMove += dt
+		local move = sinceMove >= 1 / 12
+		if move then
+			sinceMove = 0
+		end
 		for carrier, target in carrying do
 			local carrierRoot, targetRoot = getRoot(carrier), getRoot(target)
 			if not (carrierRoot and targetRoot and targetRoot:IsDescendantOf(workspace)) then
 				drop(carrier, "You dropped your teammate: they can't be found anymore")
 			elseif carrier.Character ~= carrierRoot.Parent or target.Character ~= targetRoot.Parent then
 				drop(carrier, "You dropped your teammate: their character changed")
-			else
+			elseif move then
 				targetRoot.CFrame = carrierRoot.CFrame * Config.Revive.CarryOffset
 			end
 		end

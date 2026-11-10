@@ -3,7 +3,7 @@
 -- Mismo lenguaje visual que el resto del HUD (placas inclinadas, letra pesada en cursiva, rojo sobre negro).
 -- Los textos van en inglés; Lang.watch los traduce solo (pares con {1} en shared/LangEs).
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local Sfx = require(script.Parent.Sfx)
 local Slant = require(script.Parent.Slant)
@@ -23,6 +23,7 @@ local BLACK = Color3.fromRGB(16, 12, 10)
 local function label(parent, size, color)
 	local text = Instance.new("TextLabel")
 	text.BackgroundTransparency = 1
+	text.Text = "" -- (sin esto sale "Label", el texto por defecto, hasta que se escriba otra cosa)
 	text.FontFace = Slant.FONT
 	text.TextSize = size
 	text.TextColor3 = color
@@ -101,6 +102,7 @@ function WaveHud.start()
 	banner.Size = UDim2.fromOffset(560, 130)
 	banner.BackgroundTransparency = 1
 	banner.GroupTransparency = 1
+	banner.Visible = false
 	banner.Parent = gui
 	local bannerScale = Instance.new("UIScale")
 	bannerScale.Parent = banner
@@ -114,10 +116,10 @@ function WaveHud.start()
 	bannerSub.Position = UDim2.fromOffset(150, 92)
 	bannerSub.Size = UDim2.fromOffset(260, 28)
 
-	local bannerToken = 0
+	-- El aviso se anima a mano cada cuadro (sin Tween ni task.delay): entra en 0,2 s, se queda y se va solo a los 2,3 s
+	local bannerStart = nil
+	local BANNER_IN, BANNER_HOLD, BANNER_OUT = 0.2, 1.8, 0.5
 	local function showBanner(wave, boss)
-		bannerToken += 1
-		local token = bannerToken
 		bannerTitle.Text = `WAVE {wave}`
 		bannerTitle.TextColor3 = boss and BLACK or CREAM
 		for _, strip in bannerPlate:GetChildren() do
@@ -126,19 +128,32 @@ function WaveHud.start()
 		bannerSub.Text = boss and "BOSS WAVE" or ""
 		bannerSubPlate.Visible = boss
 		bannerSub.Visible = boss
-		banner.GroupTransparency = 1
-		bannerScale.Scale = 1.25
-		TweenService:Create(banner, TweenInfo.new(0.2), { GroupTransparency = 0 }):Play()
-		TweenService:Create(bannerScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		bannerStart = os.clock()
 		if boss then
 			Sfx.play("AlertTank", 0.5)
 		end
-		task.delay(1.8, function()
-			if token == bannerToken then
-				TweenService:Create(banner, TweenInfo.new(0.5), { GroupTransparency = 1 }):Play()
-			end
-		end)
 	end
+	RunService.RenderStepped:Connect(function()
+		if not bannerStart then
+			return
+		end
+		local t = os.clock() - bannerStart
+		if t >= BANNER_IN + BANNER_HOLD + BANNER_OUT then
+			bannerStart = nil
+			banner.GroupTransparency = 1
+			banner.Visible = false
+			return
+		end
+		banner.Visible = true
+		if t < BANNER_IN then
+			banner.GroupTransparency = 1 - t / BANNER_IN
+		elseif t < BANNER_IN + BANNER_HOLD then
+			banner.GroupTransparency = 0
+		else
+			banner.GroupTransparency = (t - BANNER_IN - BANNER_HOLD) / BANNER_OUT
+		end
+		bannerScale.Scale = 1 + 0.25 * math.max(0, 1 - t / 0.3) ^ 2
+	end)
 
 	local function paintTag(color)
 		for _, strip in tag:GetChildren() do

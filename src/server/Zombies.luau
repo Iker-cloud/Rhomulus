@@ -1,6 +1,7 @@
 -- Zombies: modelo con articulaciones (ZombieModel) + IA que persigue al jugador más cercano con PathfindingService y lo golpea.
 local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,6 +12,14 @@ local PlayerState = require(script.Parent.PlayerState)
 local ZombieModel = require(script.Parent.ZombieModel)
 
 local Zombies = {}
+
+-- Los zombies pasan por las puertas del estadio en Survival (MapBuilderBarrio las cierra a los jugadores con el grupo "GateWall")
+for _, name in { "Zombie", "GateWall" } do
+	pcall(function()
+		PhysicsService:RegisterCollisionGroup(name)
+	end)
+end
+PhysicsService:CollisionGroupSetCollidable("Zombie", "GateWall", false)
 
 -- Modelo de cada tipo (se generan con tools/glb_to_lua.py desde assets/*.glb)
 local MODELS = {
@@ -425,6 +434,11 @@ function Zombies.spawn(kind, position)
 	local model, humanoid, root = ZombieModel.build(MODELS[kind], stats, position)
 	model:SetAttribute("Kind", kind)
 	model.Parent = folder
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = "Zombie"
+		end
+	end
 	root:SetNetworkOwner(nil) -- el servidor simula la física del zombie
 
 	humanoid.Died:Once(function()
