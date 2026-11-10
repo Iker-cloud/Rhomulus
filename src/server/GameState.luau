@@ -23,6 +23,7 @@ local Medkits = require(script.Parent.Medkits)
 local VoteRoom = require(script.Parent.VoteRoom)
 local Items = require(script.Parent.Items)
 local VanBuilder = require(script.Parent.VanBuilder)
+local MapBuilderAirport = require(script.Parent.MapBuilderAirport)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
@@ -41,7 +42,14 @@ local GameState = {}
 
 -- Constructor de cada mapa votable (las claves son los id de Config.Maps)
 -- (Survival es el mismo mapa con la Tienda dentro del estadio: lo pide el anfitrión de una sala desde el menú)
-local BUILDERS = { Morro = MapBuilderBarrio, Survival = MapBuilderBarrio }
+local BUILDERS = { Morro = MapBuilderBarrio, Survival = MapBuilderBarrio, LastCall = MapBuilderAirport }
+
+-- Textos de la partida que cambian con el mapa: cada constructor puede dar los suyos en `refs.texts`; los que falten son estos (Morro Esperanza)
+local DEFAULT_TEXTS = {
+	zone1 = "Cross the street to the safe room",
+	zone3 = "Cross the terminal to the stadium",
+	zone3Label = "STADIUM",
+}
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
 local stage = "Lobby"
@@ -82,7 +90,10 @@ local OBJECTIVES = {
 		return map.vanStop.Position, "VAN"
 	end,
 	Stadium = function()
-		return map.stadiumVolume.Position, "STADIUM"
+		return (map.extractionGoal or map.stadiumVolume).Position, map.texts.zone3Label
+	end,
+	Checkpoint = function()
+		return map.gate.Position, map.gateText.label
 	end,
 }
 
@@ -245,8 +256,12 @@ local function resetMap()
 		setDoor(extra, false)
 	end
 	setDoor(map.gate, false)
-	if map.church then
-		setDoor(map.church.exitDoor, false)
+	local second = map.safe2 or map.church -- el segundo punto seguro (la iglesia de Morro, la Fire Station de Last Call)
+	if second then
+		setDoor(second.exitDoor, false)
+		for _, extra in second.extraExits or {} do
+			setDoor(extra, false)
+		end
 	end
 	setLight(map.generatorModel, "luz_estado", LIGHT_OFF)
 	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
@@ -281,6 +296,7 @@ local function loadMap(id)
 	Medkits.init(map.medkits)
 	GasCans.init(map.gas)
 	map.gateText = map.gateText or { label = "GATE", open = "open the gate", run = "to the gate" }
+	map.texts = setmetatable(map.texts or {}, { __index = DEFAULT_TEXTS })
 	workspace:SetAttribute("MapId", id)
 	Dummies.setLayout(id)
 end
@@ -419,7 +435,7 @@ local function lobby()
 end
 
 local function zone1()
-	setStage("Zone1", "Cross the street to the safe room", "Advance")
+	setStage("Zone1", map.texts.zone1, "Advance")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone1")
 	WeaponBox.place("Zone1")
@@ -478,26 +494,35 @@ local function zone2()
 	Director.setZone("Zone2")
 	WeaponBox.place("Zone2")
 	Ambushes.arm(map.ambushesZone2)
-	if map.gas and not fuelGenerator() then
-		return false
-	end
-	setStage("Zone2", `Turn on the generator to {map.gateText.open}`, "Generator")
-	if not waitForPrompt(map.generatorPrompt) then
-		return false
+	if map.gatePrompt then
+		-- Last Call: el control de seguridad se abre en su lector de tarjetas
+		setStage("Zone2", "Open the security checkpoint at the card reader", "Checkpoint")
+		if not waitForPrompt(map.gatePrompt) then
+			return false
+		end
+	else
+		if map.gas and not fuelGenerator() then
+			return false
+		end
+		setStage("Zone2", `Turn on the generator to {map.gateText.open}`, "Generator")
+		if not waitForPrompt(map.generatorPrompt) then
+			return false
+		end
+		setLight(map.generatorModel, "luz_estado", LIGHT_ON) -- el generador arranca
 	end
 
-	setLight(map.generatorModel, "luz_estado", LIGHT_ON) -- el generador arranca
 	-- Aviso: se oye una sirena unos segundos antes de que llegue la horda
 	setStage("Zone2", "Horde incoming! Get ready", "Warning")
 	setDoor(map.gate, true)
 	playGlobal(Config.Sounds.HordeSiren, Config.Sounds.Volume.Siren, 15)
 	task.wait(Config.Game.HordeWarning)
 	setStage("Zone2", `HORDE! Run {map.gateText.run}`, "Horde")
-	Atmosphere.blackout(map.generator.Position) -- el generador sobrecarga la red: los faroles cercanos revientan
+	Atmosphere.blackout((map.generator or map.gate).Position) -- la red se sobrecarga: los faroles cercanos revientan
 	task.spawn(Director.spawnHorde, Config.Game.GeneratorHorde)
 
-	-- Mapa de siempre: la entrada de la extracción; mapa nuevo: la iglesia
-	local goal = map.church and map.church.volume or map.extractionVolume
+	-- El segundo punto seguro: la iglesia (Morro Esperanza) o la Fire Station (Last Call)
+	local second = map.safe2 or map.church
+	local goal = second and second.volume or map.extractionVolume
 	local ok = waitUntil(function()
 		return allInside(goal)
 	end, true)
@@ -574,13 +599,13 @@ end
 
 -- Mapa nuevo, tramo 3: cruzar la terminal hasta la puerta del estadio (emboscada con Tanque en el camino)
 local function zone3()
-	setStage("Zone3", "Cross the terminal to the stadium", "Stadium")
+	setStage("Zone3", map.texts.zone3, "Stadium")
 	PlayerState.resetSelfRevives()
 	Director.setZone("Zone3")
 	WeaponBox.place("Zone3")
 	Ambushes.arm(map.ambushesZone3)
 	local ok = waitUntil(function()
-		return allInside(map.stadiumInside or map.stadiumVolume)
+		return allInside(map.extractionArea or map.stadiumInside or map.stadiumVolume)
 	end, true)
 	if ok then
 		Points.add(Config.Points.ZoneComplete)
@@ -623,8 +648,10 @@ local function survival()
 	runStart = os.clock()
 	reachedZone2 = false
 	WeaponBox.place("Survival")
-	for _, prompt in { map.generatorPrompt, map.radioPrompt } do
-		prompt.Enabled = false -- los eventos del modo historia no se usan aquí
+	for _, key in { "generatorPrompt", "radioPrompt", "gatePrompt" } do
+		if map[key] then
+			map[key].Enabled = false -- los eventos del modo historia no se usan aquí
+		end
 	end
 
 	-- Espera a que todos tengan personaje (si no, el equipo parece vencido de entrada)
@@ -854,9 +881,10 @@ function GameState.start()
 			lobby()
 			local won = zone1() and safeRoom({ entryDoor = map.safeEntryDoor, exitDoor = map.safeExitDoor, extraExits = map.safeExtraExits, spawn = map.safeSpawn })
 			if won then
-				if map.church then
-					-- Mapa nuevo: generador -> horda -> iglesia -> descanso -> terminal -> estadio -> extracción
-					won = zone2() and safeRoom({ entryDoor = map.gate, exitDoor = map.church.exitDoor, spawn = map.church.spawn }) and zone3() and extraction()
+				local second = map.safe2 or map.church
+				if second then
+					-- Evento del sector 2 -> horda -> segundo punto seguro -> descanso -> sector 3 -> extracción
+					won = zone2() and safeRoom({ entryDoor = map.gate, exitDoor = second.exitDoor, extraExits = second.extraExits, spawn = second.spawn }) and zone3() and extraction()
 				else
 					won = zone2() and extraction()
 				end

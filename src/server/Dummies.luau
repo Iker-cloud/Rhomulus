@@ -48,7 +48,7 @@ end
 function Dummies.setLayout(mapId)
 	layout += 1
 	folder:ClearAllChildren()
-	for _, position in Config.Dummy.Positions do
+	for _, position in Config.Dummy.ByMap[mapId] or Config.Dummy.Positions do
 		spawnDummy(position)
 	end
 end

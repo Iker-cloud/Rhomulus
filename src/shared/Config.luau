@@ -840,5 +840,8 @@ return {
 			Vector3.new(0, 0, -388),
 			Vector3.new(8, 0, -388),
 		},
+		ByMap = { -- lobbies de los demás mapas (server/Dummies.setLayout)
+			LastCall = { Vector3.new(-8, 0, -434), Vector3.new(0, 0, -434), Vector3.new(8, 0, -434) }, -- Lost & Found
+		},
 	},
 }

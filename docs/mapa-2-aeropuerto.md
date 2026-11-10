@@ -1,6 +1,6 @@
 # Mapa 2 — LAST CALL, el aeropuerto de Rhomulus (diseño)
 
-Estado: **diseño propuesto el 10 de noviembre de 2026**, con las decisiones de Iker (aeropuerto, "igual pero diferente", evento propio, también Survival, nombre en inglés). Todo lo marcado como *propuesta* falta confirmarlo. Antes de construir hay que probar y publicar lo pendiente del mapa 1 y de Survival.
+Estado: **en construcción desde el 10 de noviembre de 2026**. Hecho: `MapKit`, el mapa gris completo (lobby, los 3 sectores, los 2 puntos seguros, las 3 Tiendas, la torre y la pista) y el paso de etapas en `GameState`. Falta: muebles de los sectores 2 y 3, Crew Call, Remo One, Survival, votación y menú, arte, altura y rendimiento (ver CLAUDE.md).
 
 Juego: **Rhomulus** · Ambiente: apocalipsis latinoamericano, ahora en el **aeropuerto internacional de la ciudad**.
 
@@ -160,3 +160,9 @@ Primero todo a nivel de suelo. En una segunda pasada:
 2. **Rótulos:** solo en inglés (sin doble idioma).
 3. **Remo One:** avión de pasajeros **grande**. Hay que vigilar el número de piezas del avión (la meta de 5.500 a 6.500 piezas del mapa lo incluye).
 4. **Crew Call:** los tres tripulantes son **zombies reforzados** normales, sin habilidad propia.
+5. **Remo One:** fuselaje cerrado; al subir, la cámara pasa a seguir el avión desde fuera. Modelo `avion_pasajeros.glb` a **escala 3** (unos 102 × 101 × 24 studs).
+6. **Acceso:** Last Call está abierto desde el principio (sin nivel ni requisito).
+
+## Trazado construido
+
+El mapa mide 280 × 860 studs jugables (x de -140 a 140, z de -450 a 410; la pista sigue hasta z 480). Bandas: SERVICE al oeste (x -130..-50), CONCOURSE al centro (x -40..40) y APRON al este (x 50..130). A lo largo: lobby z -440..-400 · sector 1 z -400..-190 · Sky Lounge z -180..-140 · sector 2 z -130..120 · Fire Station z 130..170 · sector 3 z 180..330 · plataforma z 330..410. La cuadrícula está en `src/server/AirportLayout.luau`.
