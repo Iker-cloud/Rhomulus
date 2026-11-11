@@ -21,6 +21,7 @@ local B = Config.Boarding
 local A = Config.Animations.Boarding
 
 local van = nil
+local layout = VanLayout -- medidas del vehículo en curso: shared/VanLayout (furgoneta) o shared/PlaneLayout (Remo One)
 local isOpen = false
 local prompts = {}
 local seatsTaken = {} -- [nombre del asiento] = jugador
@@ -36,7 +37,7 @@ end
 
 local function freeSeatCount()
 	local n = 0
-	for _, def in VanLayout.Seats do
+	for _, def in layout.Seats do
 		if not seatsTaken[def.name] then
 			n += 1
 		end
@@ -47,7 +48,7 @@ end
 -- Reserva un asiento libre, de preferencia del lado de la puerta por la que se entra
 local function takeSeat(side, player)
 	for _, sameSide in { true, false } do
-		for _, def in VanLayout.Seats do
+		for _, def in layout.Seats do
 			if not seatsTaken[def.name] and (def.side == side) == sameSide then
 				seatsTaken[def.name] = player
 				return def
@@ -73,8 +74,18 @@ end
 -- Animaciones del gesto de subir (las del servidor se replican a todos): caminar a la puerta, trepar, caminar dentro
 local function playBoardingTracks(humanoid)
 	local D = B.Duration
-	local P = VanLayout.Phases
+	local P = layout.Phases
 	local walk = loadTrack(humanoid, A.Walk, Enum.AnimationPriority.Action, true)
+	if layout.WalkUp then
+		-- Remo One: se sube la escalerilla caminando, de principio a fin
+		if walk then
+			walk:Play(0.15)
+			task.delay(D * P[4], function()
+				walk:Stop(0.2)
+			end)
+		end
+		return
+	end
 	local climb = loadTrack(humanoid, A.Climb, Enum.AnimationPriority.Action, true)
 	local function at(fraction, fn)
 		task.delay(D * fraction, function()
@@ -127,7 +138,7 @@ local function seatPlayer(player, def)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 	character:SetAttribute("VanSeat", seat.Name)
 	root.Anchored = true
-	root.CFrame = seat.CFrame * CFrame.new(0, seat.Size.Y / 2 + VanLayout.SitHeight, 0)
+	root.CFrame = seat.CFrame * CFrame.new(0, seat.Size.Y / 2 + layout.SitHeight, 0)
 	player:SetAttribute("Boarded", true)
 
 	local sit = loadTrack(humanoid, A.Sit, Enum.AnimationPriority.Action, true)
@@ -146,7 +157,7 @@ local function board(player, side)
 	local carried = Revive.carriedBy(player)
 	local need = carried and 2 or 1
 	if freeSeatCount() < need then
-		Remotes.Feed:FireClient(player, "No free seats in the van")
+		Remotes.Feed:FireClient(player, layout.FullText or "No free seats in the van")
 		return
 	end
 	local def = takeSeat(side, player)
@@ -182,9 +193,10 @@ local function board(player, side)
 	end)
 end
 
--- Abre las puertas y activa los prompts (la furgoneta ya llegó)
-function Boarding.open(vanModel)
+-- Abre las puertas y activa los prompts (el vehículo ya llegó). `vehicleLayout` = sus medidas (por defecto, las de la furgoneta)
+function Boarding.open(vanModel, vehicleLayout)
 	van = vanModel
+	layout = vehicleLayout or VanLayout
 	isOpen = true
 	seatsTaken = {}
 	prompts = {}
@@ -194,7 +206,7 @@ function Boarding.open(vanModel)
 		if anchor then
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "BoardPrompt"
-			prompt.ActionText = "Board the van"
+			prompt.ActionText = layout.BoardText or "Board the van"
 			prompt.ObjectText = "Rescue"
 			prompt.KeyboardKeyCode = Enum.KeyCode.E
 			prompt.HoldDuration = B.HoldTime
@@ -269,6 +281,7 @@ end
 function Boarding.reset()
 	isOpen = false
 	van = nil
+	layout = VanLayout
 	prompts = {}
 	seatsTaken = {}
 	pending = 0

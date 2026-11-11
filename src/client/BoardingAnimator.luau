@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PlaneLayout = require(ReplicatedStorage.Shared.PlaneLayout)
 local VanLayout = require(ReplicatedStorage.Shared.VanLayout)
 
 local BoardingAnimator = {}
@@ -98,12 +99,53 @@ local function localPose(van, character, t)
 	return seatSpot, blend(direction(entry, seatSpot, towardCenter), towardCenter, u)
 end
 
+-- Lo mismo para Remo One (medidas en shared/PlaneLayout): 1. camina hasta el pie de la escalerilla   2. se gira hacia el avión
+-- 3. sube la escalerilla   4. entra por la puerta hasta su asiento (dentro ya no se le ve: el fuselaje va cerrado).
+local function planePose(plane, character, t)
+	local from = character:GetAttribute("BoardFrom")
+	if not from then
+		return nil
+	end
+	local L = PlaneLayout
+	local D = Config.Boarding.Duration
+	local p1, p2, p3, p4 = L.Phases[1] * D, L.Phases[2] * D, L.Phases[3] * D, L.Phases[4] * D
+	local start = plane:GetPivot():PointToObjectSpace(from)
+	local h = start.Y -- altura de la raíz sobre el suelo
+	local def = PlaneLayout.Seats[1]
+	for _, seat in PlaneLayout.Seats do
+		if seat.name == character:GetAttribute("BoardSeat") then
+			def = seat
+		end
+	end
+	local foot = Vector3.new(L.DoorX - 0.5 - L.StairRun - 1.5, h, L.DoorZ)
+	local top = Vector3.new(L.DoorX - 0.5, L.DoorY + h, L.DoorZ)
+	local inside = Vector3.new(0, L.Floor + h, L.DoorZ)
+	local seatSpot = Vector3.new(def.x, L.Floor + h, def.z)
+	local towardPlane = Vector3.new(1, 0, 0)
+	local walkIn = direction(start, foot, towardPlane)
+	if t < p1 then
+		return start:Lerp(foot, smooth(t / p1)), walkIn
+	elseif t < p2 then
+		return foot, blend(walkIn, towardPlane, smooth((t - p1) / (p2 - p1)))
+	elseif t < p3 then
+		return foot:Lerp(top, (t - p2) / (p3 - p2)), towardPlane
+	elseif t < p4 then
+		local u = (t - p3) / (p4 - p3)
+		if u < 0.4 then
+			return top:Lerp(inside, smooth(u / 0.4)), towardPlane
+		end
+		return inside:Lerp(seatSpot, smooth((u - 0.4) / 0.6)), direction(inside, seatSpot, Vector3.new(0, 0, -1))
+	end
+	return seatSpot, Vector3.new(0, 0, -1)
+end
+
 local function update()
 	local map = workspace:FindFirstChild("Map")
-	local van = map and map:FindFirstChild("Van")
+	local van = map and (map:FindFirstChild("Van") or map:FindFirstChild("RemoOne"))
 	if not van then
 		return
 	end
+	local pose = van:GetAttribute("Rescue") == "Plane" and planePose or localPose
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		local startTime = character and character:GetAttribute("BoardStart")
@@ -111,7 +153,7 @@ local function update()
 		if root then
 			local t = workspace:GetServerTimeNow() - startTime
 			if t >= 0 and t <= Config.Boarding.Duration + 0.5 then
-				local position, heading = localPose(van, character, math.min(t, Config.Boarding.Duration))
+				local position, heading = pose(van, character, math.min(t, Config.Boarding.Duration))
 				if position then
 					root.CFrame = van:GetPivot() * CFrame.lookAt(position, position + heading)
 				end

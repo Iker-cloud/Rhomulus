@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PlaneLayout = require(ReplicatedStorage.Shared.PlaneLayout)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Ambushes = require(script.Parent.Ambushes)
 local Atmosphere = require(script.Parent.Atmosphere)
@@ -26,6 +27,7 @@ local Items = require(script.Parent.Items)
 local VanBuilder = require(script.Parent.VanBuilder)
 local MapBuilderAirport = require(script.Parent.MapBuilderAirport)
 local MapBuilderBarrio = require(script.Parent.MapBuilderBarrio)
+local PlaneBuilder = require(script.Parent.PlaneBuilder)
 local PlayerState = require(script.Parent.PlayerState)
 local Points = require(script.Parent.Points)
 local Stats = require(script.Parent.Stats)
@@ -50,6 +52,11 @@ local DEFAULT_TEXTS = {
 	zone1 = "Cross the street to the safe room",
 	zone3 = "Cross the terminal to the stadium",
 	zone3Label = "STADIUM",
+	hold = "Hold out until the van arrives!",
+	arriving = "The van is arriving!",
+	board = "Get in the van! Hold E at the door",
+	run = "Run to the van!",
+	rescueLabel = "VAN",
 }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
@@ -82,13 +89,13 @@ local OBJECTIVES = {
 		return map.radioModel:GetPivot().Position, "RADIO"
 	end,
 	Van = function()
-		return map.vanStop.Position, "VAN"
+		return map.boardPos or map.vanStop.Position, map.texts.rescueLabel
 	end,
 	Board = function()
-		return map.vanStop.Position, "VAN"
+		return map.boardPos or map.vanStop.Position, map.texts.rescueLabel
 	end,
 	Run = function()
-		return map.vanStop.Position, "VAN"
+		return map.boardPos or map.vanStop.Position, map.texts.rescueLabel
 	end,
 	Stadium = function()
 		return (map.extractionGoal or map.stadiumVolume).Position, map.texts.zone3Label
@@ -268,9 +275,11 @@ local function resetMap()
 	setLight(map.radioModel, "led_llamada", LIGHT_OFF)
 	setLight(map.radioModel, "led_senal", LIGHT_OFF)
 	Boarding.reset()
-	local van = workspace.Map:FindFirstChild("Van")
-	if van then
-		van:Destroy()
+	for _, name in { "Van", "RemoOne" } do
+		local rescue = workspace.Map:FindFirstChild(name)
+		if rescue then
+			rescue:Destroy()
+		end
 	end
 	workspace:SetAttribute("ExtractionEnd", nil)
 end
@@ -614,7 +623,7 @@ local function extraction()
 	setLight(map.radioModel, "led_senal", LIGHT_ON)
 	local arrival = workspace:GetServerTimeNow() + Config.Game.ExtractionTime
 	workspace:SetAttribute("ExtractionEnd", arrival)
-	setStage("Extraction", "Hold out until the van arrives!", "Hold")
+	setStage("Extraction", map.texts.hold, "Hold")
 	Director.setBoost(true)
 
 	local survived = waitUntil(function()
@@ -626,21 +635,23 @@ local function extraction()
 
 	-- La van entra por el fondo de la calle
 	-- El servidor solo dice de dónde a dónde y cuándo: cada cliente anima la entrada (VanAnimator), así se ve fluida
-	local van = VanBuilder.makeVan(map.vanStart.Position)
-	local arrivalTime = Config.Game.VanArriveTime
+	-- Last Call: en vez de la furgoneta aterriza Remo One (nace donde queda parado; cada cliente lo trae desde lejos, PlaneAnimator)
+	local plane = map.rescue == "Plane"
+	local van = plane and PlaneBuilder.make(map.vanStop) or VanBuilder.makeVan(map.vanStart.Position)
+	local arrivalTime = plane and Config.Plane.ArriveTime or Config.Game.VanArriveTime
 	van:SetAttribute("From", map.vanStart)
 	van:SetAttribute("To", map.vanStop)
 	van:SetAttribute("Duration", arrivalTime)
 	van:SetAttribute("Start", workspace:GetServerTimeNow())
 	van.Parent = workspace.Map
-	setStage("Extraction", "The van is arriving!", "Van")
+	setStage("Extraction", map.texts.arriving, "Van")
 	task.wait(arrivalTime)
 	van:PivotTo(map.vanStop) -- posición final real (colisiones y detección de quién subió)
 	van:SetAttribute("Arrived", true)
 
 	-- Se abren las puertas y cada quien sube manteniendo E (server/Boarding); con un caído en hombros suben los dos
-	Boarding.open(van)
-	setStage("Extraction", "Get in the van! Hold E at the door", "Board")
+	Boarding.open(van, plane and PlaneLayout or nil)
+	setStage("Extraction", map.texts.board, "Board")
 	local reached = waitUntil(function()
 		return Boarding.count() > 0
 	end, true)
@@ -649,7 +660,7 @@ local function extraction()
 	end
 
 	-- Margen para que lleguen los demás; la van sale al subir todos o al acabarse
-	setStage("Extraction", "Run to the van!", "Run")
+	setStage("Extraction", map.texts.run, "Run")
 	local started = os.clock()
 	while os.clock() - started < Config.Game.VanGrace and not Boarding.allBoarded(livingPlayers()) do
 		task.wait(0.25)
@@ -659,7 +670,7 @@ local function extraction()
 	-- La van arranca: puertas cerradas, marcha atrás, giro y a toda velocidad (client/VanAnimator); la victoria sale mientras se va
 	setStage("Extraction", "Go, go, go!", "Run")
 	Boarding.depart()
-	task.wait(Config.Boarding.ResultAfter)
+	task.wait(plane and Config.Plane.ResultAfter or Config.Boarding.ResultAfter)
 	return true
 end
 

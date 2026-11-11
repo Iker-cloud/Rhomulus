@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local AirportLayout = require(script.Parent.AirportLayout)
+local PlaneLayout = require(ReplicatedStorage.Shared.PlaneLayout)
 local MapKit = require(script.Parent.MapKit)
 local PropModel = require(script.Parent.PropModel)
 local Radio = require(script.Parent.ZombieData.Radio)
@@ -45,6 +46,8 @@ local medkitPickup = MapKit.medkitPickup
 local yawFacing = MapKit.yawFacing
 
 local WALL_H = 20 -- alto de los muros y del techo del terminal
+local RUNWAY_Z = 436 -- eje de la pista (Remo One rueda por aquí)
+local PLAY_NORTH = 425 -- hasta dónde se puede pisar hacia la pista: llega al pie de la escalerilla, no bajo el fuselaje
 local DOOR_H = 14
 
 -- Paleta del aeropuerto: fría y gris, con los tres colores de ruta
@@ -849,15 +852,16 @@ local function buildGates(map, refs, config, rng, spawnRoot)
 	for _, spot in { { -40, 340, 0 }, { -34, 340, 0 }, { 30, 350, 15 }, { 84, 344, 0 }, { 90, 350, 0 }, { 110, 396, 0 }, { -110, 398, 0 }, { 20, 398, 30 } } do
 		cargo(tarmac, spot[1], spot[2], spot[3])
 	end
-	fuelTruck(tarmac, 64, 386, true)
+	fuelTruck(tarmac, 64, 372, true)
 	baggageTrain(tarmac, -10, 342, 2, rng)
 	addMedkit(refs, tarmac, Vector3.new(-80, 0, 347))
 	addCans(refs, tarmac, Vector3.new(124, 0, 404))
 
 	-- La pista sigue hacia el norte, fuera del límite jugable
-	floor(tarmac, "Pista", -700, 700, 410, 480, P.asphalt, Enum.Material.Asphalt)
+	floor(tarmac, "Pista", -700, 700, 410, 462, P.asphalt, Enum.Material.Asphalt)
+	floor(tarmac, "PistaHierba", -700, 700, 462, 620, hex("#2E3A2A"), Enum.Material.Grass)
 	for x = -660, 660, 60 do
-		deco(block(tarmac, "PistaRaya", Vector3.new(24, 0.06, 1.6), Vector3.new(x, FLOOR_TOP + 0.04, 445), C.blanco, Enum.Material.SmoothPlastic))
+		deco(block(tarmac, "PistaRaya", Vector3.new(24, 0.06, 1.6), Vector3.new(x, FLOOR_TOP + 0.04, RUNWAY_Z), C.blanco, Enum.Material.SmoothPlastic))
 	end
 
 	-- Más entradas de zombies durante la extracción: las bocas de las tres rutas y las esquinas de la plataforma
@@ -865,12 +869,13 @@ local function buildGates(map, refs, config, rng, spawnRoot)
 		marker(spawnRoot.Extraction, point)
 	end
 
-	refs.extractionArea = volume(tarmac, "ExtractionArea", -130, 130, 330, 410, 40) -- toda la plataforma: basta con que el equipo esté en ella
+	refs.extractionArea = volume(tarmac, "ExtractionArea", -130, 130, 330, PLAY_NORTH, 40) -- toda la plataforma: basta con que el equipo esté en ella
 	refs.extractionGoal = volume(tarmac, "ExtractionGoal", -70, -30, 345, 385, 12) -- destino de la guía
-	-- Provisional hasta que exista Remo One: la furgoneta entra por la pista
-	refs.vanStart = CFrame.new(-30, 0, 470)
-	refs.vanStop = CFrame.new(-30, 0, 392)
-	refs.vanVolume = volume(tarmac, "VanVolume", -44, -16, 378, 406, 14)
+	-- Remo One aterriza de oeste a este por la pista y para con la puerta delantera izquierda (y su escalerilla) hacia la plataforma
+	refs.rescue = "Plane"
+	refs.vanStop = CFrame.new(-40, 0, RUNWAY_Z) * CFrame.Angles(0, -math.pi / 2, 0)
+	refs.vanStart = refs.vanStop * CFrame.new(0, Config.Plane.Height, Config.Plane.Approach)
+	refs.boardPos = (refs.vanStop * CFrame.new(PlaneLayout.DoorX - 0.5 - PlaneLayout.StairRun, 0, PlaneLayout.DoorZ)).Position -- el pie de la escalerilla
 	refs.boxSpots.Extraction = { { Vector3.new(-52, 0, 358), Vector3.new(44, 0, 340), Vector3.new(100, 0, 376) } }
 end
 
@@ -895,7 +900,7 @@ local function buildLimits(map)
 	invisible(Vector3.new(2, H, 870), Vector3.new(-131, H / 2, -20)) -- oeste
 	invisible(Vector3.new(2, H, 870), Vector3.new(131, H / 2, -20)) -- este
 	invisible(Vector3.new(284, H, 2), Vector3.new(0, H / 2, -441)) -- sur (detrás del lobby)
-	invisible(Vector3.new(284, H, 2), Vector3.new(0, H / 2, 411)) -- norte: la pista no se pisa (el avión aterriza ahí)
+	invisible(Vector3.new(284, H, 2), Vector3.new(0, H / 2, PLAY_NORTH + 1)) -- norte: la pista no se pisa (el avión aterriza ahí)
 	invisible(Vector3.new(300, 3, 960), Vector3.new(0, -1.5, 20)) -- suelo de seguridad (cara superior a ras de y = 0)
 end
 
@@ -921,6 +926,11 @@ function MapBuilderAirport.build(config, options)
 		zone1 = "Cross Arrivals to the Sky Lounge",
 		zone3 = "Cross the gates to the runway",
 		zone3Label = "RUNWAY",
+		hold = "Hold out until Remo One lands!",
+		arriving = "Remo One is landing!",
+		board = "Board Remo One! Hold E at the stairs",
+		run = "Run to Remo One!",
+		rescueLabel = "REMO ONE",
 	}
 
 	buildShell(map, spawnRoot)

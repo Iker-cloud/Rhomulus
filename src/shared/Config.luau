@@ -175,6 +175,13 @@ return {
 		VanHorn = "rbxassetid://93042705532380", -- pitido de la furgoneta al entrar (dura 1.5 s)
 		BoxSpin = "rbxassetid://9046019442",
 		-- Furgoneta de rescate (client/VanAnimator): puertas, motor, marcha atrás y derrape al irse. Suenan en 3D desde la furgoneta.
+		-- Remo One (client/PlaneAnimator): { id, volumen, tono }. Provisionales: son los de la furgoneta con otro tono, sin oír
+		Plane = {
+			Engine = { "rbxassetid://112247549523842", 0.9, 0.6 }, -- bucle; el tono sube con la velocidad
+			Spool = { "rbxassetid://80004844856889", 1.0, 0.7 }, -- los motores suben antes de despegar
+			Touchdown = { "rbxassetid://73429750798250", 1.0, 0.8 }, -- las ruedas tocan la pista
+			Door = { "rbxassetid://140296030450157", 0.8, 0.8 },
+		},
 		Van = {
 			Door = { "rbxassetid://140296030450157", 0.8 },
 			EngineStart = { "rbxassetid://80004844856889", 0.9 },
@@ -819,6 +826,18 @@ return {
 		StragglerTime = 90, -- segundos tras soltar toda la oleada: si quedan pocos, se dan por vencidos
 		CansMult = 0.55, -- todas las latas que se ganan en Survival se multiplican por esto (se ganaban demasiadas)
 		WaveBonus = { Base = 50, PerWave = 10, Clean = 100 }, -- latas del equipo al limpiar una oleada (+Clean si nadie cayó)
+	},
+
+	-- Remo One, el avión de rescate de Last Call (server/PlaneBuilder, client/PlaneAnimator; medidas en shared/PlaneLayout).
+	Plane = {
+		ArriveTime = 16, -- segundos desde que aparece a lo lejos hasta que queda parado
+		Approach = 900, -- de cuán lejos viene (studs por detrás de donde para)
+		Height = 120, -- altura a la que aparece
+		Touchdown = 0.45, -- fracción de ArriveTime en la que toca la pista (el resto es la frenada)
+		StairTime = 1.6, -- segundos que tarda en abrirse la puerta y bajar la escalerilla
+		ResultAfter = 9, -- segundos desde que arranca hasta que sale la pantalla de victoria
+		Takeoff = { Spool = 2.2, Accel = 24, RotateSpeed = 95, Pitch = 12, ClimbAccel = 9 }, -- motores, carrera, velocidad de rotación, morro arriba y ascenso
+		Camera = { Offset = Vector3.new(-58, 20, -70), LookAt = Vector3.new(0, 10, -20) }, -- cámara exterior de quien ya subió (en el marco del avión)
 	},
 
 	-- Crew Call (server/CrewCall): el evento del sector 2 de Last Call. Tres tripulantes infectados (zombies comunes reforzados, uno
