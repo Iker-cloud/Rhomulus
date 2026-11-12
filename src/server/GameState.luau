@@ -45,7 +45,8 @@ local GameState = {}
 
 -- Constructor de cada mapa votable (las claves son los id de Config.Maps)
 -- (Survival es el mismo mapa con la Tienda dentro del estadio: lo pide el anfitrión de una sala desde el menú)
-local BUILDERS = { Morro = MapBuilderBarrio, Survival = MapBuilderBarrio, LastCall = MapBuilderAirport }
+local BUILDERS = { Morro = MapBuilderBarrio, Survival = MapBuilderBarrio, LastCall = MapBuilderAirport, LastCallSurvival = MapBuilderAirport }
+local SURVIVAL = Config.SurvivalMaps -- ids de los mapas del modo Survival
 
 -- Textos de la partida que cambian con el mapa: cada constructor puede dar los suyos en `refs.texts`; los que falten son estos (Morro Esperanza)
 local DEFAULT_TEXTS = {
@@ -57,6 +58,7 @@ local DEFAULT_TEXTS = {
 	board = "Get in the van! Hold E at the door",
 	run = "Run to the van!",
 	rescueLabel = "VAN",
+	survivalStart = "Hold the stadium! The first wave is coming. Shop first",
 }
 
 local map -- referencias del mapa (puertas, volúmenes, puntos)
@@ -210,6 +212,9 @@ local function setLight(model, partName, color)
 end
 
 local function setDoor(part, open)
+	if not part then
+		return -- la arena de Survival de Last Call no tiene puertas del modo historia
+	end
 	part.CanCollide = not open
 	part.Transparency = open and 1 or 0
 end
@@ -298,7 +303,7 @@ local function loadMap(id)
 	Pharmacy.clear()
 	WeaponBox.clear()
 	Zombies.clear()
-	map = BUILDERS[id].build(Config.Game, { survival = id == "Survival" })
+	map = BUILDERS[id].build(Config.Game, { survival = SURVIVAL[id] ~= nil })
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)
 	Pharmacy.place(map.pharmacySpots)
@@ -309,6 +314,7 @@ local function loadMap(id)
 	map.gateText = map.gateText or { label = "GATE", open = "open the gate", run = "to the gate" }
 	map.texts = setmetatable(map.texts or {}, { __index = DEFAULT_TEXTS })
 	workspace:SetAttribute("MapId", id)
+	workspace:SetAttribute("SurvivalMode", SURVIVAL[id] ~= nil) -- lo leen el cliente y los sistemas que cambian en Survival
 	Dummies.setLayout(id)
 end
 
@@ -364,8 +370,8 @@ local function vote()
 
 	local fixed = privateMap()
 	if fixed then
-		Difficulty.set(fixed ~= "Survival" and privateDifficulty or nil) -- la eligió el anfitrión en el menú (nil = la de por defecto); Survival sube sola
-		if privateMutators and fixed ~= "Survival" then
+		Difficulty.set(not SURVIVAL[fixed] and privateDifficulty or nil) -- la eligió el anfitrión en el menú (nil = la de por defecto); Survival sube sola
+		if privateMutators and not SURVIVAL[fixed] then
 			rollMutators()
 		else
 			Telemetry.mutators({})
@@ -375,7 +381,7 @@ local function vote()
 	end
 
 	PlayerState.setSafePoint(VoteRoom.build().spawn)
-	setStage("Vote", "Vote on the difficulty with 1 to 4", "Vote")
+	setStage("Vote", #Config.Maps > 1 and "Vote on the map at its podium, and on the difficulty with 1 to 4" or "Vote on the difficulty with 1 to 4", "Vote")
 	respawn(false)
 
 	local winner, difficulty = VoteRoom.run(function(text)
@@ -748,7 +754,7 @@ local function survival()
 
 	local reached = 0
 	local wave = 0
-	local alive = waveBreak(S.FirstWaveDelay, "Hold the stadium! The first wave is coming. Shop first")
+	local alive = waveBreak(S.FirstWaveDelay, map.texts.survivalStart)
 	while alive do
 		wave += 1
 		local composition = SurvivalWaves.compose(wave, #Players:GetPlayers())
@@ -857,7 +863,7 @@ local function result(won, waves)
 		end
 		local teamSize = math.clamp(#Players:GetPlayers(), 1, 4)
 		task.spawn(function()
-			Remotes.Record:FireAllClients(Records.submitWaves(teamSize, waves, names))
+			Remotes.Record:FireAllClients(Records.submitWaves(teamSize, waves, names, workspace:GetAttribute("MapId")))
 		end)
 	end
 	-- Récord de extracción rápida: solo cuenta ganar; el DataStore tarda, así que se avisa aparte cuando contesta
@@ -951,7 +957,7 @@ function GameState.start()
 	task.spawn(function()
 		while true do
 			vote()
-			if workspace:GetAttribute("MapId") == "Survival" then
+			if SURVIVAL[workspace:GetAttribute("MapId")] then
 				result(false, survival())
 				continue
 			end

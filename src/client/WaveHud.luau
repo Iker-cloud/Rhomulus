@@ -168,7 +168,7 @@ function WaveHud.start()
 
 	local function refresh()
 		local stage = workspace:GetAttribute("Stage")
-		local active = workspace:GetAttribute("MapId") == "Survival" and (stage == "Wave" or stage == "WaveBreak") and not hidden()
+		local active = workspace:GetAttribute("SurvivalMode") and (stage == "Wave" or stage == "WaveBreak") and not hidden()
 		panel.Visible = active
 		if not active then
 			return
@@ -197,13 +197,13 @@ function WaveHud.start()
 	local lastWave = 0
 	workspace:GetAttributeChangedSignal("Wave"):Connect(function()
 		local wave = workspace:GetAttribute("Wave") or 0
-		if wave > 0 and wave ~= lastWave and workspace:GetAttribute("MapId") == "Survival" then
+		if wave > 0 and wave ~= lastWave and workspace:GetAttribute("SurvivalMode") then
 			showBanner(wave, workspace:GetAttribute("WaveBoss") == true)
 		end
 		lastWave = wave
 		refresh()
 	end)
-	for _, name in { "Stage", "MapId", "WaveLeft", "WaveTotal", "WaveBoss" } do
+	for _, name in { "Stage", "MapId", "SurvivalMode", "WaveLeft", "WaveTotal", "WaveBoss" } do
 		workspace:GetAttributeChangedSignal(name):Connect(refresh)
 	end
 	player:GetAttributeChangedSignal("State"):Connect(refresh)

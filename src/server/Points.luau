@@ -26,7 +26,7 @@ end
 -- `contributor` (opcional): el jugador al que se le cuenta lo que suma
 function Points.add(amount, contributor)
 	amount = math.floor(amount * Difficulty.get().Reward + 0.5) -- las dificultades altas dan algo más de latas
-	if workspace:GetAttribute("MapId") == "Survival" then
+	if workspace:GetAttribute("SurvivalMode") then
 		amount = math.max(1, math.floor(amount * Config.Survival.CansMult + 0.5))
 	end
 	total += amount

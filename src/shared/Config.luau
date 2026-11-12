@@ -778,6 +778,12 @@ return {
 	-- Mapas que se pueden votar al inicio de cada ronda (server/VoteRoom). id = clave que usa GameState para elegir el constructor.
 	Maps = {
 		{ id = "Morro", name = "Morro Esperanza", desc = "The Rhomulus barrio: 3 routes, 3 sections, iglesia, stadium and van.", color = Color3.fromRGB(190, 70, 50) },
+		{ id = "LastCall", name = "Last Call", desc = "The Rhomulus airport: 3 routes, 3 sectors, crew call, runway and Remo One.", color = Color3.fromRGB(70, 130, 200) },
+	},
+	-- Mapas del modo Survival (oleadas sin fin): no se votan; los pide el anfitrión de una sala desde el menú. El valor es el nombre de la arena.
+	SurvivalMaps = {
+		Survival = "Stadium", -- el estadio de Morro Esperanza
+		LastCallSurvival = "Hangar 7", -- el hangar de Last Call
 	},
 	Vote = {
 		Time = 20, -- segundos máximos de votación
@@ -886,6 +892,7 @@ return {
 		},
 		ByMap = { -- lobbies de los demás mapas (server/Dummies.setLayout)
 			LastCall = { Vector3.new(-8, 0, -434), Vector3.new(0, 0, -434), Vector3.new(8, 0, -434) }, -- Lost & Found
+			LastCallSurvival = {}, -- el Hangar 7 no tiene maniquíes
 		},
 	},
 }

@@ -500,7 +500,35 @@ local function floodLight(parent, position, target, range, brightness)
 	light.Parent = part
 	return part
 end
+-- Puerta solo para zombies: pared invisible que frena a los jugadores (grupo de colisión "GateWall") y deja pasar a los zombies
+-- (grupo "Zombie", lo pone server/Zombies) y a las balas. Para las rutas de los zombies no es un obstáculo.
+local function zombieGate(parent, size, cframe)
+	local PhysicsService = game:GetService("PhysicsService")
+	for _, name in { "Zombie", "GateWall" } do
+		pcall(function()
+			PhysicsService:RegisterCollisionGroup(name)
+		end)
+	end
+	PhysicsService:CollisionGroupSetCollidable("Zombie", "GateWall", false)
+	local wall = Instance.new("Part")
+	wall.Name = "PuertaSoloZombies"
+	wall.Anchored = true
+	wall.CanQuery = false
+	wall.CanTouch = false
+	wall.CastShadow = false
+	wall.Transparency = 1
+	wall.Size = size
+	wall.CFrame = cframe
+	wall.CollisionGroup = "GateWall"
+	local modifier = Instance.new("PathfindingModifier")
+	modifier.PassThrough = true
+	modifier.Parent = wall
+	wall.Parent = parent
+	return wall
+end
+
 MapKit.C = C
+MapKit.zombieGate = zombieGate
 MapKit.FLOOR_TOP = FLOOR_TOP
 MapKit.RHO_RED = RHO_RED
 MapKit.RHO_YELLOW = RHO_YELLOW

@@ -21,7 +21,8 @@ local built = nil -- { spawn, options = { { map, prompt, countLabel } }, timeLab
 local RED = Color3.fromRGB(226, 38, 44)
 local PALE = Color3.fromRGB(245, 226, 222)
 local BLACK = Color3.fromRGB(12, 12, 12)
-local PREFIX = { Prueba = "prueba", Morro = "morro" } -- id del mapa -> prefijo de sus piezas en ZonaVotacion
+local PREFIX = { LastCall = "prueba", Morro = "morro" } -- id del mapa -> prefijo de sus piezas en ZonaVotacion (Last Call usa el podio que era del mapa de prueba)
+local MAP_VOTE = #Config.Maps > 1 -- con un solo mapa no se vota el mapa (solo la dificultad)
 
 local function label(parent, text, size, position, font, color)
 	local l = Instance.new("TextLabel")
@@ -77,7 +78,13 @@ local function mapBoard(part, map)
 	local gui = face(part, 60, Color3.fromRGB(14, 14, 14))
 	rect(gui, UDim2.fromScale(0.92, 0.012), UDim2.fromScale(0.04, 0.05), main)
 	rect(gui, UDim2.fromScale(0.92, 0.012), UDim2.fromScale(0.04, 0.94), main)
-	local count = Instance.new("TextLabel") -- ya no se vota el mapa (solo hay uno): el texto no se muestra
+	local count
+	if MAP_VOTE then
+		count = label(gui, "0", UDim2.fromScale(0.3, 0.2), UDim2.fromScale(0.35, 0.09), Enum.Font.Oswald, main)
+		label(gui, "VOTES", UDim2.fromScale(0.3, 0.045), UDim2.fromScale(0.35, 0.285), Enum.Font.Oswald, soft)
+	else
+		count = Instance.new("TextLabel") -- con un solo mapa no se vota: el texto no se muestra
+	end
 	local desc = label(gui, map.desc, UDim2.fromScale(0.84, 0.22), UDim2.fromScale(0.08, 0.34), Enum.Font.GothamBold, soft)
 	desc.TextWrapped = true
 	rect(gui, UDim2.fromScale(0.78, 0.008), UDim2.fromScale(0.11, 0.6), main)
@@ -122,17 +129,19 @@ function VoteRoom.build()
 		named[d.name] = p
 	end
 
-	-- Solo hay un mapa: el podio de Morro Esperanza (negro con neón rojo tenue, como era el de Prueba) queda de cartel
-	for name, part in named do
-		local twin = name:match("^morro_(base)$") or name:match("^morro_(franja_%d+)$") or name:match("^morro_(neon_%a)$")
-		if twin and named["prueba_" .. twin] then
-			part.Color = named["prueba_" .. twin].Color
+	-- Con un solo mapa, el podio de Morro Esperanza (negro con neón rojo tenue, como era el de Prueba) queda de cartel y el otro se quita
+	if not MAP_VOTE then
+		for name, part in named do
+			local twin = name:match("^morro_(base)$") or name:match("^morro_(franja_%d+)$") or name:match("^morro_(neon_%a)$")
+			if twin and named["prueba_" .. twin] then
+				part.Color = named["prueba_" .. twin].Color
+			end
 		end
-	end
-	for name, part in named do
-		if name:find("^prueba_") then
-			part:Destroy()
-			named[name] = nil
+		for name, part in named do
+			if name:find("^prueba_") then
+				part:Destroy()
+				named[name] = nil
+			end
 		end
 	end
 
@@ -282,6 +291,16 @@ function VoteRoom.run(onTick)
 		end
 	end))
 
+	-- Voto del mapa: E en el podio de cada mapa (se puede cambiar hasta que termine el tiempo)
+	if MAP_VOTE then
+		for _, option in room.options do
+			option.prompt.Enabled = true
+			table.insert(connections, option.prompt.Triggered:Connect(function(player)
+				votes[player] = option.map.id
+			end))
+		end
+	end
+
 	local startedAt = os.clock()
 	local allVotedAt = nil
 	while true do
@@ -304,7 +323,7 @@ function VoteRoom.run(onTick)
 			timeLabel.Text = tostring(left)
 			timeLabel.TextColor3 = urgent and PALE or RED
 		end
-		onTick(`Vote on the difficulty with 1 to 4 ({voted}/{#list})`)
+		onTick(MAP_VOTE and `Vote on the map at its podium, and on the difficulty with 1 to 4 ({voted}/{#list})` or `Vote on the difficulty with 1 to 4 ({voted}/{#list})`)
 
 		if #list > 0 and voted == #list then
 			allVotedAt = allVotedAt or os.clock()

@@ -350,7 +350,7 @@ local function think(humanoid, root, stats)
 			continue
 		end
 		-- Survival: si lleva varios segundos sin avanzar y no está pegando (atascado entre edificios), reaparece en otro punto de entrada
-		if target and distance > stats.AttackRange + 3 and workspace:GetAttribute("MapId") == "Survival" then
+		if target and distance > stats.AttackRange + 3 and workspace:GetAttribute("SurvivalMode") then
 			local now = os.clock()
 			if (root.Position - stuckFrom).Magnitude > Config.Zombie.Stuck.Distance then
 				stuckFrom = root.Position

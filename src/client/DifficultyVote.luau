@@ -151,7 +151,7 @@ function DifficultyVote.start()
 		-- La etiqueta se esconde con la tarjeta de caído y la del espectador (arriba al centro) y con la pantalla de resultados
 		local stage = workspace:GetAttribute("Stage")
 		-- (en Survival no hay dificultad que mostrar: client/WaveHud pone su marcador en ese sitio)
-		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State")) and workspace:GetAttribute("MapId") ~= "Survival"
+		tag.Visible = not voting and stage ~= nil and stage ~= "Result" and not hidesTag(player:GetAttribute("State")) and not workspace:GetAttribute("SurvivalMode")
 		local ids = Mutators.parse(workspace:GetAttribute("Mutators"))
 		mutatorTag.Visible = false -- las mutaciones las muestra client/MutatorHud
 		if #ids > 0 then
@@ -188,6 +188,7 @@ function DifficultyVote.start()
 	workspace:GetAttributeChangedSignal("Stage"):Connect(update)
 	workspace:GetAttributeChangedSignal("Difficulty"):Connect(update)
 	workspace:GetAttributeChangedSignal("MapId"):Connect(update)
+	workspace:GetAttributeChangedSignal("SurvivalMode"):Connect(update)
 	workspace:GetAttributeChangedSignal("Mutators"):Connect(update)
 	player:GetAttributeChangedSignal("State"):Connect(update)
 	update()

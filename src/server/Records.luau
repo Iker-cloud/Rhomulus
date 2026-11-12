@@ -37,15 +37,17 @@ function Records.submit(difficultyId, seconds, names)
 	return info
 end
 
--- Survival: la oleada más alta que ha aguantado un equipo de `players` jugadores (clave waves_<jugadores>).
+-- Survival: la oleada más alta que ha aguantado un equipo de `players` jugadores en la arena `mapId`. El estadio de Morro
+-- (mapa "Survival") conserva su clave de siempre, waves_<jugadores>; las demás arenas usan waves_<mapa>_<jugadores>.
 -- Devuelve { waves, players, best, bestNames, isRecord } (best nil si no hay guardado)
-function Records.submitWaves(players, waves, names)
+function Records.submitWaves(players, waves, names, mapId)
+	local key = (mapId == nil or mapId == "Survival") and "waves_" .. players or `waves_{mapId}_{players}`
 	local info = { waves = waves, players = players, isRecord = false }
 	if not store then
 		return info
 	end
 	local ok, value = pcall(function()
-		return store:UpdateAsync("waves_" .. players, function(old)
+		return store:UpdateAsync(key, function(old)
 			if typeof(old) == "table" and typeof(old.waves) == "number" and old.waves >= waves then
 				return old
 			end

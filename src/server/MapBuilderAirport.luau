@@ -880,6 +880,140 @@ local function buildGates(map, refs, config, rng, spawnRoot)
 end
 
 ---------------------------------------------------------------------------------------------------
+-- Survival: Hangar 7. Arena cerrada (x -100..100, z -80..80) con un avión aparcado en el centro, la Tienda en una oficina de la
+-- pared oeste y 12 puntos de aparición fuera, tras cuatro puertas que solo cruzan los zombies (grupos de colisión Zombie y
+-- GateWall, como el portón del estadio de Morro Esperanza). No se construye el resto del aeropuerto.
+
+local HANGAR_H = 34
+
+local function buildHangarArena(map, refs, spawnRoot, rng)
+	local arena = newFolder(map, "Hangar7")
+	local wallColor, steel = P.wall, P.steel
+
+	-- Suelos: el hangar, la oficina de la Tienda y las tres zonas de fuera por donde llegan los zombies
+	floor(arena, "PisoHangar", -104, 104, -84, 84, P.serviceFloor, Enum.Material.Concrete)
+	floor(arena, "PisoOficina", -132, -104, -12, 12, P.tile, Enum.Material.SmoothPlastic)
+	floor(arena, "Asfalto", -108, 108, 84, 128, P.asphalt, Enum.Material.Asphalt) -- plataforma norte
+	floor(arena, "Asfalto", -108, 108, -128, -84, P.asphalt, Enum.Material.Asphalt) -- patio sur
+	floor(arena, "PisoTaller", 104, 136, -62, 62, P.serviceFloor, Enum.Material.Concrete) -- pasillo del taller, al este
+
+	-- Muros del hangar con sus cuatro puertas: el portón norte (60 de ancho), dos puertas al sur y una al este
+	local function wall(x1, x2, z1, z2, y1, y2)
+		return block(arena, "Muro", Vector3.new(x2 - x1, y2 - y1, z2 - z1), Vector3.new((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2), wallColor)
+	end
+	wall(-104, -30, 80, 84, 0, HANGAR_H)
+	wall(30, 104, 80, 84, 0, HANGAR_H)
+	wall(-30, 30, 80, 84, 24, HANGAR_H) -- dintel del portón
+	wall(-104, -70, -84, -80, 0, HANGAR_H)
+	wall(-50, 50, -84, -80, 0, HANGAR_H)
+	wall(70, 104, -84, -80, 0, HANGAR_H)
+	wall(-70, -50, -84, -80, 14, HANGAR_H)
+	wall(50, 70, -84, -80, 14, HANGAR_H)
+	wall(100, 104, -80, -10, 0, HANGAR_H)
+	wall(100, 104, 10, 80, 0, HANGAR_H)
+	wall(100, 104, -10, 10, 14, HANGAR_H)
+	wall(-104, -100, -80, -10, 0, HANGAR_H)
+	wall(-104, -100, 10, 80, 0, HANGAR_H)
+	wall(-104, -100, -10, 10, 20, HANGAR_H)
+	block(arena, "Techo", Vector3.new(208, 1, 168), Vector3.new(0, HANGAR_H + 0.5, 0), P.ceiling, Enum.Material.Metal)
+	for _, z in { -54, 0, 54 } do
+		deco(block(arena, "Cercha", Vector3.new(200, 2, 1.2), Vector3.new(0, HANGAR_H - 1.2, z), steel, Enum.Material.Metal))
+	end
+	-- La oficina (hueco de la pared oeste): paredes y techo
+	wall(-134, -104, 10, 12, 0, 20)
+	wall(-134, -104, -12, -10, 0, 20)
+	wall(-134, -132, -10, 10, 0, 20)
+	block(arena, "Techo", Vector3.new(30, 1, 24), Vector3.new(-119, 20.5, 0), P.ceiling, Enum.Material.SmoothPlastic)
+	-- El pasillo del taller (este): paredes y techo
+	wall(136, 138, -62, 62, 0, 16)
+	wall(104, 138, 62, 64, 0, 16)
+	wall(104, 138, -64, -62, 0, 16)
+	block(arena, "Techo", Vector3.new(34, 1, 128), Vector3.new(121, 16.5, 0), P.ceiling, Enum.Material.SmoothPlastic)
+	-- Vallas de la plataforma y del patio (los zombies aparecen detrás de vehículos, fuera de la vista)
+	for _, side in { 1, -1 } do
+		block(arena, "Valla", Vector3.new(220, 10, 2), Vector3.new(0, 5, side * 129), P.fence, Enum.Material.DiamondPlate)
+		for _, x in { -109, 109 } do
+			block(arena, "Valla", Vector3.new(2, 10, 44), Vector3.new(x, 5, side * 106), P.fence, Enum.Material.DiamondPlate)
+		end
+	end
+
+	-- Puertas solo para zombies
+	MapKit.zombieGate(arena, Vector3.new(60, 24, 3), CFrame.new(0, 12, 82))
+	MapKit.zombieGate(arena, Vector3.new(20, 14, 3), CFrame.new(-60, 7, -82))
+	MapKit.zombieGate(arena, Vector3.new(20, 14, 3), CFrame.new(60, 7, -82))
+	MapKit.zombieGate(arena, Vector3.new(3, 14, 20), CFrame.new(102, 7, 0))
+
+	-- 12 puntos de aparición: 5 en la plataforma norte, 4 en el patio sur y 3 en el pasillo del taller
+	local spawns = newFolder(spawnRoot, "Survival")
+	for _, point in {
+		Vector3.new(-72, 0, 110), Vector3.new(-36, 0, 114), Vector3.new(0, 0, 118), Vector3.new(36, 0, 114), Vector3.new(72, 0, 110),
+		Vector3.new(-82, 0, -110), Vector3.new(-38, 0, -114), Vector3.new(38, 0, -114), Vector3.new(82, 0, -110),
+		Vector3.new(124, 0, -44), Vector3.new(128, 0, 0), Vector3.new(124, 0, 44),
+	} do
+		marker(spawns, point)
+	end
+	-- Vehículos fuera, delante de donde aparecen
+	shuttle(arena, -54, 104, true, C.blanco)
+	fuelTruck(arena, 54, 104, true)
+	baggageTrain(arena, -20, -118, 2, rng)
+	cargo(arena, 60, -100, 10)
+	cargo(arena, -60, -98, 0)
+
+	-- El avión aparcado, en el centro (el morro hacia el sur), y cobertura alrededor: contenedores, motores, la grúa y cajones
+	parkedPlane(arena, Vector3.new(0, 0, 8), 0)
+	for _, spot in { { -74, -52, 0 }, { -68, -52, 8 }, { 72, 50, 0 }, { 66, 56, 0 }, { -66, 52, 20 }, { 62, -54, 0 }, { 84, -20, 0 }, { -84, 34, 0 } } do
+		cargo(arena, spot[1], spot[2], spot[3])
+	end
+	engineStand(arena, -46, -8, false)
+	engineStand(arena, 46, 22, true)
+	for _, x in { -94, 94 } do
+		deco(pole(arena, "GruaPoste", Vector3.new(x, 0, 60), 26, 1.2, P.signYellow))
+	end
+	deco(block(arena, "GruaViga", Vector3.new(190, 1.6, 1.6), Vector3.new(0, 26, 60), P.signYellow, Enum.Material.Metal))
+	deco(block(arena, "GruaGancho", Vector3.new(0.5, 8, 0.5), Vector3.new(-24, 21.2, 60), P.dark, Enum.Material.Metal))
+	crates(arena, 30, -66)
+	crates(arena, -88, -66)
+	crates(arena, 88, 70)
+	for _, z in { -52, 44 } do
+		block(arena, "CajonHerramientas", Vector3.new(2.4, 4, 5), Vector3.new(98.4, 2, z), C.rojo, Enum.Material.Metal)
+	end
+	barrel(arena, -92, 12)
+	barrel(arena, -89, 15, C.lonaAzul)
+	barrel(arena, 20, 72)
+	cart(arena, -26, -44, 30, rng)
+
+	-- Luces: tubos altos en el hangar, la oficina y el taller, y dos mástiles fuera
+	for _, x in { -66, -22, 22, 66 } do
+		for _, z in { -52, 0, 52 } do
+			tube(arena, Vector3.new(x, HANGAR_H - 0.2, z), 60, 1.5)
+		end
+	end
+	tube(arena, Vector3.new(-118, 19.8, 0), 30, 1.2, true)
+	tube(arena, Vector3.new(121, 15.8, -30), 30, 0.9, true)
+	tube(arena, Vector3.new(121, 15.8, 30), 30, 0.9, true)
+	mast(arena, -90, 100)
+	mast(arena, 90, 100)
+	mast(arena, -90, -100)
+	mast(arena, 90, -100)
+
+	-- Rótulos
+	hangSign(arena, Vector3.new(0, 27.5, 79.6), -Vector3.zAxis, 30, "HANGAR 7")
+	hangSign(arena, Vector3.new(99.6, 17, 0), -Vector3.xAxis, 14, "WORKSHOP  ·  STAFF ONLY")
+
+	-- La Tienda del modo: caja de armas, munición y farmacia en la oficina
+	MapKit.buildShop(map, refs, { zone = "Survival", origin = Vector3.new(-100, 0, 0), forward = -Vector3.xAxis, width = 20, depth = 30, title = "HANGAR OFFICE" })
+
+	refs.survivalSpawn = CFrame.lookAt(Vector3.new(0, 3, -62), Vector3.new(0, 3, 0))
+	refs.texts.survivalStart = "Hold Hangar 7! The first wave is coming. Shop first"
+
+	-- Suelo de seguridad (cara superior a ras de y = 0)
+	local safety = block(arena, "Limite", Vector3.new(300, 3, 280), Vector3.new(0, -1.5, 0), P.dark)
+	safety.Transparency = 1
+	safety.CanQuery = false
+	safety.CastShadow = false
+end
+
+---------------------------------------------------------------------------------------------------
 -- Límites: paredes invisibles en el perímetro y un suelo de seguridad bajo todo el mapa
 
 local function buildLimits(map)
@@ -932,6 +1066,12 @@ function MapBuilderAirport.build(config, options)
 		run = "Run to Remo One!",
 		rescueLabel = "REMO ONE",
 	}
+
+	if options.survival then
+		-- Survival: solo la arena del Hangar 7
+		buildHangarArena(map, refs, spawnRoot, rng)
+		return refs
+	end
 
 	buildShell(map, spawnRoot)
 	buildLights(map)

@@ -35,8 +35,22 @@ local OSW_LIGHT = Font.new("rbxasset://fonts/families/Oswald.json", Enum.FontWei
 
 local MAPS = {
 	{ id = "Morro", name = "MORRO ESPERANZA" },
-	{ id = "Survival", name = "SURVIVAL" },
+	{ id = "LastCall", name = "LAST CALL" },
+	{ id = "Survival", name = "STADIUM" }, -- las arenas de Survival salen con su nombre; el modo va en la línea de la dificultad
+	{ id = "LastCallSurvival", name = "HANGAR 7" },
 }
+-- Cada mapa de historia tiene su arena de Survival: el id de la sala es el del mapa (historia) o el de su arena (Survival)
+local ARENA_OF = { Morro = "Survival", LastCall = "LastCallSurvival" }
+local PLACE_OF = { Survival = "Morro", LastCallSurvival = "LastCall" }
+local function isSurvival(id)
+	return PLACE_OF[id] ~= nil
+end
+local function placeOf(id)
+	return PLACE_OF[id] or id
+end
+local function mapFor(place, survival)
+	return survival and ARENA_OF[place] or place
+end
 local function mapName(id)
 	for _, m in MAPS do
 		if m.id == id then
@@ -1700,7 +1714,7 @@ builders.list = function()
 			end
 			text(row, upperEs(item.name), ANTON, 54, Vector2.new(nameX, 50), { width = 800, transparency = alpha })
 			text(row, spaced(string.upper(mapName(item.map)), 4), OSW_BOLD, 22, Vector2.new(740, 32), { width = 480, color = RED, transparency = alpha })
-			text(row, spaced(item.map == "Survival" and "ENDLESS" or difficultyName(item.difficulty), 3), OSW_BOLD, 22, Vector2.new(740, 72), { width = 480, color = DIM, transparency = alpha })
+			text(row, spaced(isSurvival(item.map) and "SURVIVAL" or difficultyName(item.difficulty), 3), OSW_BOLD, 22, Vector2.new(740, 72), { width = 480, color = DIM, transparency = alpha })
 			text(row, `{item.count}/{item.max}`, ANTON, 64, Vector2.new(1600, 40),
 				{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 220, transparency = alpha })
 			if full then
@@ -1790,7 +1804,7 @@ builders.setup = function()
 		text(card, upperEs((player.DisplayName ~= "" and player.DisplayName or player.Name) .. "'s room"), ANTON, 60, Vector2.new(nameX, 68), { width = 560 })
 		text(card, spaced(upperEs(mapName(setupState.map)), 5), OSW_BOLD, 22, Vector2.new(34, 130), { width = 520, color = RED })
 		text(card, "1/4", ANTON, 78, Vector2.new(745, 70), { anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 200 })
-		text(card, spaced(setupState.map == "Survival" and "ENDLESS" or difficultyName(setupState.difficulty), 3), OSW_BOLD, 20, Vector2.new(745, 128),
+		text(card, spaced(isSurvival(setupState.map) and "SURVIVAL" or difficultyName(setupState.difficulty), 3), OSW_BOLD, 20, Vector2.new(745, 128),
 			{ anchor = Vector2.new(1, 0.5), align = Enum.TextXAlignment.Right, width = 330, color = DIM })
 		text(previewHolder, setupState.public and "Anyone can join with a tap." or "Asks for a 4-letter code that we'll give you when you create the room.",
 			OSW, 24, Vector2.new(2, 203), { width = 770, color = DIM })
@@ -1814,17 +1828,29 @@ builders.setup = function()
 
 	tag(s, "MODE", 120, 550)
 	local describeDifficultyAgain = nil -- se asigna más abajo: al cambiar de modo se actualiza el texto de la dificultad
-	choiceRow(s, 120, 574, 84, { { "Morro", "STORY", 300 }, { "Survival", "SURVIVAL", 380 } }, 52, function(id)
-		return setupState.map == id
+	choiceRow(s, 120, 574, 84, { { false, "STORY", 300 }, { true, "SURVIVAL", 380 } }, 52, function(id)
+		return isSurvival(setupState.map) == id
 	end, function(id)
-		setupState.map = id
-		if id == "Survival" then
+		setupState.map = mapFor(placeOf(setupState.map), id)
+		if id then
 			setupState.difficulty = Difficulties.Default
 		end
 		drawPreview()
 		if describeDifficultyAgain then
 			describeDifficultyAgain()
 		end
+		task.defer(builders.setup) -- los nombres de la fila MAP cambian con el modo
+	end)
+
+	-- El mapa (historia) o la arena (Survival), a la derecha, bajo la vista previa
+	tag(s, "MAP", 1020, 698)
+	local arenaNames = isSurvival(setupState.map)
+	choiceRow(s, 1020, 722, 80, arenaNames and { { "Morro", "STADIUM", 384 }, { "LastCall", "HANGAR 7", 384 } }
+		or { { "Morro", "MORRO ESPERANZA", 384 }, { "LastCall", "LAST CALL", 384 } }, 40, function(id)
+		return placeOf(setupState.map) == id
+	end, function(id)
+		setupState.map = mapFor(id, isSurvival(setupState.map))
+		drawPreview()
 	end)
 
 	-- Los mutadores se encienden o apagan después, en la sala del anfitrión (aquí se crea con ellos activados)
@@ -1832,7 +1858,7 @@ builders.setup = function()
 	tag(s, "DIFFICULTY", 120, 698)
 	local difficultyDesc = text(s, "", OSW_LIGHT, 24, Vector2.new(120, 830), { width = 1000, color = DIM })
 	local function describeDifficulty()
-		difficultyDesc.Text = setupState.map == "Survival" and "Survival ignores this: the horde gets harder by itself every wave."
+		difficultyDesc.Text = isSurvival(setupState.map) and "Survival ignores this: the horde gets harder by itself every wave."
 			or Difficulties.get(setupState.difficulty).Description
 	end
 	describeDifficultyAgain = describeDifficulty
@@ -1958,7 +1984,7 @@ builders.create = function()
 		end
 	end)
 
-	if st.map ~= "Survival" then -- Survival no sortea mutaciones
+	if not isSurvival(st.map) then -- Survival no sortea mutaciones
 		tag(s, "MUTATIONS", 1368, 703)
 		choiceRow(s, 1368, 728, 80, { { true, "YES", 110 }, { false, "NO", 110 } }, 54, function(id)
 			return st.mutators ~= false == id
@@ -1969,11 +1995,19 @@ builders.create = function()
 	end
 
 	tag(s, "MODE", 900, 703)
-	choiceRow(s, 900, 728, 80, { { "Morro", "STORY", 190 }, { "Survival", "SURVIVAL", 238 } }, 46, function(id)
-		return st.map == id
+	choiceRow(s, 900, 728, 62, { { false, "STORY", 190 }, { true, "SURVIVAL", 238 } }, 40, function(id)
+		return isSurvival(st.map) == id
 	end, function(id)
-		st.map = id
-		hostRequest("setMap", id)
+		st.map = mapFor(placeOf(st.map), id)
+		hostRequest("setMap", st.map, true) -- se redibuja: los nombres de la fila de abajo cambian con el modo
+	end)
+	-- El mapa (historia) o la arena (Survival)
+	choiceRow(s, 900, 798, 62, isSurvival(st.map) and { { "Morro", "STADIUM", 190 }, { "LastCall", "HANGAR 7", 238 } }
+		or { { "Morro", "MORRO ESPERANZA", 238 }, { "LastCall", "LAST CALL", 190 } }, 28, function(id)
+		return placeOf(st.map) == id
+	end, function(id)
+		st.map = mapFor(id, isSurvival(st.map))
+		hostRequest("setMap", st.map, true)
 	end)
 
 	-- Dificultad (izquierda, bajo el acceso): cuatro casillas y la descripción de la elegida
@@ -1985,7 +2019,7 @@ builders.create = function()
 	diffDesc.TextWrapped = true
 	diffDesc.TextYAlignment = Enum.TextYAlignment.Top
 	local function describeDifficulty()
-		diffDesc.Text = st.map == "Survival" and "Survival ignores this: the horde gets harder by itself every wave."
+		diffDesc.Text = isSurvival(st.map) and "Survival ignores this: the horde gets harder by itself every wave."
 			or Difficulties.get(st.difficulty).Description
 	end
 	local diffItems = {}
@@ -2030,9 +2064,10 @@ builders.joined = function()
 	playerList(s, st.names, st.hostIndex, st.youIndex, st.ids)
 	-- Lo que eligió el anfitrión (solo se ve)
 	tag(s, "DIFFICULTY", 120, 662)
-	local survival = st.map == "Survival"
+	local survival = isSurvival(st.map)
 	text(s, spaced(survival and "ENDLESS" or Difficulties.get(st.difficulty).Upper, 3), ANTON, 54, Vector2.new(120, 725), { width = 700 })
-	text(s, survival and "Waves of zombies that never stop. Hold the stadium for as long as you can." or Difficulties.get(st.difficulty).Description,
+	text(s, survival and (st.map == "LastCallSurvival" and "Waves of zombies that never stop. Hold Hangar 7 for as long as you can."
+		or "Waves of zombies that never stop. Hold the stadium for as long as you can.") or Difficulties.get(st.difficulty).Description,
 		OSW_LIGHT, 24, Vector2.new(120, 790), { width = 700, color = DIM })
 	tag(s, "MODE", 900, 703)
 	text(s, upperEs(mapName(st.map)), ANTON, 54, Vector2.new(900, 765), { width = 460 })
