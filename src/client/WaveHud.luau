@@ -1,9 +1,8 @@
--- Marcador del modo Survival: oleada actual y cuántos zombies quedan (o la cuenta atrás de la pausa), y un aviso grande al empezar cada
--- oleada. Lee los atributos de Workspace que publica GameState.survival: Wave, WaveTotal, WaveLeft, WaveBoss y WaveBreakEnd.
+-- Marcador del modo Survival: oleada actual y cuántos zombies quedan (o la cuenta atrás de la pausa), y una alerta al empezar cada
+-- oleada de jefe. Lee los atributos de Workspace que publica GameState.survival: Wave, WaveTotal, WaveLeft, WaveBoss y WaveBreakEnd.
 -- Mismo lenguaje visual que el resto del HUD (placas inclinadas, letra pesada en cursiva, rojo sobre negro).
 -- Los textos van en inglés; Lang.watch los traduce solo (pares con {1} en shared/LangEs).
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local Sfx = require(script.Parent.Sfx)
 local Slant = require(script.Parent.Slant)
@@ -95,65 +94,12 @@ function WaveHud.start()
 	fill.BorderSizePixel = 0
 	fill.Parent = track
 
-	-- Aviso grande al empezar una oleada: placa roja inclinada atravesando la pantalla y una tira oscura debajo
-	local banner = Instance.new("CanvasGroup")
-	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = UDim2.fromScale(0.5, 0.4)
-	banner.Size = UDim2.fromOffset(560, 130)
-	banner.BackgroundTransparency = 1
-	banner.GroupTransparency = 1
-	banner.Visible = false
-	banner.Parent = gui
-	local bannerScale = Instance.new("UIScale")
-	bannerScale.Parent = banner
-	UiFit.scale(banner, 0.9)
-	local bannerPlate = plate(banner, 20, 0, 520, 84, 30, RED)
-	local bannerTitle = label(banner, 62, CREAM)
-	bannerTitle.Position = UDim2.fromOffset(60, 6)
-	bannerTitle.Size = UDim2.fromOffset(440, 72)
-	local bannerSubPlate = plate(banner, 120, 90, 320, 32, 14, DARK)
-	local bannerSub = label(banner, 20, AMBER)
-	bannerSub.Position = UDim2.fromOffset(150, 92)
-	bannerSub.Size = UDim2.fromOffset(260, 28)
-
-	-- El aviso se anima a mano cada cuadro (sin Tween ni task.delay): entra en 0,2 s, se queda y se va solo a los 2,3 s
-	local bannerStart = nil
-	local BANNER_IN, BANNER_HOLD, BANNER_OUT = 0.2, 1.8, 0.5
-	local function showBanner(wave, boss)
-		bannerTitle.Text = `WAVE {wave}`
-		bannerTitle.TextColor3 = boss and BLACK or CREAM
-		for _, strip in bannerPlate:GetChildren() do
-			strip.BackgroundColor3 = boss and AMBER or RED
-		end
-		bannerSub.Text = boss and "BOSS WAVE" or ""
-		bannerSubPlate.Visible = boss
-		bannerSub.Visible = boss
-		bannerStart = os.clock()
+	-- Al empezar una oleada de jefe suena la alerta (el aviso grande en el centro se quitó: tapaba la vista)
+	local function showBanner(_wave, boss)
 		if boss then
 			Sfx.play("AlertTank", 0.5)
 		end
 	end
-	RunService.RenderStepped:Connect(function()
-		if not bannerStart then
-			return
-		end
-		local t = os.clock() - bannerStart
-		if t >= BANNER_IN + BANNER_HOLD + BANNER_OUT then
-			bannerStart = nil
-			banner.GroupTransparency = 1
-			banner.Visible = false
-			return
-		end
-		banner.Visible = true
-		if t < BANNER_IN then
-			banner.GroupTransparency = 1 - t / BANNER_IN
-		elseif t < BANNER_IN + BANNER_HOLD then
-			banner.GroupTransparency = 0
-		else
-			banner.GroupTransparency = (t - BANNER_IN - BANNER_HOLD) / BANNER_OUT
-		end
-		bannerScale.Scale = 1 + 0.25 * math.max(0, 1 - t / 0.3) ^ 2
-	end)
 
 	local function paintTag(color)
 		for _, strip in tag:GetChildren() do
