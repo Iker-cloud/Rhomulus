@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local AirportDetail = require(script.Parent.AirportDetail)
 local AirportLayout = require(script.Parent.AirportLayout)
 local PlaneLayout = require(ReplicatedStorage.Shared.PlaneLayout)
 local MapKit = require(script.Parent.MapKit)
@@ -49,13 +50,14 @@ local WALL_H = 20 -- alto de los muros y del techo del terminal
 local RUNWAY_Z = 436 -- eje de la pista (Remo One rueda por aquí)
 local PLAY_NORTH = 425 -- hasta dónde se puede pisar hacia la pista: llega al pie de la escalerilla, no bajo el fuselaje
 local DOOR_H = 14
+local DECK = 11 -- altura de las pasarelas (el segundo piso del sector 2 y los fingers del sector 3)
 
 -- Paleta del aeropuerto: fría y gris, con los tres colores de ruta
 local P = {
 	wall = hex("#858D95"),
-	tile = hex("#989EA4"), -- piso del terminal
-	serviceFloor = hex("#63666A"), -- piso de los túneles de servicio
-	asphalt = hex("#34363B"),
+	tile = hex("#545A62"), -- piso del terminal (oscuro: bajo los tubos un piso claro se quema)
+	serviceFloor = hex("#3E4044"), -- piso de los túneles de servicio
+	asphalt = hex("#3C3F45"),
 	sidewalk = hex("#7B7F85"),
 	ceiling = hex("#A4AAB0"),
 	fence = hex("#474C52"),
@@ -64,7 +66,7 @@ local P = {
 	seat = hex("#2F4E79"),
 	taxi = hex("#E7B416"),
 	signYellow = hex("#F2C230"),
-	tube = Color3.fromRGB(214, 232, 255), -- luz fluorescente
+	tube = Color3.fromRGB(200, 222, 240), -- luz fluorescente
 	mast = Color3.fromRGB(255, 214, 160), -- focos de la plataforma
 	door = Color3.fromRGB(96, 104, 112),
 	red = C.rojo, -- CONCOURSE
@@ -151,7 +153,7 @@ local function tube(parent, position, range, brightness, alongZ)
 	light.Face = Enum.NormalId.Bottom
 	light.Angle = 140
 	light.Color = P.tube
-	light.Brightness = brightness or 1.2
+	light.Brightness = (brightness or 1.2) * 0.6
 	light.Range = range or 34
 	light.Shadows = false
 	light.Parent = bulb
@@ -168,11 +170,13 @@ local function mast(parent, x, z)
 	light.Face = Enum.NormalId.Bottom
 	light.Angle = 130
 	light.Color = P.mast
-	light.Brightness = 1.7
-	light.Range = 46
+	light.Brightness = 3.2
+	light.Range = 60
 	light.Shadows = false
 	light.Parent = bulb
 	CollectionService:AddTag(bulb, "NightLamp")
+	-- Luz roja de obstáculo en la punta (client/Beacons)
+	AirportDetail.beacon(parent, Vector3.new(x, 19.1, z), Color3.fromRGB(255, 50, 40), 2.4, ((x + z) % 7) / 7, 0.3, nil, Vector3.new(0.8, 0.8, 0.8))
 	return bulb
 end
 
@@ -263,6 +267,50 @@ local function sofa(parent, x, z, alongZ)
 	block(parent, "Sofa", size, Vector3.new(x, 0.9, z), C.terracota, Enum.Material.Fabric)
 end
 
+-- Altura: piso de pasarela (cara superior en DECK)
+local function deck(parent, x1, x2, z1, z2, name)
+	return block(parent, name or "Pasarela", Vector3.new(x2 - x1, 0.8, z2 - z1), Vector3.new((x1 + x2) / 2, DECK - 0.4, (z1 + z2) / 2), P.steel, Enum.Material.DiamondPlate)
+end
+
+-- Barandilla de vidrio de (x1, z1) a (x2, z2), recta en X o en Z: frena a quien camina, no a las balas
+local function rail(parent, x1, z1, x2, z2)
+	local length = math.abs(x2 - x1) + math.abs(z2 - z1)
+	local size = x1 == x2 and Vector3.new(0.4, 3.4, length) or Vector3.new(length, 3.4, 0.4)
+	local part = block(parent, "Barandilla", size, Vector3.new((x1 + x2) / 2, DECK + 1.7, (z1 + z2) / 2), Color3.fromRGB(40, 52, 66), Enum.Material.Glass)
+	part.Transparency = 0.45
+	part.CanQuery = false
+	part.CastShadow = false
+	return part
+end
+
+-- Rampa de cuña (escalera mecánica parada) del punto `bottom` al punto `top`, de `width` de ancho, con paneles a los lados
+-- (`sides`: -1 y 1; mirando hacia arriba, 1 es la izquierda)
+local function rampTo(parent, bottom, top, width, sides)
+	local flat = Vector3.new(top.X - bottom.X, 0, top.Z - bottom.Z)
+	local run, rise = flat.Magnitude, top.Y - bottom.Y
+	local dir = flat.Unit
+	local center = Vector3.new((bottom.X + top.X) / 2, bottom.Y + rise / 2, (bottom.Z + top.Z) / 2)
+	local wedge = Instance.new("WedgePart")
+	wedge.Name = "RampaMecanica"
+	wedge.Anchored = true
+	wedge.Size = Vector3.new(width, rise, run)
+	wedge.CFrame = CFrame.lookAt(center, center - dir) -- la cuña sube hacia su +Z
+	wedge.Color = P.dark
+	wedge.Material = Enum.Material.DiamondPlate
+	wedge.TopSurface = Enum.SurfaceType.Smooth
+	wedge.BottomSurface = Enum.SurfaceType.Smooth
+	wedge.Parent = parent
+	local right = dir:Cross(Vector3.yAxis)
+	local slope = top - bottom
+	for _, side in sides or { -1, 1 } do
+		local mid = (bottom + top) / 2 - right * side * (width / 2 - 0.2) + Vector3.new(0, 1.8, 0)
+		local panel = block(parent, "RampaPanel", Vector3.new(0.4, 3.4, slope.Magnitude), CFrame.lookAt(mid, mid + slope), P.steel, Enum.Material.Metal)
+		panel.CanQuery = false
+		deco(block(parent, "RampaPasamanos", Vector3.new(0.6, 0.3, slope.Magnitude), CFrame.lookAt(mid, mid + slope) * CFrame.new(0, 1.85, 0), P.signYellow, Enum.Material.SmoothPlastic))
+	end
+	return wedge
+end
+
 -- Puerta de AirportLayout.DOORS: la hoja (GameState la abre y la cierra) y el dintel fijo de encima
 local function makeDoor(parent, id, name)
 	local d = L.DOORS[id]
@@ -291,6 +339,21 @@ local function buildShell(map, spawnRoot)
 		return ch == "F" and "fence" or nil
 	end) do
 		slab(shell, "Valla", r.x1, r.x2, r.z1, r.z2, 10, P.fence, Enum.Material.DiamondPlate)
+	end
+
+	-- Paso alto de un finger (J): el muro deja un hueco de 6 de ancho a la altura de la pasarela
+	for row = 0, #ROWS - 1 do
+		for col = 0, #ROWS[1] - 1 do
+			if cell(row, col) == "J" then
+				local x1, x2, z1, z2 = L.x(col), L.x(col + 1), L.z(row), L.z(row + 1)
+				local cx = (x1 + x2) / 2
+				slab(shell, "Muro", x1, x2, z1, z2, DECK - 0.8, P.wall)
+				block(shell, "Muro", Vector3.new(x2 - x1, WALL_H - DECK - 8, z2 - z1), Vector3.new(cx, (WALL_H + DECK + 8) / 2, (z1 + z2) / 2), P.wall)
+				for _, z in { z1 + 1, z2 - 1 } do
+					block(shell, "Muro", Vector3.new(x2 - x1, 8.8, 2), Vector3.new(cx, DECK + 3.6, z), P.wall)
+				end
+			end
+		end
 	end
 
 	-- Interior: piso por banda y techo encima
@@ -646,7 +709,43 @@ local function buildDepartures(map, refs, rng)
 	cart(s, 24, -24, 70, rng)
 	cart(s, 6, -84, 10, rng)
 	hangSign(s, Vector3.new(0, 16.4, -129.4), -Vector3.zAxis, 22, "DEPARTURES  ·  CHECK-IN", P.red)
-	addCans(refs, s, Vector3.new(-35, 0, -126))
+	addCans(refs, s, Vector3.new(-26, 0, -126))
+
+	-- ALTURA: la pasarela del segundo piso sobre el salón de facturación. Se sube por la escalera mecánica del suroeste, se
+	-- recorre el balcón oeste, se cruza por el puente y se baja por la del noreste (hacia el oeste, delante del último mostrador). Los dos fondos sin salida tienen premio.
+	deck(s, -40, -32, -106, -4)
+	deck(s, 32, 40, -106, -4)
+	deck(s, -32, 32, -44, -36)
+	rampTo(s, Vector3.new(-36, 0, -128), Vector3.new(-36, DECK, -106), 8, { 1 })
+	rampTo(s, Vector3.new(10, 0, -7), Vector3.new(32, DECK, -7), 6)
+	for _, x in { -32, 32 } do
+		rail(s, x, -106, x, -44)
+	end
+	rail(s, -32, -36, -32, -4)
+	rail(s, 32, -36, 32, -10) -- el hueco de z -10 a -4 es la boca de la rampa noreste
+	rail(s, -40, -4, -32, -4)
+	rail(s, 32, -106, 40, -106)
+	rail(s, 32, -4, 40, -4)
+	rail(s, -32, -44, 32, -44)
+	rail(s, -32, -36, 32, -36)
+	for row = 32, 44 do -- donde el muro tiene un hueco, la pasarela lleva barandilla
+		local z1, z2 = math.max(L.z(row), -106), math.min(L.z(row + 1), -4)
+		if z2 > z1 then
+			if cell(row, 9) ~= "#" then
+				rail(s, -40, z1, -40, z2)
+			end
+			if cell(row, 18) ~= "#" then
+				rail(s, 40, z1, 40, z2)
+			end
+		end
+	end
+	for _, spot in { { -32.6, -90 }, { -32.6, -66 }, { -32.6, -20 }, { 32.6, -90 }, { 32.6, -66 }, { 32.6, -20 }, { -12, -40 }, { 12, -40 } } do
+		deco(pole(s, "PasarelaPata", Vector3.new(spot[1], 0, spot[2]), DECK - 0.8, 1.2, P.steel))
+	end
+	hangSign(s, Vector3.new(-36, 16.4, -127.4), -Vector3.zAxis, 7, "↑ UPPER LEVEL")
+	addCans(refs, s, Vector3.new(-36, DECK, -8), 75)
+	addMedkit(refs, s, Vector3.new(36, DECK, -102))
+
 	-- Zona de comida (z 10..100): mesas al centro, locales en la pared oeste; la Tienda 2 (Duty Free) se abre en la pared este
 	hangSign(s, Vector3.new(-20, 16.4, -0.6), -Vector3.zAxis, 16, "↑ FOOD COURT", P.red)
 	hangSign(s, Vector3.new(20, 16.4, -0.6), -Vector3.zAxis, 16, "DUTY FREE →", P.red)
@@ -780,9 +879,46 @@ local function buildGates(map, refs, config, rng, spawnRoot)
 
 	-- CONCOURSE: el pasillo de las puertas de embarque, largo y recto (x -20..20), con una sala a cada lado
 	gateBay(s, -40, -20, 200, 210, "GATE A1")
-	gateBay(s, 20, 40, 230, 240, "GATE A2")
 	gateBay(s, -40, -20, 280, 290, "GATE A3")
-	gateBay(s, 20, 40, 300, 310, "GATE A4")
+
+	-- ALTURA: los fingers de las puertas A2 y A4. De cada sala sube una rampa al hueco del muro (celda J) y el túnel, de techo
+	-- bajo, sale sobre la plataforma hasta el morro de su avión. Una pasarela al aire une las dos cabezas (la ruta alta paralela a
+	-- la APRON) y de ella baja una rampa de servicio a la plataforma, entre los dos aviones.
+	local fingerWall = hex("#B9C0C7")
+	for _, bay in { { z = 235, name = "GATE A2", open = 1 }, { z = 305, name = "GATE A4", open = -1 } } do
+		local z = bay.z
+		hangSign(s, Vector3.new(20.4, 16.4, z), -Vector3.xAxis, 8, bay.name)
+		rampTo(s, Vector3.new(21, 0, z), Vector3.new(40, DECK, z), 6)
+		deck(s, 40, 74, z - 3, z + 3, "Finger")
+		block(s, "FingerTecho", Vector3.new(24, 0.6, 7), Vector3.new(62, DECK + 8.3, z), P.steel, Enum.Material.Metal)
+		for _, side in { -1, 1 } do
+			local x2 = side == bay.open and 68 or 74 -- el lado de la pasarela queda abierto al final
+			block(s, "FingerPared", Vector3.new(x2 - 50, 3.4, 0.5), Vector3.new((50 + x2) / 2, DECK + 1.7, z + side * 3.25), fingerWall, Enum.Material.Metal)
+			local glass = block(s, "FingerVidrio", Vector3.new(x2 - 50, 4.6, 0.3), Vector3.new((50 + x2) / 2, DECK + 5.7, z + side * 3.25), Color3.fromRGB(40, 52, 66), Enum.Material.Glass)
+			glass.Transparency = 0.5
+			glass.CanQuery = false
+			glass.CastShadow = false
+		end
+		block(s, "FingerFondo", Vector3.new(0.5, 8, 7), Vector3.new(74.25, DECK + 4, z), P.dark, Enum.Material.Metal)
+		for _, x in { 56, 71 } do
+			deco(pole(s, "FingerPata", Vector3.new(x, 0, z), DECK - 0.8, 1.4, P.steel))
+		end
+		tube(s, Vector3.new(60, DECK + 7.8, z), 22, 0.8)
+	end
+	-- El fuelle de cada finger hacia la puerta de su avión (adorno)
+	deco(block(s, "FingerFuelle", Vector3.new(5, 6.5, 7), Vector3.new(71, 7.4, 228.6), P.dark, Enum.Material.Fabric))
+	deco(block(s, "FingerFuelle", Vector3.new(5, 6.5, 4), Vector3.new(71, 7.4, 300.4), P.dark, Enum.Material.Fabric))
+	-- La pasarela entre las dos cabezas y la rampa de servicio
+	deck(s, 68, 74, 238, 302)
+	rail(s, 68, 238, 68, 302)
+	rail(s, 74, 238, 74, 262)
+	rail(s, 74, 268, 74, 302)
+	rampTo(s, Vector3.new(96, 0, 265), Vector3.new(74, DECK, 265), 6)
+	for _, z in { 250, 276, 292 } do
+		deco(pole(s, "PasarelaPata", Vector3.new(68.6, 0, z), DECK - 0.8, 1, P.steel))
+	end
+	addCans(refs, s, Vector3.new(72, DECK, 233), 75)
+	addMedkit(refs, s, Vector3.new(72, DECK, 307))
 	seats(s, -9, 236, true)
 	seats(s, 9, 262, true)
 	seats(s, -9, 316, true)
@@ -885,6 +1021,9 @@ end
 -- GateWall, como el portón del estadio de Morro Esperanza). No se construye el resto del aeropuerto.
 
 local HANGAR_H = 34
+
+-- Lo que usa server/AirportDetail (el pase de arte) de este constructor
+local KIT = { P = P, WALL_H = WALL_H, HANGAR_H = HANGAR_H, RUNWAY_Z = RUNWAY_Z, PLAY_NORTH = PLAY_NORTH, cell = cell, hangSign = hangSign }
 
 local function buildHangarArena(map, refs, spawnRoot, rng)
 	local arena = newFolder(map, "Hangar7")
@@ -1003,6 +1142,8 @@ local function buildHangarArena(map, refs, spawnRoot, rng)
 	-- La Tienda del modo: caja de armas, munición y farmacia en la oficina
 	MapKit.buildShop(map, refs, { zone = "Survival", origin = Vector3.new(-100, 0, 0), forward = -Vector3.xAxis, width = 20, depth = 30, title = "HANGAR OFFICE" })
 
+	AirportDetail.arena(arena, rng, KIT)
+
 	refs.survivalSpawn = CFrame.lookAt(Vector3.new(0, 3, -62), Vector3.new(0, 3, 0))
 	refs.texts.survivalStart = "Hold Hangar 7! The first wave is coming. Shop first"
 
@@ -1082,6 +1223,7 @@ function MapBuilderAirport.build(config, options)
 	buildFireStation(map, refs)
 	buildGates(map, refs, config, rng, spawnRoot)
 	buildLimits(map)
+	AirportDetail.build(map, refs, rng, KIT) -- el pase de arte (lo último: no cambia lo que se sorteó antes)
 	for _, point in spawnRoot.Zone2:GetChildren() do
 		table.insert(refs.crew.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
 	end

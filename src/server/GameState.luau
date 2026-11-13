@@ -303,6 +303,7 @@ local function loadMap(id)
 	Pharmacy.clear()
 	WeaponBox.clear()
 	Zombies.clear()
+	Atmosphere.forMap(id) -- luz, niebla y clima del mapa (antes de decorar: los faroles dependen del mapa)
 	map = BUILDERS[id].build(Config.Game, { survival = SURVIVAL[id] ~= nil })
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)
@@ -380,6 +381,7 @@ local function vote()
 		return
 	end
 
+	Atmosphere.forMap(nil) -- la sala de votación no tiene clima
 	PlayerState.setSafePoint(VoteRoom.build().spawn)
 	setStage("Vote", #Config.Maps > 1 and "Vote on the map at its podium, and on the difficulty with 1 to 4" or "Vote on the difficulty with 1 to 4", "Vote")
 	respawn(false)

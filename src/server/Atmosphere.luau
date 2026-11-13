@@ -2,6 +2,7 @@
 -- Los faroles son piezas con la etiqueta "NightLamp" (las ponen los constructores de mapa); aquí se les da la luz y se
 -- decide cuáles parpadean (atributo Flicker) o están rotos (Broken). El cliente los anima (client/NightLights) y apaga
 -- los que tienen el atributo BlackoutUntil (Atmosphere.blackout). Todo se apaga con Config.Atmosphere.Enabled = false.
+-- Cada mapa puede cambiar la luz, la niebla, el color, los faroles y el clima (Config.Atmosphere.ByMap; Atmosphere.forMap).
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -13,6 +14,22 @@ local Difficulty = require(script.Parent.Difficulty)
 local Atmosphere = {}
 
 local A = Config.Atmosphere
+
+local current = nil -- lo que cambia el mapa en curso (Config.Atmosphere.ByMap), o nil
+
+-- Un grupo de ajustes (Lighting, Fog, ColorGrade, Lamps) con lo que cambie el mapa en curso por encima del base
+local function setting(group)
+	local base = A[group]
+	local over = current and current[group]
+	if not over then
+		return base
+	end
+	local merged = table.clone(base)
+	for key, value in over do
+		merged[key] = value
+	end
+	return merged
+end
 
 local function lampPart(parent, name, size, position, color, material)
 	local part = Instance.new("Part")
@@ -44,6 +61,7 @@ function Atmosphere.decorate(map)
 	end
 	local rng = Random.new(Config.Game.Seed)
 	local blackout = Difficulty.get().Flags.Blackout == true
+	local lamps = setting("Lamps")
 	for _, bulb in CollectionService:GetTagged("NightLamp") do
 		if not bulb:FindFirstChildWhichIsA("Light") then
 			local light = Instance.new("SpotLight")
@@ -61,8 +79,8 @@ function Atmosphere.decorate(map)
 			bulb:SetAttribute("Flicker", false)
 		elseif bulb:GetAttribute("Flicker") == nil then
 			local roll = rng:NextNumber()
-			bulb:SetAttribute("Broken", roll < A.Lamps.BrokenChance)
-			bulb:SetAttribute("Flicker", roll >= A.Lamps.BrokenChance and roll < A.Lamps.BrokenChance + A.Lamps.FlickerChance)
+			bulb:SetAttribute("Broken", roll < lamps.BrokenChance)
+			bulb:SetAttribute("Flicker", roll >= lamps.BrokenChance and roll < lamps.BrokenChance + lamps.FlickerChance)
 		end
 	end
 end
@@ -105,26 +123,28 @@ local function addFlashlight(player, character)
 end
 
 local function applyLighting()
-	for key, value in A.Lighting do
+	for key, value in setting("Lighting") do
 		Lighting[key] = value
 	end
+	local fogSetting = setting("Fog")
 	local fog = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-	fog.Density = A.Fog.Density
-	fog.Haze = A.Fog.Haze
-	fog.Glare = A.Fog.Glare
-	fog.Color = A.Fog.Color
-	fog.Decay = A.Fog.Decay
+	fog.Density = fogSetting.Density
+	fog.Haze = fogSetting.Haze
+	fog.Glare = fogSetting.Glare
+	fog.Color = fogSetting.Color
+	fog.Decay = fogSetting.Decay
 	fog.Parent = Lighting
 	local rays = Lighting:FindFirstChildOfClass("SunRaysEffect")
 	if rays then
 		rays.Enabled = false
 	end
-	local grade = Instance.new("ColorCorrectionEffect")
+	local gradeSetting = setting("ColorGrade")
+	local grade = Lighting:FindFirstChild("Noche") or Instance.new("ColorCorrectionEffect")
 	grade.Name = "Noche"
-	grade.Brightness = A.ColorGrade.Brightness
-	grade.Contrast = A.ColorGrade.Contrast
-	grade.Saturation = A.ColorGrade.Saturation
-	grade.TintColor = A.ColorGrade.Tint
+	grade.Brightness = gradeSetting.Brightness
+	grade.Contrast = gradeSetting.Contrast
+	grade.Saturation = gradeSetting.Saturation
+	grade.TintColor = gradeSetting.Tint
 	grade.Parent = Lighting
 end
 
@@ -135,8 +155,21 @@ function Atmosphere.refreshFog()
 		return
 	end
 	local dense = Difficulty.get().Flags.Fog == true
-	fog.Density = dense and A.FogDense.Density or A.Fog.Density
-	fog.Haze = dense and A.FogDense.Haze or A.Fog.Haze
+	local normal = setting("Fog")
+	fog.Density = dense and math.max(A.FogDense.Density, normal.Density) or normal.Density
+	fog.Haze = dense and math.max(A.FogDense.Haze, normal.Haze) or normal.Haze
+end
+
+-- Ambiente del mapa que se va a jugar (nil = el base, p. ej. en la sala de votación): luz, niebla, color y clima.
+-- El clima va en Workspace.Weather (lo lee client/Rain). Las arenas de Survival usan el de su mapa (Config.MapTheme).
+function Atmosphere.forMap(id)
+	if not A.Enabled then
+		return
+	end
+	current = id and A.ByMap[Config.MapTheme[id] or id] or nil
+	applyLighting()
+	Atmosphere.refreshFog()
+	workspace:SetAttribute("Weather", current and current.Weather or nil)
 end
 
 function Atmosphere.start()

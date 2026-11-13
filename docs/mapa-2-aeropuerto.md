@@ -1,6 +1,6 @@
 # Mapa 2 — LAST CALL, el aeropuerto de Rhomulus (diseño)
 
-Estado: **en construcción desde el 10 de noviembre de 2026**. Hecho: `MapKit`, el mapa gris completo y amueblado (lobby, los 3 sectores, los 2 puntos seguros, las 3 Tiendas, la torre y la pista), el paso de etapas en `GameState`, el evento Crew Call, la extracción con Remo One, la arena de Survival del Hangar 7, la votación de mapa y la elección de mapa y arena en el menú. Falta: arte, altura y rendimiento (ver CLAUDE.md).
+Estado: **en construcción desde el 10 de noviembre de 2026**. Hecho: `MapKit`, el mapa gris completo y amueblado (lobby, los 3 sectores, los 2 puntos seguros, las 3 Tiendas, la torre y la pista), el paso de etapas en `GameState`, el evento Crew Call, la extracción con Remo One, la arena de Survival del Hangar 7, la votación de mapa y la elección de mapa y arena en el menú. Después (13 de noviembre): pase de arte con lluvia, balizas, megafonía y pistas de la historia, la pasarela del sector 2 y los fingers del sector 3, y la medición de rendimiento (ver CLAUDE.md). Falta: probar con 2 o más jugadores, oír los sonidos y medir en un celular.
 
 Juego: **Rhomulus** · Ambiente: apocalipsis latinoamericano, ahora en el **aeropuerto internacional de la ciudad**.
 

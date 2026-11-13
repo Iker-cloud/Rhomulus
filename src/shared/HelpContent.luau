@@ -5,7 +5,7 @@ local Content = {
 
 	Headline = "SURVIVE\nWITH YOUR TEAM",
 	Objective = {
-		"Cross Morro Esperanza at night to the stadium, call in the radio and hold out until the van arrives.",
+		"Cross the map at night to the extraction point, call in the radio and hold out until your rescue arrives.",
 		"It only takes one of you boarding to win. If everyone goes down, you lose. No one gets left behind.",
 	},
 
@@ -14,7 +14,7 @@ local Content = {
 		{ "CROSS THE BARRIO", "Three sections, three routes each and two safe rooms." },
 		{ "OPEN UP THE IGLESIA", "Bring the gas cans to the generator in the plaza." },
 		{ "REACH THE STADIUM", "Cross the terminal to Refugio Remo." },
-		{ "CALL THE RADIO", "Hold off the horde until the van arrives." },
+		{ "CALL THE RADIO", "Hold off the horde until your rescue arrives." },
 	},
 
 	-- Tres columnas de teclas: { título, { { tecla, qué hace }, ... } }
@@ -50,7 +50,7 @@ local Content = {
 	Welcome = {
 		Title = "WELCOME TO RHOMULUS",
 		Lines = {
-			"Cross the barrio with your team to the stadium and hold out until the van arrives.",
+			"Cross the map with your team to the extraction point and hold out until your rescue arrives.",
 			"Aim with right click and shoot with left click. R reloads and Shift sprints.",
 			"E revives, opens and buys. F carries a downed teammate. 3 to 7 use items.",
 			"When everyone is ready, press Y.",
@@ -81,7 +81,7 @@ Content.Touch = {
 	Welcome = {
 		Title = "WELCOME TO RHOMULUS",
 		Lines = {
-			"Cross the barrio with your team to the stadium and hold out until the van arrives.",
+			"Cross the map with your team to the extraction point and hold out until your rescue arrives.",
 			"Drag your finger to look around. FIRE shoots, AIM zooms in and RELOAD reloads.",
 			"The E button revives, opens and buys; F carries a downed teammate. Tap an item on the bar to draw it.",
 			"When everyone is ready, tap READY.",

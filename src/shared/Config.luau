@@ -166,6 +166,12 @@ return {
 		DryFire = "rbxassetid://117629133235583",
 		Headshot = "rbxassetid://137096881472307", -- "ding" de headshot (0.6 s, Creator Store). Suena solo para quien dispara
 		HeadshotPitch = 1,
+		-- Clima (client/Rain) y megafonía (client/Announcer)
+		Weather = {
+			Rain = "rbxassetid://9112793871", -- lluvia fuerte sobre hormigón (bucle)
+			Thunder = { "rbxassetid://9113169432" }, -- estampidos graves y lejanos
+		},
+		Announcer = { Chime = "rbxassetid://5099327056" }, -- timbre de aviso de aeropuerto
 		ZombieGrowls = {
 			"rbxassetid://129294628821291",
 			"rbxassetid://100949226522885",
@@ -284,6 +290,23 @@ return {
 				{ name = "Terminal", box = { -62, 62, 200, 330 }, loop = "rbxassetid://9112792684", volume = 0.22 }, -- motores y grillos lejos
 				{ name = "Estadio", box = { -122, 122, 330, 440 }, loop = "rbxassetid://9125602882", volume = 0.28 }, -- tonos huecos
 			},
+			-- Sonido por zona de los demás mapas (por id de mapa). Last Call: cintas de equipaje en los túneles, zumbido de la
+			-- ventilación en el terminal, taller en el hangar y motores lejanos en la plataforma. La lluvia va aparte (Weather).
+			ZonesByMap = {
+				LastCall = {
+					{ name = "Service", box = { -132, -48, -400, 124 }, loop = "rbxassetid://9112890980", volume = 0.16 }, -- máquinas de clasificación
+					{ name = "Concourse", box = { -42, 42, -400, 330 }, loop = "rbxassetid://9112825488", volume = 0.18 }, -- sala de máquinas (ventilación)
+					{ name = "Hangar", box = { -132, -48, 176, 332 }, loop = "rbxassetid://9112825337", volume = 0.2 },
+					{ name = "Apron", box = { 48, 132, -440, 332 }, loop = "rbxassetid://9112740168", volume = 0.12 }, -- reactores al ralentí y megafonía lejana
+					{ name = "Runway", box = { -132, 132, 332, 430 }, loop = "rbxassetid://9112740168", volume = 0.18 },
+					{ name = "FireStation", box = { -42, 42, 96, 180 }, bell = "rbxassetid://9113085203", bellPos = Vector3.new(0, 16, 150), bellInterval = { 18, 34 }, bellVolume = 0.3 }, -- timbre de alarma
+				},
+				LastCallSurvival = {
+					{ name = "Hangar7", box = { -110, 110, -90, 90 }, loop = "rbxassetid://9112825337", volume = 0.2 },
+				},
+			},
+			-- Lo que se oye lejos de vez en cuando en lugar de los perros (por tema de mapa)
+			FarByMap = { LastCall = "rbxassetid://9113169432" }, -- estampidos lejanos
 			-- Ruidos sueltos cerca del jugador (además de los gruñidos de ZombieGrowls)
 			Noises = {
 				"rbxassetid://9116521880", -- golpe de metal (tubo)
@@ -716,6 +739,64 @@ return {
 		Volume = { Wind = 0.35, Sirens = 0.08, Drone = 0.18, Noise = 0.7, Dogs = 0.25, Spark = 0.8, Heartbeat = 0.7 },
 		Noises = { MinInterval = 7, MaxInterval = 16, MinDistance = 18, MaxDistance = 40 }, -- ruidos sueltos cerca
 		Heartbeat = { ZombieDistance = 22, LowHealth = 40 }, -- empieza a sonar con un zombie a menos de esto o con poca vida
+		-- Lo que cambia cada mapa sobre lo de arriba (server/Atmosphere.forMap). Last Call: más frío, niebla baja y lluvia; los
+		-- tubos fluorescentes parpadean más que los faroles del barrio.
+		ByMap = {
+			LastCall = {
+				Lighting = { Brightness = 2.6, Ambient = Color3.fromRGB(26, 30, 38), OutdoorAmbient = Color3.fromRGB(96, 108, 136) },
+				Fog = { Density = 0.4, Haze = 2.6, Color = Color3.fromRGB(72, 84, 102), Decay = Color3.fromRGB(20, 25, 34) },
+				ColorGrade = { Brightness = -0.03, Contrast = 0.18, Saturation = -0.24, Tint = Color3.fromRGB(204, 220, 255) },
+				Lamps = { FlickerChance = 0.3, BrokenChance = 0.12 },
+				Weather = "Rain",
+			},
+		},
+	},
+
+	-- El ambiente de cada arena de Survival es el de su mapa de historia (ambiente, megafonía)
+	MapTheme = { Survival = "Morro", LastCallSurvival = "LastCall" },
+
+	-- Clima (client/Rain): lo elige Config.Atmosphere.ByMap[mapa].Weather y el servidor lo publica en Workspace.Weather.
+	-- La lluvia cae de unas hojas alrededor de la cámara, solo donde no hay techo; bajo techo se oye apagada.
+	Weather = {
+		Rain = {
+			Rate = { 90, 55, 28 }, -- gotas por segundo y por hoja, por nivel de calidad gráfica (ALTA, MEDIA, BAJA)
+			Grid = 5, -- hojas por lado (5 × 5 alrededor de la cámara)
+			Sheet = 9, -- lado de cada hoja
+			Height = 24, -- altura sobre la cámara desde la que caen
+			Life = { 0.38, 0.45 }, -- segundos que vive cada gota
+			Size = 0.45,
+			Transparency = 0.4,
+			Speed = { 95, 120 },
+			Wind = Vector3.new(7, 0, 3), -- empuje lateral
+			Color = Color3.fromRGB(185, 200, 225),
+			Volume = { Outside = 0.5, Inside = 0.14 },
+			Thunder = { MinInterval = 30, MaxInterval = 80, Volume = 0.55, Flash = 0.8 }, -- rayo: destello y trueno
+		},
+	},
+
+	-- Megafonía del aeropuerto (client/Announcer): cada cierto tiempo, un timbre por el altavoz más cercano (piezas con la etiqueta
+	-- PaSpeaker) y el aviso escrito unos segundos. Los avisos están en inglés y tienen su par al español en shared/LangEs.
+	Announcer = {
+		MinInterval = 40,
+		MaxInterval = 85,
+		ShowTime = 6.5,
+		Volume = 0.5,
+		SpeakerRange = 150, -- más lejos que esto de un altavoz no se oye (ni sale el aviso)
+		Stages = { Zone1 = true, SafeRoom = true, Zone2 = true, Zone3 = true, Extraction = true, Wave = true, WaveBreak = true },
+		Maps = {
+			LastCall = {
+				"Last call for flight RM-2 to San Remo. Boarding at gate A3.",
+				"All flights are cancelled. Please remain calm.",
+				"Quarantine is in effect. Do not leave the terminal.",
+				"Crew of flight RM-2, please report to the security checkpoint.",
+				"Unattended luggage will be... will be... will be...",
+				"Passengers are reminded not to approach the infected.",
+				"The Sky Lounge is now open to all passengers.",
+				"Remo One, runway zero-nine is clear. Repeat, runway is clear.",
+				"This is the final boarding call. This is the final... final...",
+				"Medical staff to arrivals. Medical staff to... never mind.",
+			},
+		},
 	},
 
 	-- Mapa nuevo: emboscadas de las plazoletas del callejón (server/Ambushes). La primera vez que alguien entra a una

@@ -9,6 +9,7 @@
 --   #  muro del edificio (20 de alto)          .  piso interior (lleva techo)      ,  piso exterior (asfalto, sin techo)
 --   s  piso interior + punto de aparición      x  piso exterior + punto de aparición
 --   B  bulto exterior de 9 de alto (cobertura)  F  valla del perímetro              (espacio) nada
+--   J  muro con un paso alto: el hueco de un finger (puente de embarque) a la altura de las pasarelas
 --
 -- Filas: 0 a 4 lobby (Lost & Found) · 5 a 26 sector 1 (Arrivals) · 27 a 30 Sky Lounge · 31 a 57 sector 2 (Departures) ·
 -- 58 a 61 Fire Station · 62 a 77 sector 3 (Gates & Hangars) · 78 a 85 la plataforma de la extracción (la pista queda más al norte).
@@ -87,14 +88,14 @@ AirportLayout.ROWS = {
 	"#s.......#......###,,,,,,,,F", -- 65
 	"####............###,,,,,,,,F", -- 66
 	"####.....###....###,,,BB,,,F", -- 67
-	"####.....###......#,,,BB,,xF", -- 68
+	"####.....###......J,,,BB,,xF", -- 68 (J: el finger de la puerta A2)
 	"####.....###.......,,,,,,,,F", -- 69
 	"#........###....###,,,,,,,,F", -- 70 Tienda 3 (Ground Crew Workshop) en las columnas 1 a 3
 	"#........###....###,,,,,,,,F", -- 71
 	"####.....##s....###,,,,,,,,F", -- 72
 	"####.....#......###,,,BB,,,F", -- 73
 	"#s..............###,,,BB,,,F", -- 74
-	"####.....###......#,,,,,,,,F", -- 75
+	"####.....###......J,,,,,,,,F", -- 75 (J: el finger de la puerta A4)
 	"####.....###.......,,,,,,,xF", -- 76
 	"#####...####....###,,,,,,,,F", -- 77
 	"F,,,,,,,,,,,,,,,,,,,,,,,,,,F", -- 78 plataforma de la extracción

@@ -14,7 +14,7 @@ local N = Config.Sounds.Night
 
 local NightSounds = {}
 
-local OUTSIDE = { Zone1 = true, Zone2 = true, Extraction = true, Wave = true, WaveBreak = true }
+local OUTSIDE = { Zone1 = true, Zone2 = true, Zone3 = true, Extraction = true, Wave = true, WaveBreak = true }
 
 local function isOutside()
 	return OUTSIDE[workspace:GetAttribute("Stage")] == true
@@ -74,8 +74,10 @@ local function noiseLoop()
 			local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 			local roll = math.random()
 			if roll < 0.15 then
-				-- Perros ladrando lejos
-				playAt(N.Dogs, root.Position + direction * 90, A.Volume.Dogs, 0.9 + math.random() * 0.2)
+				-- Perros ladrando lejos (en otros mapas, lo que diga FarByMap: en el aeropuerto, motores)
+				local mapId = workspace:GetAttribute("MapId")
+				local far = N.FarByMap[Config.MapTheme[mapId] or mapId] or N.Dogs
+				playAt(far, root.Position + direction * 90, A.Volume.Dogs, 0.9 + math.random() * 0.2)
 			else
 				local distance = cfg.MinDistance + math.random() * (cfg.MaxDistance - cfg.MinDistance)
 				local list = roll < 0.45 and Config.Sounds.ZombieGrowls or N.Noises
@@ -121,8 +123,12 @@ function NightSounds.start()
 	local drone = loop(N.Drone)
 	local heart = loop(N.Heartbeat)
 
-	-- Sonido por zona (solo en el mapa nuevo): bucles que suben al entrar en su zona y campanas cada cierto tiempo
-	local zones = {}
+	-- Sonido por zona: bucles que suben al entrar en su zona y campanas cada cierto tiempo. Cada mapa tiene sus zonas
+	-- (Morro Esperanza: N.Zones; los demás: N.ZonesByMap) y se crean la primera vez que se juega ese mapa.
+	local zonesByMap = {} -- [id de mapa] = { { zone, level, sound } }
+	local function zoneList(mapId)
+		return mapId == "Morro" and N.Zones or N.ZonesByMap[mapId]
+	end
 	local function insideZone(zone)
 		local root = getRoot()
 		if not root then
@@ -132,8 +138,10 @@ function NightSounds.start()
 		return p.X >= b[1] and p.X <= b[2] and p.Z >= b[3] and p.Z <= b[4]
 	end
 
-	local function buildZones() -- se crean la primera vez que el mapa elegido es Morro Esperanza
-		for _, zone in N.Zones do
+	local function buildZones(mapId)
+		local zones = {}
+		zonesByMap[mapId] = zones
+		for _, zone in zoneList(mapId) do
 			local entry = { zone = zone, level = 0 }
 			if zone.loop then
 				entry.sound = loop(zone.loop)
@@ -144,8 +152,8 @@ function NightSounds.start()
 					while true do
 						local interval = zone.bellInterval
 						task.wait(interval[1] + math.random() * (interval[2] - interval[1]))
-						if workspace:GetAttribute("MapId") == "Morro" and insideZone(zone) then
-							playAt(zone.bell, Vector3.new(36, 42, 155), zone.bellVolume, 0.85 + math.random() * 0.1)
+						if workspace:GetAttribute("MapId") == mapId and insideZone(zone) then
+							playAt(zone.bell, zone.bellPos or Vector3.new(36, 42, 155), zone.bellVolume, 0.85 + math.random() * 0.1)
 						end
 					end
 				end)
@@ -167,14 +175,16 @@ function NightSounds.start()
 		wind.Volume += ((outside and A.Volume.Wind or A.Volume.Wind * 0.35) - wind.Volume) * blend
 		sirens.Volume += ((outside and A.Volume.Sirens or 0) - sirens.Volume) * blend
 		drone.Volume += ((outside and A.Volume.Drone or 0) - drone.Volume) * blend
-		local onMorro = workspace:GetAttribute("MapId") == "Morro"
-		if onMorro and #zones == 0 then
-			buildZones()
+		local mapId = workspace:GetAttribute("MapId")
+		if mapId and not zonesByMap[mapId] and zoneList(mapId) then
+			buildZones(mapId)
 		end
-		for _, entry in zones do
-			if entry.sound then
-				entry.level += (((onMorro and insideZone(entry.zone)) and 1 or 0) - entry.level) * blend
-				entry.sound.Volume = entry.level * entry.zone.volume
+		for id, zones in zonesByMap do
+			for _, entry in zones do
+				if entry.sound then
+					entry.level += (((id == mapId and insideZone(entry.zone)) and 1 or 0) - entry.level) * blend
+					entry.sound.Volume = entry.level * entry.zone.volume
+				end
 			end
 		end
 		-- El latido sube rápido y baja despacio
