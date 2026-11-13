@@ -179,13 +179,22 @@ function NightSounds.start()
 		if mapId and not zonesByMap[mapId] and zoneList(mapId) then
 			buildZones(mapId)
 		end
+		local reverb = "NoReverb"
 		for id, zones in zonesByMap do
 			for _, entry in zones do
+				local inside = id == mapId and insideZone(entry.zone)
 				if entry.sound then
-					entry.level += (((id == mapId and insideZone(entry.zone)) and 1 or 0) - entry.level) * blend
+					entry.level += ((inside and 1 or 0) - entry.level) * blend
 					entry.sound.Volume = entry.level * entry.zone.volume
 				end
+				if inside and entry.zone.reverb then
+					reverb = entry.zone.reverb
+				end
 			end
+		end
+		-- Eco de la zona (salones grandes, túneles): afecta a todos los sonidos, también los disparos
+		if SoundService.AmbientReverb.Name ~= reverb then
+			SoundService.AmbientReverb = Enum.ReverbType[reverb]
 		end
 		-- El latido sube rápido y baja despacio
 		local target = heartIntensity()

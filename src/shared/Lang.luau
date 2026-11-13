@@ -195,8 +195,16 @@ function Lang.watch()
 		watchTree(player:WaitForChild("PlayerGui"))
 	end)
 	-- Globos y carteles del mundo (BillboardGui y SurfaceGui, como los de la sala de votación)
+	-- Un cartel con el atributo NoTranslate en su SurfaceGui se queda como está (los rótulos del aeropuerto van solo en inglés)
 	local function worldLabel(descendant)
-		if descendant:IsA("TextLabel") and (descendant:FindFirstAncestorOfClass("BillboardGui") or descendant:FindFirstAncestorOfClass("SurfaceGui")) then
+		if not descendant:IsA("TextLabel") then
+			return
+		end
+		local surface = descendant:FindFirstAncestorOfClass("SurfaceGui")
+		if surface and surface:GetAttribute("NoTranslate") then
+			return
+		end
+		if surface or descendant:FindFirstAncestorOfClass("BillboardGui") then
 			watchLabel(descendant)
 		end
 	end

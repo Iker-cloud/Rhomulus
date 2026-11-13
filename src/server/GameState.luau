@@ -304,6 +304,7 @@ local function loadMap(id)
 	WeaponBox.clear()
 	Zombies.clear()
 	Atmosphere.forMap(id) -- luz, niebla y clima del mapa (antes de decorar: los faroles dependen del mapa)
+	workspace.Terrain:Clear() -- el terreno lo pone el constructor del mapa que lo use (Last Call); los demás no tienen
 	map = BUILDERS[id].build(Config.Game, { survival = SURVIVAL[id] ~= nil })
 	Atmosphere.decorate(map)
 	WeaponBox.init(map)

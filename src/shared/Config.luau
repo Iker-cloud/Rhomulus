@@ -294,15 +294,15 @@ return {
 			-- ventilación en el terminal, taller en el hangar y motores lejanos en la plataforma. La lluvia va aparte (Weather).
 			ZonesByMap = {
 				LastCall = {
-					{ name = "Service", box = { -132, -48, -400, 124 }, loop = "rbxassetid://9112890980", volume = 0.16 }, -- máquinas de clasificación
-					{ name = "Concourse", box = { -42, 42, -400, 330 }, loop = "rbxassetid://9112825488", volume = 0.18 }, -- sala de máquinas (ventilación)
-					{ name = "Hangar", box = { -132, -48, 176, 332 }, loop = "rbxassetid://9112825337", volume = 0.2 },
+					{ name = "Service", box = { -132, -48, -400, 124 }, loop = "rbxassetid://9112890980", volume = 0.16, reverb = "StoneCorridor" }, -- máquinas de clasificación
+					{ name = "Concourse", box = { -42, 42, -400, 330 }, loop = "rbxassetid://9112825488", volume = 0.18, reverb = "Hangar" }, -- sala de máquinas (ventilación); eco de salón grande
+					{ name = "Hangar", box = { -132, -48, 176, 332 }, loop = "rbxassetid://9112825337", volume = 0.2, reverb = "Hangar" },
 					{ name = "Apron", box = { 48, 132, -440, 332 }, loop = "rbxassetid://9112740168", volume = 0.12 }, -- reactores al ralentí y megafonía lejana
 					{ name = "Runway", box = { -132, 132, 332, 430 }, loop = "rbxassetid://9112740168", volume = 0.18 },
 					{ name = "FireStation", box = { -42, 42, 96, 180 }, bell = "rbxassetid://9113085203", bellPos = Vector3.new(0, 16, 150), bellInterval = { 18, 34 }, bellVolume = 0.3 }, -- timbre de alarma
 				},
 				LastCallSurvival = {
-					{ name = "Hangar7", box = { -110, 110, -90, 90 }, loop = "rbxassetid://9112825337", volume = 0.2 },
+					{ name = "Hangar7", box = { -110, 110, -90, 90 }, loop = "rbxassetid://9112825337", volume = 0.2, reverb = "Hangar" },
 				},
 			},
 			-- Lo que se oye lejos de vez en cuando en lugar de los perros (por tema de mapa)
@@ -743,7 +743,14 @@ return {
 		-- tubos fluorescentes parpadean más que los faroles del barrio.
 		ByMap = {
 			LastCall = {
-				Lighting = { Brightness = 2.6, Ambient = Color3.fromRGB(26, 30, 38), OutdoorAmbient = Color3.fromRGB(96, 108, 136) },
+				Lighting = {
+					Brightness = 2.6,
+					Ambient = Color3.fromRGB(26, 30, 38),
+					OutdoorAmbient = Color3.fromRGB(96, 108, 136),
+					EnvironmentSpecularScale = 0.6, -- el suelo mojado y los vidrios brillan (con la iluminación Future)
+					EnvironmentDiffuseScale = 0.25,
+				},
+				Bloom = { Intensity = 0.55, Size = 22, Threshold = 1.6 }, -- resplandor de neones y focos
 				Fog = { Density = 0.4, Haze = 2.6, Color = Color3.fromRGB(72, 84, 102), Decay = Color3.fromRGB(20, 25, 34) },
 				ColorGrade = { Brightness = -0.03, Contrast = 0.18, Saturation = -0.24, Tint = Color3.fromRGB(204, 220, 255) },
 				Lamps = { FlickerChance = 0.3, BrokenChance = 0.12 },

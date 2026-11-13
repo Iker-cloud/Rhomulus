@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
+local AirportArt = require(script.Parent.AirportArt)
 local AirportDetail = require(script.Parent.AirportDetail)
 local AirportLayout = require(script.Parent.AirportLayout)
 local PlaneLayout = require(ReplicatedStorage.Shared.PlaneLayout)
@@ -47,6 +48,7 @@ local medkitPickup = MapKit.medkitPickup
 local yawFacing = MapKit.yawFacing
 
 local WALL_H = 20 -- alto de los muros y del techo del terminal
+local HALL_H = 32 -- techo de los salones del CONCOURSE (llegadas, facturación, embarque): cerchas y tragaluces
 local RUNWAY_Z = 436 -- eje de la pista (Remo One rueda por aquí)
 local PLAY_NORTH = 425 -- hasta dónde se puede pisar hacia la pista: llega al pie de la escalerilla, no bajo el fuselaje
 local DOOR_H = 14
@@ -54,20 +56,26 @@ local DECK = 11 -- altura de las pasarelas (el segundo piso del sector 2 y los f
 
 -- Paleta del aeropuerto: fría y gris, con los tres colores de ruta
 local P = {
-	wall = hex("#858D95"),
-	tile = hex("#545A62"), -- piso del terminal (oscuro: bajo los tubos un piso claro se quema)
-	serviceFloor = hex("#3E4044"), -- piso de los túneles de servicio
+	wall = hex("#7E8287"),
+	plaster = hex("#A59C8E"), -- revestimiento del terminal (yeso crema)
+	trim = hex("#2B2926"), -- zócalos y molduras (granito oscuro)
+	servicePaint = hex("#4B5C4E"), -- pintura verde de los túneles de servicio (mitad baja)
+	tile = hex("#7A746A"), -- terrazo del terminal
+	serviceFloor = hex("#45493F"), -- concreto pintado de los túneles de servicio
 	asphalt = hex("#3C3F45"),
 	sidewalk = hex("#7B7F85"),
-	ceiling = hex("#A4AAB0"),
+	ceiling = hex("#8E9296"),
+	roof = hex("#2F3236"), -- techo alto de los salones (se pierde en la oscuridad)
+	truss = hex("#8B9298"),
 	fence = hex("#474C52"),
 	steel = hex("#6E757D"),
 	dark = Color3.fromRGB(34, 36, 40),
 	seat = hex("#2F4E79"),
 	taxi = hex("#E7B416"),
 	signYellow = hex("#F2C230"),
-	tube = Color3.fromRGB(200, 222, 240), -- luz fluorescente
-	mast = Color3.fromRGB(255, 214, 160), -- focos de la plataforma
+	tube = Color3.fromRGB(255, 214, 165), -- luz del terminal (ámbar)
+	serviceTube = Color3.fromRGB(190, 255, 205), -- fluorescente verdoso de los túneles
+	mast = Color3.fromRGB(205, 222, 255), -- focos de la plataforma (fríos)
 	door = Color3.fromRGB(96, 104, 112),
 	red = C.rojo, -- CONCOURSE
 	yellow = C.amarillo, -- SERVICE
@@ -89,6 +97,33 @@ end
 
 local function band(col)
 	return col <= 9 and "Service" or (col <= 17 and "Concourse" or "Apron")
+end
+
+-- Salones de techo alto: el CONCOURSE de los tres sectores (no el lobby ni los puntos seguros)
+local HALL_ROWS = { { 6, 25 }, { 32, 56 }, { 63, 77 } }
+local function isHall(row, col)
+	local ch = cell(row, col)
+	if band(col) ~= "Concourse" or (ch ~= "." and ch ~= "s") then
+		return false
+	end
+	for _, range in HALL_ROWS do
+		if row >= range[1] and row <= range[2] then
+			return true
+		end
+	end
+	return false
+end
+
+-- Muro de la fachada este que da a la plataforma: se hace de vidrio (AirportArt.structure)
+local function isFacade(row, col)
+	return cell(row, col) == "#" and isHall(row, col - 1) and cell(row, col + 1) == ","
+end
+
+-- Altura del techo en un punto del mapa
+local function ceilingAt(position)
+	local col = math.floor((position.X - L.X0) / L.CELL)
+	local row = math.floor((position.Z - L.Z0) / L.CELL)
+	return isHall(row, col) and HALL_H or WALL_H
 end
 
 -- Junta las celdas vecinas con la misma clave en rectángulos (menos piezas). `match(letra, fila, columna)` devuelve la clave o nil.
@@ -146,13 +181,22 @@ end
 -- Piezas del aeropuerto
 
 -- Tubo fluorescente en el techo: farol con la etiqueta NightLamp (Atmosphere decide si parpadea o está roto; NightLights lo anima)
-local function tube(parent, position, range, brightness, alongZ)
-	local bulb = deco(block(parent, "Tubo", alongZ and Vector3.new(0.9, 0.3, 5) or Vector3.new(5, 0.3, 0.9), position, P.tube, Enum.Material.Neon))
+local function tube(parent, position, range, brightness, alongZ, color)
+	color = color or P.tube
+	local bulb = deco(block(parent, "Tubo", alongZ and Vector3.new(0.9, 0.3, 5) or Vector3.new(5, 0.3, 0.9), position, color, Enum.Material.Neon))
+	-- En un techo más alto, el tubo cuelga de dos varillas
+	local roof = ceilingAt(position)
+	if roof - position.Y > 1 then
+		for _, side in { -1, 1 } do
+			local offset = alongZ and Vector3.new(0, 0, side * 2) or Vector3.new(side * 2, 0, 0)
+			deco(block(parent, "TuboVarilla", Vector3.new(0.1, roof - position.Y, 0.1), position + offset + Vector3.new(0, (roof - position.Y) / 2, 0), P.dark, Enum.Material.Metal))
+		end
+	end
 	local light = Instance.new("SpotLight")
 	light.Name = "Luz"
 	light.Face = Enum.NormalId.Bottom
 	light.Angle = 140
-	light.Color = P.tube
+	light.Color = color
 	light.Brightness = (brightness or 1.2) * 0.6
 	light.Range = range or 34
 	light.Shadows = false
@@ -190,7 +234,7 @@ local function hangSign(parent, position, facing, width, text, color)
 		boardRect(gui, 0.012, 0.08, 0.07, 0.84, color)
 	end
 	boardText(gui, text, color and 0.105 or 0.04, 0.16, color and 0.87 or 0.92, 0.68, RHO_BLACK)
-	local hang = WALL_H - (position.Y + size.Y / 2)
+	local hang = ceilingAt(position) - (position.Y + size.Y / 2)
 	if hang > 0.2 then
 		for _, side in { -1, 1 } do
 			deco(block(parent, "CartelTirante", Vector3.new(0.15, hang, 0.15), cf * CFrame.new(side * (width / 2 - 0.6), size.Y / 2 + hang / 2, 0), P.dark, Enum.Material.Metal))
@@ -242,14 +286,26 @@ local function cart(parent, x, z, angle, rng)
 	end
 end
 
--- Autobús de traslado (9 × 8.5 × 19): cobertura alta. `alongX` = a lo largo de X.
+-- Autobús de traslado (9 × 8.5 × 19): cobertura alta. `alongX` = a lo largo de X. Parabrisas, ventanillas, puerta, ruedas,
+-- letrero de destino y equipo de aire en el techo.
 local function shuttle(parent, x, z, alongX, color)
 	local base = CFrame.new(x, 0, z) * CFrame.Angles(0, alongX and math.pi / 2 or 0, 0)
 	block(parent, "Autobus", Vector3.new(9, 7.3, 19), base * CFrame.new(0, 4.85, 0), color or C.blanco, Enum.Material.Metal)
-	deco(block(parent, "AutobusVentanas", Vector3.new(9.1, 2.4, 15), base * CFrame.new(0, 6.2, -0.6), P.dark, Enum.Material.Glass))
+	local windows = deco(block(parent, "AutobusVentanas", Vector3.new(9.1, 2.4, 14), base * CFrame.new(0, 6.2, 0.6), P.dark, Enum.Material.Glass))
+	windows.Reflectance = 0.2
+	deco(block(parent, "AutobusParabrisas", Vector3.new(8.2, 3.4, 0.2), base * CFrame.new(0, 5.9, -9.55), P.dark, Enum.Material.Glass)).Reflectance = 0.2
 	deco(block(parent, "AutobusFranja", Vector3.new(9.12, 0.6, 19.04), base * CFrame.new(0, 3.4, 0), P.blue, Enum.Material.SmoothPlastic))
-	for _, dz in { -6, 6 } do
-		deco(block(parent, "AutobusRuedas", Vector3.new(9.2, 2.4, 2.4), base * CFrame.new(0, 1.2, dz), P.dark, Enum.Material.Rubber))
+	deco(block(parent, "AutobusPuerta", Vector3.new(0.15, 5.6, 2.6), base * CFrame.new(4.55, 4.1, -6.5), P.dark, Enum.Material.Glass))
+	deco(block(parent, "AutobusParachoques", Vector3.new(9.2, 0.9, 19.4), base * CFrame.new(0, 1.65, 0), P.dark, Enum.Material.SmoothPlastic))
+	deco(block(parent, "AutobusTechoAire", Vector3.new(5, 0.9, 6), base * CFrame.new(0, 8.95, 2), P.steel, Enum.Material.Metal))
+	local _, gui = blankBoard(parent, "AutobusDestino", Vector3.new(6, 0.9, 0.15), base * CFrame.new(0, 7.9, -9.62) * CFrame.Angles(0, math.pi, 0), RHO_BLACK, 50)
+	gui.LightInfluence = 0
+	boardText(gui, "TERMINAL · OUT OF SERVICE", 0.03, 0.1, 0.94, 0.8, Color3.fromRGB(255, 170, 40), Enum.TextXAlignment.Center)
+	for _, sx in { -1, 1 } do
+		for _, sz in { -6, 6 } do
+			local wheel = deco(block(parent, "AutobusRueda", Vector3.new(1, 3, 3), base * CFrame.new(sx * 4.3, 1.5, sz), P.dark, Enum.Material.Rubber))
+			wheel.Shape = Enum.PartType.Cylinder
+		end
 	end
 end
 
@@ -258,8 +314,13 @@ local function barrier(parent, x, z, alongX)
 	block(parent, "Barrera", alongX and Vector3.new(8, 3, 1.6) or Vector3.new(1.6, 3, 8), Vector3.new(x, 1.5, z), C.concreto, Enum.Material.Concrete)
 end
 
+-- Columna redonda de metal pintado hasta el techo, con basa y capitel
 local function column(parent, x, z)
-	return pole(parent, "Columna", Vector3.new(x, 0, z), WALL_H, 3, P.wall, Enum.Material.Concrete)
+	local height = ceilingAt(Vector3.new(x, 0, z))
+	local shaft = pole(parent, "Columna", Vector3.new(x, 0, z), height, 2.6, P.plaster, Enum.Material.Metal)
+	deco(pole(parent, "ColumnaBasa", Vector3.new(x, 0, z), 1.2, 3.4, P.trim, Enum.Material.Granite))
+	deco(pole(parent, "ColumnaCapitel", Vector3.new(x, height - 1.6, z), 1.6, 3.6, P.truss, Enum.Material.Metal))
+	return shaft
 end
 
 local function sofa(parent, x, z, alongZ)
@@ -321,6 +382,16 @@ local function makeDoor(parent, id, name)
 	local size = crossX and Vector3.new(2, DOOR_H, z2 - z1) or Vector3.new(x2 - x1, DOOR_H, 2)
 	local leaf = block(parent, name, size, center + Vector3.new(0, DOOR_H / 2, 0), P.door, Enum.Material.DiamondPlate)
 	block(parent, "Dintel", Vector3.new(x2 - x1, WALL_H - DOOR_H, z2 - z1), center + Vector3.new(0, (WALL_H + DOOR_H) / 2, 0), P.wall)
+	-- Marco: dos jambas y el cabecero, de acero oscuro (por las dos caras)
+	local across = crossX and Vector3.new(0, 0, 1) or Vector3.new(1, 0, 0)
+	local width = crossX and (z2 - z1) or (x2 - x1)
+	local depth = crossX and (x2 - x1) or (z2 - z1)
+	local frameSize = crossX and Vector3.new(depth + 0.6, DOOR_H + 0.8, 0.8) or Vector3.new(0.8, DOOR_H + 0.8, depth + 0.6)
+	for _, side in { -1, 1 } do
+		deco(block(parent, "MarcoPuerta", frameSize, center + across * side * (width / 2 - 0.4) + Vector3.new(0, (DOOR_H + 0.8) / 2, 0), P.trim, Enum.Material.Metal))
+	end
+	local headSize = crossX and Vector3.new(depth + 0.6, 0.8, width) or Vector3.new(width, 0.8, depth + 0.6)
+	deco(block(parent, "MarcoPuerta", headSize, center + Vector3.new(0, DOOR_H + 0.4, 0), P.trim, Enum.Material.Metal))
 	return leaf
 end
 
@@ -330,8 +401,8 @@ end
 local function buildShell(map, spawnRoot)
 	local shell = newFolder(map, "Estructura")
 
-	for _, r in rects(function(ch)
-		return ch == "#" and "wall" or nil
+	for _, r in rects(function(ch, row, col)
+		return ch == "#" and not isFacade(row, col) and "wall" or nil
 	end) do
 		slab(shell, "Muro", r.x1, r.x2, r.z1, r.z2, WALL_H, P.wall)
 	end
@@ -356,12 +427,17 @@ local function buildShell(map, spawnRoot)
 		end
 	end
 
-	-- Interior: piso por banda y techo encima
+	-- Interior: piso por banda (terrazo en el terminal, concreto pintado en servicio)
 	local floorColors = { Service = P.serviceFloor, Concourse = P.tile, Apron = P.tile }
 	for _, r in rects(function(ch, _, col)
 		return (ch == "." or ch == "s") and band(col) or nil
 	end) do
-		floor(shell, "Piso" .. r.key, r.x1, r.x2, r.z1, r.z2, floorColors[r.key], r.key == "Service" and Enum.Material.Concrete or Enum.Material.SmoothPlastic)
+		floor(shell, "Piso" .. r.key, r.x1, r.x2, r.z1, r.z2, floorColors[r.key], r.key == "Service" and Enum.Material.Concrete or Enum.Material.Marble)
+	end
+	-- Techos: bajos (20) en pasillos y salas; los salones del CONCOURSE suben a HALL_H con tragaluces (AirportArt.structure)
+	for _, r in rects(function(ch, row, col)
+		return (ch == "." or ch == "s") and not isHall(row, col) and "low" or nil
+	end) do
 		block(shell, "Techo", Vector3.new(r.x2 - r.x1, 1, r.z2 - r.z1), Vector3.new((r.x1 + r.x2) / 2, WALL_H + 0.5, (r.z1 + r.z2) / 2), P.ceiling, Enum.Material.SmoothPlastic)
 	end
 	-- Exterior: asfalto (también bajo los vehículos)
@@ -401,9 +477,11 @@ local function buildLights(map)
 			if ch == "." or ch == "s" then
 				local zone = band(col)
 				if zone == "Concourse" and row % 3 == 1 and (col == 11 or col == 15) then
-					tube(lights, center + Vector3.new(5, WALL_H - 0.2, 0), 36, 1.2)
+					-- En los salones altos los tubos cuelgan a 25 (de las varillas); en salas bajas van al techo
+					local y = isHall(row, col) and HALL_H - 7 or WALL_H - 0.2
+					tube(lights, center + Vector3.new(5, y, 0), 36, isHall(row, col) and 1.5 or 1.2)
 				elseif zone ~= "Concourse" and (row * 7 + col * 3) % 9 == 0 then
-					tube(lights, center + Vector3.new(0, WALL_H - 0.2, 0), 30, 0.9, true)
+					tube(lights, center + Vector3.new(0, WALL_H - 0.2, 0), 30, 0.9, true, zone == "Service" and P.serviceTube or nil)
 				end
 			elseif ch == "," and row % 5 == 2 and (col == 20 or col == 25 or (row >= 78 and (col == 3 or col == 9 or col == 15))) then
 				mast(lights, center.X, center.Z)
@@ -548,12 +626,7 @@ local function buildArrivals(map, refs, rng)
 
 	-- APRON: acera de llegadas (junto al terminal) con taxis, buses de traslado y el estacionamiento al fondo
 	deco(block(s, "Acera", Vector3.new(8, 0.12, 250), Vector3.new(54, FLOOR_TOP + 0.06, -315), P.sidewalk, Enum.Material.Concrete))
-	for _, spot in { { 64, -428, 4 }, { 65, -404, -8 }, { 64, -330, 0 }, { 66, -264, 12 }, { 63, -226, 0 } } do
-		car(s, spot[1], spot[2], spot[3], P.taxi)
-	end
-	for _, spot in { { 108, -432, 90, C.cobalto }, { 122, -408, 0, C.concreto }, { 106, -392, 80, C.terracota }, { 120, -322, 0, C.blanco }, { 104, -318, 12, C.turquesa }, { 118, -246, 0, C.oscuro }, { 100, -214, 96, C.lima } } do
-		car(s, spot[1], spot[2], spot[3], spot[4])
-	end
+	-- (los autos los pone AirportArt.arrivals)
 	for _, r in rects(function(ch, row)
 		return ch == "B" and row < 26 and "bus" or nil
 	end) do
@@ -586,8 +659,9 @@ local function flightBoard(parent, cframe)
 		local y = 0.2 + (i - 1) * 0.155
 		boardText(gui, flight[1], 0.04, y + 0.02, 0.2, 0.1, C.blanco)
 		boardText(gui, flight[2], 0.26, y + 0.02, 0.4, 0.1, C.blanco)
-		boardText(gui, "CANCELLED", 0.66, y + 0.02, 0.3, 0.1, C.rojo, Enum.TextXAlignment.Right)
+		boardText(gui, "CANCELLED", 0.66, y + 0.02, 0.3, 0.1, C.rojo, Enum.TextXAlignment.Right).Name = "Status"
 	end
+	CollectionService:AddTag(gui.Parent, "FlightBoard") -- parpadea y cambia los estados (client/MapMotion)
 end
 
 local function buildLounge(map, refs)
@@ -1022,8 +1096,12 @@ end
 
 local HANGAR_H = 34
 
--- Lo que usa server/AirportDetail (el pase de arte) de este constructor
-local KIT = { P = P, WALL_H = WALL_H, HANGAR_H = HANGAR_H, RUNWAY_Z = RUNWAY_Z, PLAY_NORTH = PLAY_NORTH, cell = cell, hangSign = hangSign }
+-- Lo que usan server/AirportDetail y server/AirportArt (el pase de arte) de este constructor
+local KIT = {
+	P = P, WALL_H = WALL_H, HALL_H = HALL_H, HALL_ROWS = HALL_ROWS, HANGAR_H = HANGAR_H, RUNWAY_Z = RUNWAY_Z, PLAY_NORTH = PLAY_NORTH, DECK = DECK,
+	cell = cell, band = band, isHall = isHall, isFacade = isFacade, ceilingAt = ceilingAt, rects = rects,
+	hangSign = hangSign, tube = tube, column = column, counter = counter, seats = seats, cart = cart, newFolder = newFolder,
+}
 
 local function buildHangarArena(map, refs, spawnRoot, rng)
 	local arena = newFolder(map, "Hangar7")
@@ -1179,6 +1257,15 @@ local function buildLimits(map)
 	invisible(Vector3.new(300, 3, 960), Vector3.new(0, -1.5, 20)) -- suelo de seguridad (cara superior a ras de y = 0)
 end
 
+-- Los rótulos del terminal van solo en inglés: shared/Lang no los traduce (los avisos y etiquetas de juego sí se traducen)
+function MapBuilderAirport.literalSigns(map)
+	for _, gui in map:GetDescendants() do
+		if gui:IsA("SurfaceGui") then
+			gui:SetAttribute("NoTranslate", true)
+		end
+	end
+end
+
 function MapBuilderAirport.build(config, options)
 	options = options or {}
 	for _, name in { "Map", "SpawnPoints" } do
@@ -1211,13 +1298,19 @@ function MapBuilderAirport.build(config, options)
 	if options.survival then
 		-- Survival: solo la arena del Hangar 7
 		buildHangarArena(map, refs, spawnRoot, rng)
+		MapBuilderAirport.literalSigns(map)
 		return refs
 	end
 
 	buildShell(map, spawnRoot)
+	AirportArt.structure(map, KIT) -- revestimiento de muros, salones altos con cerchas y tragaluces, fachada de vidrio
+	AirportArt.terrain(KIT)
 	buildLights(map)
 	buildLobby(map, refs, rng)
 	buildArrivals(map, refs, rng)
+	local artRng = Random.new(config.Seed + 5) -- su propio azar: el pase de arte no cambia lo que se sortea en lo demás
+	AirportArt.lobby(map, refs, artRng, KIT)
+	AirportArt.arrivals(map, refs, artRng, KIT)
 	buildLounge(map, refs)
 	buildDepartures(map, refs, rng)
 	buildFireStation(map, refs)
@@ -1227,6 +1320,8 @@ function MapBuilderAirport.build(config, options)
 	for _, point in spawnRoot.Zone2:GetChildren() do
 		table.insert(refs.crew.hordePoints, point.Position - Vector3.new(0, 0.5, 0))
 	end
+
+	MapBuilderAirport.literalSigns(map)
 
 	-- Aviso si un lugar de la caja de armas quedó tapado por un obstáculo
 	local params = OverlapParams.new()

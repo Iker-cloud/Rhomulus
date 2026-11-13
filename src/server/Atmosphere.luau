@@ -16,6 +16,7 @@ local Atmosphere = {}
 local A = Config.Atmosphere
 
 local current = nil -- lo que cambia el mapa en curso (Config.Atmosphere.ByMap), o nil
+local original = {} -- valor del lugar de las propiedades de Lighting que solo cambia algún mapa (se devuelven al cambiar de mapa)
 
 -- Un grupo de ajustes (Lighting, Fog, ColorGrade, Lamps) con lo que cambie el mapa en curso por encima del base
 local function setting(group)
@@ -123,8 +124,30 @@ local function addFlashlight(player, character)
 end
 
 local function applyLighting()
-	for key, value in setting("Lighting") do
+	local lighting = setting("Lighting")
+	for key, value in original do
+		if lighting[key] == nil then
+			Lighting[key] = value
+		end
+	end
+	for key, value in lighting do
+		if A.Lighting[key] == nil and original[key] == nil then
+			original[key] = Lighting[key]
+		end
 		Lighting[key] = value
+	end
+	-- Resplandor de las luces (solo en los mapas que lo piden)
+	local bloomSetting = current and current.Bloom
+	local bloom = Lighting:FindFirstChild("MapBloom")
+	if bloomSetting then
+		bloom = bloom or Instance.new("BloomEffect")
+		bloom.Name = "MapBloom"
+		bloom.Intensity = bloomSetting.Intensity
+		bloom.Size = bloomSetting.Size
+		bloom.Threshold = bloomSetting.Threshold
+		bloom.Parent = Lighting
+	elseif bloom then
+		bloom:Destroy()
 	end
 	local fogSetting = setting("Fog")
 	local fog = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")

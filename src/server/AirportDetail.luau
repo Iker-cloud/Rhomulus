@@ -54,8 +54,11 @@ local function flightScreen(parent, position, facing, title, flights)
 		local y = 0.2 + (i - 1) * 0.155
 		boardText(gui, flight[1], 0.04, y + 0.02, 0.2, 0.1, C.blanco)
 		boardText(gui, flight[2], 0.26, y + 0.02, 0.4, 0.1, C.blanco)
-		boardText(gui, flight[3], 0.62, y + 0.02, 0.34, 0.1, C.rojo, Enum.TextXAlignment.Right)
+		local status = boardText(gui, flight[3], 0.62, y + 0.02, 0.34, 0.1, C.rojo, Enum.TextXAlignment.Right)
+		status.Name = "Status" -- client/MapMotion cambia el estado y hace parpadear la pantalla
 	end
+	local board = gui.Parent
+	CollectionService:AddTag(board, "FlightBoard")
 end
 
 -- Nota de papel (pista de la historia): pocas líneas, se lee de cerca. `cframe` = centro; la cara escrita es la frontal (-Z).
@@ -178,32 +181,6 @@ local function routeSigns(folder, kit)
 	end
 end
 
--- Ventanales altos (falsos) del terminal hacia la plataforma: una banda de vidrio oscuro por cada tramo del muro este
-local function windows(folder, kit)
-	local glass = Color3.fromRGB(26, 40, 62)
-	local row = 5
-	while row <= 77 do
-		local function solid(r)
-			local inside = kit.cell(r, 17)
-			return kit.cell(r, 18) == "#" and (inside == "." or inside == "s") and kit.cell(r, 19) == ","
-		end
-		if solid(row) then
-			local last = row
-			while solid(last + 1) do
-				last += 1
-			end
-			local z1, z2 = L.z(row) + 1.5, L.z(last + 1) - 1.5
-			for _, x in { 39.92, 50.08 } do
-				local pane = deco(block(folder, "Ventanal", Vector3.new(0.16, 4.4, z2 - z1), Vector3.new(x, 16.2, (z1 + z2) / 2), glass, Enum.Material.Glass))
-				pane.Reflectance = 0.25
-			end
-			row = last + 1
-		else
-			row += 1
-		end
-	end
-end
-
 -- Charcos repartidos por el exterior (celdas de asfalto)
 local function puddles(folder, kit, rng, amount)
 	local cells = {}
@@ -229,7 +206,6 @@ function AirportDetail.build(map, refs, rng, kit)
 	local X, Z = Vector3.xAxis, Vector3.zAxis
 
 	routeSigns(folder, kit)
-	windows(folder, kit)
 	puddles(folder, kit, rng, 34)
 
 	-- Avisos de cuarentena
@@ -298,7 +274,7 @@ function AirportDetail.build(map, refs, rng, kit)
 
 	-- Megafonía: altavoces en el techo del terminal y de los túneles, y bocinas en el muro de la plataforma y en la torre
 	for _, z in { -360, -290, -220, -160, -100, -30, 40, 104, 150, 200, 260, 320 } do
-		speaker(folder, Vector3.new(0, kit.WALL_H - 0.5, z))
+		speaker(folder, Vector3.new(0, kit.ceilingAt(Vector3.new(0, 0, z)) - 0.5, z))
 	end
 	for _, spot in { { -75, -385 }, { -105, -305 }, { -85, -225 }, { -95, -80 }, { -105, 20 }, { -75, 95 }, { -75, 215 }, { -75, 305 } } do
 		speaker(folder, Vector3.new(spot[1], kit.WALL_H - 0.5, spot[2]))
