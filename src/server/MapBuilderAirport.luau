@@ -323,9 +323,18 @@ local function column(parent, x, z)
 	return shaft
 end
 
-local function sofa(parent, x, z, alongZ)
-	local size = alongZ and Vector3.new(3, 1.8, 8) or Vector3.new(8, 1.8, 3)
-	block(parent, "Sofa", size, Vector3.new(x, 0.9, z), C.terracota, Enum.Material.Fabric)
+-- Sofá de cuero del Sky Lounge: asiento (choca), respaldo y brazos. `back` = hacia dónde queda el respaldo (por defecto -X o -Z)
+local function sofa(parent, x, z, alongZ, back)
+	back = back or -1
+	local leather = hex("#5A2E24")
+	local size = alongZ and Vector3.new(3.4, 1.6, 8) or Vector3.new(8, 1.6, 3.4)
+	block(parent, "Sofa", size, Vector3.new(x, 0.8, z), leather, Enum.Material.Leather)
+	local backOffset = alongZ and Vector3.new(back * 1.5, 1.8, 0) or Vector3.new(0, 1.8, back * 1.5)
+	deco(block(parent, "SofaRespaldo", alongZ and Vector3.new(0.8, 2.4, 8) or Vector3.new(8, 2.4, 0.8), Vector3.new(x, 0, z) + backOffset, leather, Enum.Material.Leather))
+	for _, s in { -1, 1 } do
+		local armOffset = alongZ and Vector3.new(0, 1.9, s * 3.7) or Vector3.new(s * 3.7, 1.9, 0)
+		deco(block(parent, "SofaBrazo", alongZ and Vector3.new(3.4, 1, 0.7) or Vector3.new(0.7, 1, 3.4), Vector3.new(x, 0, z) + armOffset, leather, Enum.Material.Leather))
+	end
 end
 
 -- Altura: piso de pasarela (cara superior en DECK)
@@ -677,7 +686,7 @@ local function buildLounge(map, refs)
 	hangSign(lounge, Vector3.new(0, 16.4, -190.4), -Vector3.zAxis, 18, "SKY LOUNGE  ·  MEMBERS ONLY")
 	sofa(lounge, -26, -172, true)
 	sofa(lounge, -26, -148, true)
-	sofa(lounge, 26, -172, true)
+	sofa(lounge, 26, -172, true, 1)
 	sofa(lounge, -16, -177, false)
 	counter(lounge, 20, -146, 16, 3, C.madera) -- la barra
 	flightBoard(lounge, CFrame.lookAt(Vector3.new(20, 10, -179.8), Vector3.new(20, 10, -160)))
@@ -691,9 +700,28 @@ end
 -- Piezas de los sectores 2 y 3
 
 -- Isla de facturación: mostrador largo con la cinta detrás y su rótulo
+local AIRLINES = { { "RHM AIR", hex("#B8322A") }, { "SAN REMO", hex("#2E6FB8") }, { "COSTA AZUL", hex("#2A9A8C") }, { "ALBA JET", hex("#D08A2A") }, { "RHM AIR", hex("#B8322A") } }
+local airlineIndex = 0
+-- Isla de facturación: mostrador con frente de color y tapa de granito, monitores, básculas, la cinta detrás, el panel de la
+-- aerolínea y su cartel colgante
 local function checkIn(parent, x, z, name)
+	airlineIndex = airlineIndex % #AIRLINES + 1
+	local airline = AIRLINES[airlineIndex]
 	counter(parent, x, z, 22, 3.5, P.steel)
+	deco(block(parent, "CheckInFrente", Vector3.new(22.1, 2.6, 0.2), Vector3.new(x, 1.5, z - 1.8), airline[2], Enum.Material.SmoothPlastic))
+	deco(block(parent, "CheckInTapa", Vector3.new(22.4, 0.3, 3.9), Vector3.new(x, 3.75, z), P.trim, Enum.Material.Granite))
+	for i = -1, 1 do
+		local monitor = deco(block(parent, "CheckInMonitor", Vector3.new(1.6, 1.1, 0.2), CFrame.new(x + i * 7, 4.7, z + 0.6) * CFrame.Angles(math.rad(-12), 0, 0), P.dark, Enum.Material.SmoothPlastic))
+		if i ~= 0 then
+			deco(block(parent, "CheckInPantalla", Vector3.new(1.4, 0.9, 0.05), monitor.CFrame * CFrame.new(0, 0, -0.12), hex("#3D6E9E"), Enum.Material.Neon)).Transparency = 0.4
+		end
+		deco(block(parent, "CheckInBascula", Vector3.new(3, 0.6, 2.6), Vector3.new(x + i * 7 + 3, 0.3, z - 3.2), P.steel, Enum.Material.DiamondPlate))
+	end
 	deco(block(parent, "CheckInCinta", Vector3.new(22, 1.2, 3), Vector3.new(x, 0.6, z + 3.4), P.dark, Enum.Material.Rubber))
+	local _, gui = blankBoard(parent, "CheckInPanel", Vector3.new(20, 4, 0.4), CFrame.lookAt(Vector3.new(x, 7.2, z + 5.2), Vector3.new(x, 7.2, z - 10)), airline[2], 30)
+	boardText(gui, airline[1], 0.05, 0.12, 0.9, 0.76, C.blanco, Enum.TextXAlignment.Center)
+	deco(block(parent, "CheckInPanelPata", Vector3.new(0.6, 5.2, 0.6), Vector3.new(x - 8, 2.6, z + 5.2), P.trim, Enum.Material.Metal))
+	deco(block(parent, "CheckInPanelPata", Vector3.new(0.6, 5.2, 0.6), Vector3.new(x + 8, 2.6, z + 5.2), P.trim, Enum.Material.Metal))
 	hangSign(parent, Vector3.new(x, 13, z), -Vector3.zAxis, 14, name)
 end
 
@@ -715,14 +743,38 @@ local function securityLane(parent, x, z)
 end
 
 -- Contenedor de carga aérea (6 × 6 × 6): cobertura alta
+-- Contenedor de carga aérea (ULD): caja de aluminio con la esquina superior achaflanada, cortina de lona y marcos
 local function cargo(parent, x, z, angle)
-	block(parent, "ContenedorCarga", Vector3.new(6, 6, 6), CFrame.new(x, 3, z) * CFrame.Angles(0, math.rad(angle or 0), 0), hex("#B9C0C7"), Enum.Material.Metal)
+	local base = CFrame.new(x, 0, z) * CFrame.Angles(0, math.rad(angle or 0), 0)
+	block(parent, "ContenedorCarga", Vector3.new(6, 4.4, 6), base * CFrame.new(0, 2.2, 0), hex("#B9C0C7"), Enum.Material.Metal)
+	local chamfer = Instance.new("WedgePart")
+	chamfer.Name = "ContenedorChaflan"
+	chamfer.Anchored = true
+	chamfer.Size = Vector3.new(6, 1.6, 6)
+	chamfer.CFrame = base * CFrame.new(0, 5.2, 0) * CFrame.Angles(0, math.pi, 0)
+	chamfer.Color = hex("#B9C0C7")
+	chamfer.Material = Enum.Material.Metal
+	chamfer.Parent = parent
+	deco(block(parent, "ContenedorCortina", Vector3.new(5, 3.8, 0.1), base * CFrame.new(0, 2.3, -3.02), hex("#3B4A5C"), Enum.Material.Fabric))
+	deco(block(parent, "ContenedorBase", Vector3.new(6.3, 0.3, 6.3), base * CFrame.new(0, 0.15, 0), P.dark, Enum.Material.Metal))
+	deco(block(parent, "ContenedorMarco", Vector3.new(6.1, 0.25, 0.25), base * CFrame.new(0, 4.4, -3.05), P.signYellow, Enum.Material.SmoothPlastic))
 end
 
 -- Tractor de equipaje con su tren de carritos, en fila hacia +Z
 local function baggageTrain(parent, x, z, carts, rng)
-	block(parent, "Tractor", Vector3.new(4, 3, 6), Vector3.new(x, 1.7, z), P.signYellow, Enum.Material.Metal)
-	deco(block(parent, "TractorRuedas", Vector3.new(4.4, 1.4, 4.6), Vector3.new(x, 0.7, z), P.dark, Enum.Material.Rubber))
+	-- Tractor: cuerpo bajo, asiento, volante, techo sobre cuatro postes, ruedas y baliza naranja
+	block(parent, "Tractor", Vector3.new(4, 2.2, 6), Vector3.new(x, 1.5, z), P.signYellow, Enum.Material.Metal)
+	deco(block(parent, "TractorAsiento", Vector3.new(2, 1.4, 1.6), Vector3.new(x, 3.2, z + 1), P.dark, Enum.Material.Leather))
+	deco(block(parent, "TractorVolante", Vector3.new(1.2, 0.2, 1.2), CFrame.new(x, 3.6, z - 1.2) * CFrame.Angles(math.rad(40), 0, 0), P.dark, Enum.Material.Rubber))
+	deco(block(parent, "TractorTecho", Vector3.new(4, 0.2, 4.4), Vector3.new(x, 6.3, z), P.signYellow, Enum.Material.Metal))
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			deco(block(parent, "TractorPoste", Vector3.new(0.2, 3.4, 0.2), Vector3.new(x + sx * 1.8, 4.6, z + sz * 2), P.dark, Enum.Material.Metal))
+			local wheel = deco(block(parent, "TractorRueda", Vector3.new(0.8, 1.8, 1.8), Vector3.new(x + sx * 2.1, 0.9, z + sz * 2), P.dark, Enum.Material.Rubber))
+			wheel.Shape = Enum.PartType.Cylinder
+		end
+	end
+	deco(block(parent, "TractorBaliza", Vector3.new(0.6, 0.5, 0.6), Vector3.new(x, 6.65, z), hex("#FF8A1E"), Enum.Material.Neon))
 	for i = 1, carts do
 		cart(parent, x, z + i * 9, 0, rng)
 	end
@@ -735,6 +787,52 @@ local function fuelTruck(parent, x, z, alongX)
 	block(parent, "CamionChasis", Vector3.new(8, 2.4, 19), base * CFrame.new(0, 1.8, 0), P.dark, Enum.Material.Metal)
 	local tank = block(parent, "CamionCisterna", Vector3.new(13, 6.4, 6.4), base * CFrame.new(0, 6, 2.6) * CFrame.Angles(0, math.pi / 2, 0), hex("#C9CED3"), Enum.Material.Metal)
 	tank.Shape = Enum.PartType.Cylinder
+	-- Detalle: parabrisas, franja roja y rótulo, ruedas, tapas de la cisterna y la manguera enrollada
+	deco(block(parent, "CamionParabrisas", Vector3.new(7, 2.4, 0.2), base * CFrame.new(0, 5.6, -9.55), P.dark, Enum.Material.Glass)).Reflectance = 0.2
+	deco(block(parent, "CamionFranja", Vector3.new(6.5, 0.6, 13.1), base * CFrame.new(0, 6, 2.6), C.rojo, Enum.Material.SmoothPlastic))
+	local _, gui = blankBoard(parent, "CamionRotulo", Vector3.new(0.1, 1.6, 8), base * CFrame.new(3.25, 7.2, 2.6) * CFrame.Angles(0, math.pi / 2, 0), C.rojo, 40)
+	boardText(gui, "JET A-1 · FLAMMABLE", 0.04, 0.1, 0.92, 0.8, C.blanco, Enum.TextXAlignment.Center)
+	for _, sx in { -1, 1 } do
+		for _, sz in { -7, 2, 7 } do
+			local wheel = deco(block(parent, "CamionRueda", Vector3.new(1, 3, 3), base * CFrame.new(sx * 4.1, 1.5, sz), P.dark, Enum.Material.Rubber))
+			wheel.Shape = Enum.PartType.Cylinder
+		end
+	end
+	for _, sz in { -1.5, 4 } do
+		deco(block(parent, "CamionTapa", Vector3.new(1.4, 0.5, 1.4), base * CFrame.new(0, 9.4, sz), P.steel, Enum.Material.Metal))
+	end
+	local reel = deco(block(parent, "CamionManguera", Vector3.new(1.2, 2.4, 2.4), base * CFrame.new(0, 3.2, 9.6), P.dark, Enum.Material.Rubber))
+	reel.Shape = Enum.PartType.Cylinder
+end
+
+-- Camión de bomberos del aeropuerto: cabina, carrocería con persianas de los compartimentos, escalera en el techo, barra de luces
+-- (balizas rojas), ruedas y carrete de manguera. Choca como un bloque (16 × 6 × 7) donde estaba la camioneta.
+local function fireTruck(parent, x, z)
+	local base = CFrame.new(x, 0, z) * CFrame.Angles(0, math.pi / 2, 0) -- a lo largo de X, morro al oeste
+	block(parent, "CamionBomberos", Vector3.new(7, 6, 16), base * CFrame.new(0, 3.6, 0), C.rojo, Enum.Material.Metal)
+	deco(block(parent, "CamionBomberosCabina", Vector3.new(7, 1.6, 4.5), base * CFrame.new(0, 7.4, -5.6), C.rojo, Enum.Material.Metal))
+	deco(block(parent, "CamionBomberosVidrio", Vector3.new(6.4, 2.2, 0.2), base * CFrame.new(0, 5.6, -8.05), P.dark, Enum.Material.Glass)).Reflectance = 0.2
+	deco(block(parent, "CamionBomberosFranja", Vector3.new(7.06, 0.6, 16.06), base * CFrame.new(0, 2.6, 0), C.blanco, Enum.Material.SmoothPlastic))
+	for _, sx in { -1, 1 } do
+		for i = 0, 2 do
+			deco(block(parent, "CamionBomberosPersiana", Vector3.new(0.1, 3, 2.8), base * CFrame.new(sx * 3.52, 4.3, -1 + i * 3.4), hex("#B7BCC2"), Enum.Material.DiamondPlate))
+		end
+		for _, sz in { -5.5, 4.5 } do
+			local wheel = deco(block(parent, "CamionBomberosRueda", Vector3.new(1, 3, 3), base * CFrame.new(sx * 3.3, 1.5, sz), P.dark, Enum.Material.Rubber))
+			wheel.Shape = Enum.PartType.Cylinder
+		end
+	end
+	for _, sx in { -1.4, 1.4 } do
+		deco(block(parent, "CamionBomberosEscalera", Vector3.new(0.3, 0.3, 11), base * CFrame.new(sx, 7, 2.5), hex("#C9CED3"), Enum.Material.Metal))
+	end
+	for i = 0, 8 do
+		deco(block(parent, "CamionBomberosPeldano", Vector3.new(2.8, 0.2, 0.2), base * CFrame.new(0, 7, -2.5 + i * 1.25), hex("#C9CED3"), Enum.Material.Metal))
+	end
+	for _, sx in { -1.8, 1.8 } do
+		AirportDetail.beacon(parent, (base * CFrame.new(sx, 8.4, -6.8)).Position, Color3.fromRGB(255, 40, 30), 0.6, sx > 0 and 0.5 or 0, 0.5, 16, Vector3.new(1.4, 0.5, 0.6))
+	end
+	local reel = deco(block(parent, "CamionBomberosCarrete", Vector3.new(1.4, 2.6, 2.6), base * CFrame.new(0, 7.8, 6.8), hex("#C9CED3"), Enum.Material.Metal))
+	reel.Shape = Enum.PartType.Cylinder
 end
 
 -- Motor de avión sobre su caballete (taller del hangar): cobertura
@@ -928,9 +1026,7 @@ local function buildFireStation(map, refs)
 	tube(station, Vector3.new(-14, WALL_H - 0.2, 150), 36, 1.3)
 	tube(station, Vector3.new(14, WALL_H - 0.2, 150), 36, 1.3)
 	-- Camioneta de bomberos, taquillas, literas y un banco con el botiquín
-	block(station, "CamionetaBomberos", Vector3.new(16, 6, 7), Vector3.new(20, 3.6, 137), C.rojo, Enum.Material.Metal)
-	deco(block(station, "CamionetaRuedas", Vector3.new(12, 2, 7.2), Vector3.new(20, 1, 137), P.dark, Enum.Material.Rubber))
-	deco(block(station, "CamionetaBaliza", Vector3.new(3, 0.6, 1), Vector3.new(24, 6.9, 137), C.azul, Enum.Material.Neon))
+	fireTruck(station, 20, 137)
 	for i = 0, 3 do
 		block(station, "Taquilla", Vector3.new(3, 8, 2), Vector3.new(-27 + i * 3.2, 4, 168.8), P.steel, Enum.Material.Metal)
 	end
@@ -1311,6 +1407,9 @@ function MapBuilderAirport.build(config, options)
 	local artRng = Random.new(config.Seed + 5) -- su propio azar: el pase de arte no cambia lo que se sortea en lo demás
 	AirportArt.lobby(map, refs, artRng, KIT)
 	AirportArt.arrivals(map, refs, artRng, KIT)
+	AirportArt.lounge(map, refs, artRng, KIT)
+	AirportArt.departures(map, refs, artRng, KIT)
+	AirportArt.fireStation(map, refs, artRng, KIT)
 	buildLounge(map, refs)
 	buildDepartures(map, refs, rng)
 	buildFireStation(map, refs)

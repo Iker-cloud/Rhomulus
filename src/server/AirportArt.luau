@@ -680,4 +680,265 @@ function AirportArt.arrivals(map, refs, rng, kit)
 	end
 end
 
+---------------------------------------------------------------------------------------------------
+-- Piezas de la zona 2
+
+-- Lámpara de pie con pantalla que da luz cálida (parpadea como un farol: etiqueta NightLamp)
+function AirportArt.floorLamp(parent, x, z)
+	deco(pole(parent, "LamparaPie", Vector3.new(x, 0, z), 6, 0.3, Color3.fromRGB(40, 36, 30), Enum.Material.Metal))
+	local shade = decoAt(parent, "LamparaPantalla", Vector3.new(1.6, 1.4, 1.6), Vector3.new(x, 6.4, z), Color3.fromRGB(255, 214, 160), Enum.Material.Neon)
+	shade.Transparency = 0.2
+	local light = Instance.new("PointLight")
+	light.Name = "Luz"
+	light.Color = Color3.fromRGB(255, 190, 120)
+	light.Range = 18
+	light.Brightness = 1.1
+	light.Shadows = false
+	light.Parent = shade
+	CollectionService:AddTag(shade, "NightLamp")
+end
+
+-- Planta en maceta, seca
+function AirportArt.deadPlant(parent, x, z, rng)
+	local pot = decoAt(parent, "Maceta", Vector3.new(2.2, 2.4, 2.4), CFrame.new(x, 1.1, z) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(70, 66, 60), Enum.Material.Concrete)
+	pot.Shape = Enum.PartType.Cylinder
+	for i = 1, 4 do
+		decoAt(parent, "PlantaSeca", Vector3.new(0.15, rng:NextNumber(2, 3.5), 0.15), CFrame.new(x, 3.2, z) * CFrame.Angles(rng:NextNumber(-0.5, 0.5), i * 1.6, rng:NextNumber(-0.5, 0.5)), Color3.fromRGB(96, 72, 44), Enum.Material.Wood)
+	end
+end
+
+-- Luz giratoria de emergencia (roja): la pieza gira (client/MapMotion, etiqueta Spin) y barre con su foco
+function AirportArt.emergencyLight(parent, position)
+	decoAt(parent, "LuzEmergenciaBase", Vector3.new(1.2, 0.5, 1.2), position - Vector3.new(0, 0.6, 0), Color3.fromRGB(40, 40, 40), Enum.Material.Metal)
+	local head = decoAt(parent, "LuzEmergencia", Vector3.new(0.9, 0.8, 0.9), position, Color3.fromRGB(255, 40, 30), Enum.Material.Neon)
+	local light = Instance.new("SpotLight")
+	light.Face = Enum.NormalId.Front
+	light.Angle = 45
+	light.Range = 30
+	light.Brightness = 3
+	light.Color = Color3.fromRGB(255, 50, 40)
+	light.Shadows = false
+	light.Parent = head
+	return tag(head, "Spin", { Speed = 220 })
+end
+
+-- Poste de fila con cinta; `fallen` = tirado en el suelo
+function AirportArt.stanchion(parent, a, b, color, fallen)
+	if fallen then
+		decoAt(parent, "PosteFilaTirado", Vector3.new(0.4, 3, 0.4), CFrame.new(a + Vector3.new(0, 0.25, 0)) * CFrame.Angles(math.pi / 2, 0, 0.6), Color3.fromRGB(150, 156, 160), Enum.Material.Metal)
+		return
+	end
+	deco(pole(parent, "PosteFila", a, 3, 0.4, Color3.fromRGB(150, 156, 160), Enum.Material.Metal))
+	deco(pole(parent, "PosteFila", b, 3, 0.4, Color3.fromRGB(150, 156, 160), Enum.Material.Metal))
+	local flat = b - a
+	local mid = (a + b) / 2 + Vector3.new(0, 2.7, 0)
+	decoAt(parent, "CintaFila", Vector3.new(0.1, 0.35, flat.Magnitude), CFrame.lookAt(mid, mid + flat), color, Enum.Material.Fabric)
+end
+
+-- Rastro de la huida: maletas, mochilas y zapatos sueltos a lo largo de un camino
+function AirportArt.trail(parent, from, to, count, rng)
+	local colors = { C.cobalto, C.terracota, C.oscuro, C.mostaza, C.lima, C.salmon }
+	for i = 1, count do
+		local p = from:Lerp(to, i / (count + 1)) + Vector3.new(rng:NextNumber(-5, 5), 0, rng:NextNumber(-3, 3))
+		local roll = rng:NextNumber()
+		local size = roll < 0.4 and Vector3.new(2.3, 0.9, 1.6) or (roll < 0.75 and Vector3.new(1.4, 1.1, 0.9) or Vector3.new(0.5, 0.4, 1.1))
+		decoAt(parent, "Abandonado", size, CFrame.new(p.X, size.Y / 2 + FLOOR_TOP, p.Z) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), colors[rng:NextInteger(1, #colors)], Enum.Material.Fabric)
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Punto seguro 1: Sky Lounge (x -30..30, z -180..-140). Convertido en refugio: colchones, latas de comida, velas.
+
+function AirportArt.lounge(map, refs, rng, kit)
+	local f = folder(map, "ArteSkyLounge")
+	decoAt(f, "Alfombra", Vector3.new(60, 0.08, 40), Vector3.new(0, FLOOR_TOP + 0.05, -160), Color3.fromRGB(78, 30, 40), Enum.Material.Carpet)
+	decoAt(f, "AlfombraBorde", Vector3.new(52, 0.09, 32), Vector3.new(0, FLOOR_TOP + 0.06, -160), Color3.fromRGB(110, 76, 40), Enum.Material.Carpet)
+	decoAt(f, "AlfombraCentro", Vector3.new(50, 0.1, 30), Vector3.new(0, FLOOR_TOP + 0.07, -160), Color3.fromRGB(78, 30, 40), Enum.Material.Carpet)
+	-- Paneles de madera en la mitad baja de las paredes
+	local WOOD = Color3.fromRGB(74, 48, 32)
+	for _, seg in { { -20, -179.6, 20, 0 }, { 20, -179.6, 20, 0 }, { -20, -140.4, 20, 0 }, { 20, -140.4, 20, 0 }, { -29.6, -170, 20, 90 }, { 29.6, -170, 20, 90 } } do
+		decoAt(f, "PanelMadera", Vector3.new(seg[3], 6, 0.3), CFrame.new(seg[1], 3.05, seg[2]) * CFrame.Angles(0, math.rad(seg[4]), 0), WOOD, Enum.Material.WoodPlanks)
+	end
+	AirportArt.neonSign(f, Vector3.new(14, 2.4, 0.3), CFrame.lookAt(Vector3.new(-14, 12, -140.6), Vector3.new(-14, 12, -160)), "SKY LOUNGE", Color3.fromRGB(255, 120, 200), 20)
+	-- Bar: estante con botellas detrás de la barra y taburetes (uno tirado)
+	decoAt(f, "BarEstante", Vector3.new(16, 6, 1.2), Vector3.new(20, 6, -140.8), WOOD, Enum.Material.Wood)
+	for i = 0, 9 do
+		local bottle = decoAt(f, "Botella", Vector3.new(0.4, 1.3, 0.4), Vector3.new(13.2 + i * 1.5, 5.3 + (i % 2) * 2.4, -141.5), ({ Color3.fromRGB(70, 140, 70), Color3.fromRGB(150, 90, 40), Color3.fromRGB(200, 200, 230) })[i % 3 + 1], Enum.Material.Glass)
+		bottle.Transparency = 0.3
+	end
+	for i, x in { 14, 19, 24 } do
+		if i == 3 then
+			decoAt(f, "TaburetoTirado", Vector3.new(1.4, 3, 1.4), CFrame.new(x, 0.7, -150.5) * CFrame.Angles(math.rad(90), 0.6, 0), Color3.fromRGB(40, 36, 34), Enum.Material.Leather)
+		else
+			deco(pole(f, "Taburete", Vector3.new(x, 0, -149.6), 3, 1.4, Color3.fromRGB(40, 36, 34), Enum.Material.Leather))
+		end
+	end
+	-- Mesas bajas con vasos, lámparas de pie y plantas secas
+	for _, spot in { { -20, -172 }, { -20, -148 } } do
+		block(f, "MesaBaja", Vector3.new(3, 1.2, 5), Vector3.new(spot[1], 0.6, spot[2]), WOOD, Enum.Material.Wood)
+		decoAt(f, "Vaso", Vector3.new(0.4, 0.5, 0.4), Vector3.new(spot[1] + 0.6, 1.45, spot[2] - 1), Color3.fromRGB(220, 200, 150), Enum.Material.Glass).Transparency = 0.4
+	end
+	AirportArt.floorLamp(f, -28, -160)
+	AirportArt.floorLamp(f, 28, -158)
+	AirportArt.deadPlant(f, -27.5, -142.5, rng)
+	AirportArt.deadPlant(f, -27.5, -177.5, rng)
+	-- Refugio: colchones, sacos de dormir, latas de comida y un hornillo con su llama
+	for i, spot in { { 10, -175, 0.1 }, { 15.5, -174, -0.08 }, { 21, -176, 0.12 } } do
+		decoAt(f, "Colchon", Vector3.new(3.4, 0.6, 6.5), CFrame.new(spot[1], 0.35, spot[2]) * CFrame.Angles(0, spot[3], 0), Color3.fromRGB(190, 186, 170), Enum.Material.Fabric)
+		decoAt(f, "SacoDormir", Vector3.new(2.6, 0.5, 4.5), CFrame.new(spot[1], 0.85, spot[2] + 0.6) * CFrame.Angles(0, spot[3], 0), ({ C.cobalto, Color3.fromRGB(110, 120, 60), C.terracota })[i], Enum.Material.Fabric)
+	end
+	for i = 0, 7 do
+		local can = decoAt(f, "LataComida", Vector3.new(0.7, 0.6, 0.6), CFrame.new(5 + (i % 4) * 0.8, 0.35 + math.floor(i / 4) * 0.7, -168) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(170, 170, 160), Enum.Material.Metal)
+		can.Shape = Enum.PartType.Cylinder
+	end
+	decoAt(f, "Hornillo", Vector3.new(1.2, 0.6, 1.2), Vector3.new(8, 0.35, -165), Color3.fromRGB(60, 60, 60), Enum.Material.Metal)
+	local flame = decoAt(f, "HornilloLlama", Vector3.new(0.5, 0.5, 0.5), Vector3.new(8, 0.9, -165), Color3.fromRGB(110, 170, 255), Enum.Material.Neon)
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(150, 190, 255)
+	glow.Range = 10
+	glow.Brightness = 1.2
+	glow.Parent = flame
+	-- Velas sobre la barra
+	for i = 0, 2 do
+		decoAt(f, "Vela", Vector3.new(0.3, 0.6, 0.3), Vector3.new(14 + i * 5, 4.15, -145), Color3.fromRGB(240, 230, 210), Enum.Material.SmoothPlastic)
+		local candle = decoAt(f, "VelaLlama", Vector3.new(0.18, 0.3, 0.18), Vector3.new(14 + i * 5, 4.6, -145), Color3.fromRGB(255, 190, 90), Enum.Material.Neon)
+		if i == 1 then
+			local light = Instance.new("PointLight")
+			light.Color = Color3.fromRGB(255, 170, 90)
+			light.Range = 12
+			light.Brightness = 1
+			light.Parent = candle
+		end
+	end
+	decoAt(f, "MantaSofa", Vector3.new(2.8, 0.25, 3.5), CFrame.new(-26, 1.75, -149) * CFrame.Angles(0, 0.3, 0), Color3.fromRGB(150, 140, 110), Enum.Material.Fabric)
+end
+
+---------------------------------------------------------------------------------------------------
+-- Sector 2: Departures (z -130..120). Facturación, pasarela, zona de comida, Duty Free y control de seguridad.
+
+function AirportArt.departures(map, refs, rng, kit)
+	local P = kit.P
+	local f = folder(map, "ArteSector2")
+	-- Filas de facturación delante de cada isla (algunas tiradas)
+	for i, spot in { { -20, -104 }, { 20, -104 }, { -20, -62 }, { 20, -62 }, { -20, -20 } } do
+		local z = spot[2] - 7
+		AirportArt.stanchion(f, Vector3.new(spot[1] - 8, 0, z), Vector3.new(spot[1], 0, z), C.azul, false)
+		AirportArt.stanchion(f, Vector3.new(spot[1] + 4, 0, z), Vector3.new(spot[1] + 9, 0, z), C.azul, i % 2 == 0)
+	end
+	-- El rastro de la huida, de la facturación al control
+	AirportArt.trail(f, Vector3.new(0, 0, -120), Vector3.new(4, 0, 96), 26, rng)
+	-- Pasarela: frentes con franja amarilla y luces bajo el piso
+	for _, run in { { -32, -106, -32, -44 }, { -32, -36, -32, -4 }, { 32, -106, 32, -44 }, { 32, -36, 32, -10 }, { -32, -44, 32, -44 }, { -32, -36, 32, -36 } } do
+		local a, b = Vector3.new(run[1], 0, run[2]), Vector3.new(run[3], 0, run[4])
+		local len = (b - a).Magnitude
+		local mid = (a + b) / 2
+		local alongX = run[2] == run[4]
+		local size = alongX and Vector3.new(len, 1.2, 0.3) or Vector3.new(0.3, 1.2, len)
+		decoAt(f, "PasarelaFrente", size, Vector3.new(mid.X, kit.DECK - 1.2, mid.Z), P.trim, Enum.Material.Metal)
+		decoAt(f, "PasarelaFranja", alongX and Vector3.new(len, 0.25, 0.35) or Vector3.new(0.35, 0.25, len), Vector3.new(mid.X, kit.DECK - 1.5, mid.Z), P.signYellow, Enum.Material.SmoothPlastic)
+	end
+	for _, spot in { { -36, -80 }, { -36, -30 }, { 36, -80 }, { 36, -30 }, { 0, -40 } } do
+		local lamp = decoAt(f, "PasarelaLuz", Vector3.new(2.4, 0.2, 0.8), Vector3.new(spot[1], kit.DECK - 0.9, spot[2]), Color3.fromRGB(255, 214, 165), Enum.Material.Neon)
+		local light = Instance.new("SpotLight")
+		light.Name = "Luz"
+		light.Face = Enum.NormalId.Bottom
+		light.Angle = 120
+		light.Range = 16
+		light.Brightness = 1.2
+		light.Color = Color3.fromRGB(255, 214, 165)
+		light.Shadows = false
+		light.Parent = lamp
+		CollectionService:AddTag(lamp, "NightLamp")
+	end
+	-- Zona de comida: neones de los locales, bandejas, papeleras desbordadas y una barricada de carritos
+	AirportArt.neonSign(f, Vector3.new(9, 2, 0.3), CFrame.lookAt(Vector3.new(-39.6, 14, 22), Vector3.new(-30, 14, 22)), "BURGERS", Color3.fromRGB(255, 90, 60), 18)
+	AirportArt.neonSign(f, Vector3.new(9, 2, 0.3), CFrame.lookAt(Vector3.new(-39.6, 14, 44), Vector3.new(-30, 14, 44)), "COFFEE", Color3.fromRGB(120, 230, 160), 18)
+	for _, spot in { { -14, 24 }, { 8, 30 }, { -8, 52 }, { 16, 62 }, { -16, 80 }, { 6, 88 } } do
+		decoAt(f, "Bandeja", Vector3.new(1.6, 0.1, 1.1), CFrame.new(spot[1] + rng:NextNumber(-0.8, 0.8), 3.05, spot[2] + rng:NextNumber(-0.8, 0.8)) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), Color3.fromRGB(150, 60, 40), Enum.Material.SmoothPlastic)
+		decoAt(f, "Vaso", Vector3.new(0.4, 0.7, 0.4), Vector3.new(spot[1] + 0.6, 3.4, spot[2] + 0.3), C.blanco, Enum.Material.SmoothPlastic)
+	end
+	for _, spot in { { -36, 32 }, { 36, 70 } } do
+		local bin = block(f, "Papelera", Vector3.new(3, 2.4, 2.4), CFrame.new(spot[1], 1.5, spot[2]) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(70, 74, 72), Enum.Material.Metal)
+		bin.Shape = Enum.PartType.Cylinder
+		for _ = 1, 3 do
+			decoAt(f, "BolsaBasura", Vector3.new(1.6, 1.6, 1.6), Vector3.new(spot[1] + rng:NextNumber(-2, 2), 0.8, spot[2] + rng:NextNumber(-2, 2)), RHO_BLACK, Enum.Material.Plastic).Shape = Enum.PartType.Ball
+		end
+	end
+	-- (entre las dos bocas del muro oeste, que son entradas de zombies: no las tapa)
+	kit.cart(f, -36, 74, rng:NextNumber(-8, 8), rng)
+	kit.cart(f, -32, 97, 90, rng)
+	kit.cart(f, -25, 97, 96, rng)
+	AirportArt.leak(f, Vector3.new(-4, 0, 37), kit.HALL_H - 0.5)
+	AirportArt.sparkCable(f, Vector3.new(12, kit.HALL_H - 6, 60), 6)
+	AirportArt.deadPlant(f, 36, 4, rng)
+	AirportArt.deadPlant(f, -36, 96, rng)
+	-- Duty Free: neón sobre la entrada y una reja bajada a medias por encima del pórtico
+	AirportArt.neonSign(f, Vector3.new(14, 2.6, 0.3), CFrame.lookAt(Vector3.new(39.4, 17.5, 40), Vector3.new(30, 17.5, 40)), "DUTY FREE", Color3.fromRGB(255, 210, 90), 22)
+	AirportArt.shutter(f, CFrame.new(40.6, 0, 40) * CFrame.Angles(0, math.pi / 2, 0), 20, 19.4, 15.6)
+	-- Control de seguridad: piso de goma, bandejas apiladas, escáner corporal, avisos y luces de emergencia giratorias
+	decoAt(f, "PisoGoma", Vector3.new(76, 0.08, 18), Vector3.new(0, FLOOR_TOP + 0.05, 110), Color3.fromRGB(32, 34, 36), Enum.Material.Rubber)
+	for _, x in { -30, -16, 22 } do
+		for i = 0, 3 do
+			decoAt(f, "Bandeja", Vector3.new(2.2, 0.35, 1.6), Vector3.new(x + 5.6, 3.58 + i * 0.36, 108), Color3.fromRGB(110, 114, 118), Enum.Material.SmoothPlastic)
+		end
+	end
+	local scanner = block(f, "EscanerCorporal", Vector3.new(6.5, 5, 5), CFrame.new(4, 3.25, 106) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(150, 200, 230), Enum.Material.Glass)
+	scanner.Shape = Enum.PartType.Cylinder
+	scanner.Transparency = 0.5
+	decoAt(f, "EscanerBase", Vector3.new(5.4, 0.4, 5.4), Vector3.new(4, 0.25, 106), P.trim, Enum.Material.Metal)
+	for _, spot in { { -24, "LIQUIDS 100 ML" }, { 30, "REMOVE LAPTOPS" } } do
+		local _, gui = blankBoard(f, "AvisoControl", Vector3.new(5, 2.2, 0.2), CFrame.lookAt(Vector3.new(spot[1], 6.2, 100.4), Vector3.new(spot[1], 6.2, 90)), C.blanco, 40)
+		boardText(gui, spot[2], 0.05, 0.15, 0.9, 0.7, C.azul, Enum.TextXAlignment.Center)
+		deco(pole(f, "AvisoControlPata", Vector3.new(spot[1], 0, 100.6), 5.1, 0.3, P.steel, Enum.Material.Metal))
+	end
+	AirportArt.emergencyLight(f, Vector3.new(-25, 16, 119))
+	AirportArt.emergencyLight(f, Vector3.new(25, 16, 119))
+	-- SERVICE: vapor, chispas y una gotera
+	AirportArt.steam(f, Vector3.new(-115, 0, -118))
+	AirportArt.steam(f, Vector3.new(-80, 0, 64))
+	AirportArt.sparkCable(f, Vector3.new(-100, kit.WALL_H - 0.5, -40), 5)
+	AirportArt.leak(f, Vector3.new(-120, 0, -24), kit.WALL_H - 0.3)
+	-- APRON: papeles al viento
+	for i = 1, 6 do
+		AirportArt.paper(f, Vector3.new(70 + rng:NextNumber(0, 45), 0, -120 + i * 34), Vector3.new(-0.3, 0, 1), 55, rng)
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+-- Punto seguro 2: Fire Station (x -30..30, z 130..170)
+
+function AirportArt.fireStation(map, refs, rng, kit)
+	local P = kit.P
+	local f = folder(map, "ArteFireStation")
+	-- Bahía del camión: piso rojo con líneas amarillas y el portón enrollable en el muro este
+	decoAt(f, "BahiaPiso", Vector3.new(22, 0.08, 12), Vector3.new(19, FLOOR_TOP + 0.05, 137), Color3.fromRGB(110, 34, 30), Enum.Material.Concrete)
+	for _, z in { 131, 143 } do
+		decoAt(f, "BahiaLinea", Vector3.new(22, 0.09, 0.4), Vector3.new(19, FLOOR_TOP + 0.07, z), P.signYellow, Enum.Material.SmoothPlastic)
+	end
+	decoAt(f, "Porton", Vector3.new(0.3, 12, 18), Vector3.new(29.6, 6, 140), Color3.fromRGB(150, 156, 160), Enum.Material.DiamondPlate)
+	for y = 1, 11, 1.5 do
+		decoAt(f, "PortonLama", Vector3.new(0.35, 0.15, 18), Vector3.new(29.5, y, 140), Color3.fromRGB(110, 114, 118), Enum.Material.Metal)
+	end
+	-- Barra de bomberos, mangueras en el muro, cascos y chaquetas, hacha y tanques de oxígeno
+	deco(pole(f, "BarraBomberos", Vector3.new(-6, 0, 136), kit.WALL_H, 0.6, Color3.fromRGB(200, 170, 80), Enum.Material.Metal))
+	decoAt(f, "BarraBomberosBase", Vector3.new(4, 0.3, 4), Vector3.new(-6, FLOOR_TOP + 0.15, 136), Color3.fromRGB(30, 30, 30), Enum.Material.Rubber)
+	for i = 0, 1 do
+		local hose = decoAt(f, "MangueraRollo", Vector3.new(1, 3.4, 3.4), Vector3.new(-29.2, 5 + i * 3.6, 145.5), Color3.fromRGB(170, 40, 34), Enum.Material.Fabric)
+		hose.Shape = Enum.PartType.Cylinder
+	end
+	for i = 0, 3 do
+		local helmet = decoAt(f, "Casco", Vector3.new(1.4, 1.4, 1.4), Vector3.new(-27 + i * 3.2, 8.7, 168.8), P.signYellow, Enum.Material.SmoothPlastic)
+		helmet.Shape = Enum.PartType.Ball
+		decoAt(f, "Chaqueta", Vector3.new(2.2, 3, 0.6), Vector3.new(-27 + i * 3.2, 4.2, 167.4), Color3.fromRGB(170, 140, 80), Enum.Material.Fabric)
+	end
+	decoAt(f, "Hacha", Vector3.new(0.2, 3.4, 0.3), CFrame.new(-29.6, 6, 165) * CFrame.Angles(math.rad(20), 0, 0), Color3.fromRGB(120, 80, 40), Enum.Material.Wood)
+	decoAt(f, "HachaHoja", Vector3.new(0.25, 0.9, 1.2), CFrame.new(-29.6, 7.6, 165.6) * CFrame.Angles(math.rad(20), 0, 0), C.rojo, Enum.Material.Metal)
+	for i = 0, 2 do
+		local tank = decoAt(f, "TanqueOxigeno", Vector3.new(3, 1, 1), CFrame.new(6 + i * 1.2, 1.5, 168.6) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(220, 220, 220), Enum.Material.Metal)
+		tank.Shape = Enum.PartType.Cylinder
+	end
+	AirportArt.neonSign(f, Vector3.new(8, 2.2, 0.3), CFrame.lookAt(Vector3.new(-14, 12, 169.6), Vector3.new(-14, 12, 150)), "ARFF 1", NEON_RED, 16)
+	AirportArt.emergencyLight(f, Vector3.new(0, kit.WALL_H - 0.6, 150))
+end
+
 return AirportArt
